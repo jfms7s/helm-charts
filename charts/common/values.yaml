@@ -20,11 +20,22 @@ commonLabels: {}
 ##
 commonAnnotations: {}
 
-deploy:
+controller:
+  # type: options are deployment, daemonset or statefulset
+  type: deployment
+
+  revisionHistoryLimit: 10
+  replicas: 1
+  strategy:
+    ## For Deployments, valid values are Recreate and RollingUpdate
+    ## For StatefulSets, valid values are OnDelete and RollingUpdate
+    ## DaemonSets ignore this
+    type: RollingUpdate
+
   ## @param deploy.containerPorts.http instance http port
   ##
-  containerPorts:
-    http: 0
+  # containerPorts:
+  #   http: 8080
 
   ## deploy image 
   ## @param deploy.image.repository deploy image repository
@@ -35,13 +46,35 @@ deploy:
     repository: ""
     tag: ""
     pullPolicy: IfNotPresent
-
-  ## @param deploy.extraVolumes Optionally specify extra list of additional volumes for the Redis&trade; master pod(s)
-  ##
-  extraVolumes: []
-  ## @param deploy.extraVolumeMounts Optionally specify extra list of additional volumeMounts
-  ##
-  extraVolumeMounts: []
+    termination: {}
+    securityContext: {}
+    containerPorts:
+      http: 334
+    # command: []
+    # args: []
+    # lifecycle: {}
+    ## https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/
+    # env:
+    #   - name: LOG_LEVEL
+    #     value: info
+    # envFrom:
+    #   - configMapRef:
+    #       name: appconfig
+    ## https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-requests-and-limits-of-pod-and-container
+    # resources:
+    #   limits:
+    #     cpu: "1"
+    #   requests:
+    #     cpu: "0.5"
+    # volumeMounts:
+    #   - name: test
+    #     mountPath: /test
+    #     # https://kubernetes.io/docs/concepts/storage/volumes/#using-subpath
+    #     subPath: path
+    #     readOnly: false
+    #     # https://kubernetes.io/docs/concepts/storage/volumes/#mount-propagation
+    #     mountPropagation: None
+  volumes: []
 
 ingress:
   enabled: false
