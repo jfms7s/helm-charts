@@ -8,8 +8,9 @@ metadata:
     app.kubernetes.io/component: {{ include "common.names.name" . | quote }}
 spec:
   replicas: {{ .Values.controller.replicas }}
+  revisionHistoryLimit: {{ .Values.controller.revisionHistoryLimit }}
   strategy:
-    {{ .Values.controller.strategy | toYaml | nindent 4 }}
+    {{- .Values.controller.strategy | toYaml | nindent 4 }}
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: {{ include "common.names.name" . | quote }}
@@ -21,7 +22,6 @@ spec:
       labels: {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ include "common.names.name" . | quote }}
     spec:
-      revisionHistoryLimit: {{ .Values.controller.revisionHistoryLimit }}
       containers:
         {{- include "common.controller.container" $ | nindent 8 }}
 
