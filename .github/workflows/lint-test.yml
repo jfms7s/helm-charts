@@ -1,0 +1,39 @@
+name: Lint and Test Charts
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Add Helm repos
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+
+      - name: Lint Helm charts
+        run: |
+          helm lint charts/common
+
+      - name: Template Helm charts
+        run: |
+          helm template test-release charts/common --values charts/common/values.yaml
+
+      - name: Install kubeval
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin
+
+      - name: Validate rendered templates
+        run: |
+          helm template test-release charts/common --values charts/common/values.yaml | kubeval

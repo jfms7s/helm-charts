@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/component: {{ include "common.names.name" . | quote }}
 
 spec:
-  replicas: 1
+  replicas: {{ .Values.deploy.replicas }}
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: {{ include "common.names.name" . | quote }}
@@ -18,11 +18,19 @@ spec:
       name: {{ include "common.names.fullname" . | quote }}
       labels: {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ include "common.names.name" . | quote }}
+      annotations: {{- .Values.commonAnnotations | toYaml | nindent 8 }}
     spec:
+{{- if .Values.deploy.serviceAccount.create }}
+      serviceAccountName: {{ default (include "common.names.fullname" .) .Values.deploy.serviceAccount.name }}
+{{- else if .Values.deploy.serviceAccount.name }}
+      serviceAccountName: {{ .Values.deploy.serviceAccount.name }}
+{{- end }}
+      securityContext: {{- .Values.deploy.podSecurityContext | toYaml | nindent 8 }}
       containers:
         - name: {{ include "common.names.name" . | quote }}
           image: {{ (printf "%s:%s" .Values.deploy.image.repository .Values.deploy.image.tag) | quote }} 
           imagePullPolicy: {{ .Values.deploy.image.pullPolicy | quote }}
+          securityContext: {{- .Values.deploy.securityContext | toYaml | nindent 12 }}
 {{- if .Values.deploy.env }}
           env: {{- .Values.deploy.env | toYaml | nindent 12 }}
 {{- end }}
@@ -36,5 +44,6 @@ spec:
               protocol: TCP
   {{- end }}
 {{- end }}  
-          volumeMounts: {{- .Values.deploy.extraVolumeMounts | toYaml | nindent 12 }}
-      volumes: {{- .Values.deploy.extraVolumes | toYaml | nindent 8 }}
+          resources: {{- .Values.deploy.resources | toYaml | nindent 12 }}
+          volumeMounts: {{- .Values.deploy.volumeMounts | toYaml | nindent 12 }}
+      volumes: {{- .Values.deploy.volumes | toYaml | nindent 8 }}

@@ -1,4 +1,4 @@
-# Default values for home-k8s.
+# Default values for common.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -21,10 +21,6 @@ commonLabels: {}
 commonAnnotations: {}
 
 deploy:
-  ## @param deploy.containerPorts.http instance http port
-  ##
-  containerPorts:
-    http: 0
 
   ## deploy image 
   ## @param deploy.image.repository deploy image repository
@@ -36,21 +32,110 @@ deploy:
     tag: ""
     pullPolicy: IfNotPresent
 
-  ## @param deploy.extraVolumes Optionally specify extra list of additional volumes for the Redis&trade; master pod(s)
+  ## @param deploy.replicas Number of deployment replicas
   ##
-  extraVolumes: []
-  ## @param deploy.extraVolumeMounts Optionally specify extra list of additional volumeMounts
+  replicas: 1
+
+  ## @param deploy.resources Resource limits and requests
   ##
-  extraVolumeMounts: []
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
 
-ingress:
-  enabled: false
+  ## @param deploy.securityContext Security context for the container
+  ##
+  securityContext: {}
+    # runAsNonRoot: true
+    # runAsUser: 1000
+    # fsGroup: 1000
 
-  pathType: ImplementationSpecific
-  className: "traefik"
+  ## @param deploy.podSecurityContext Security context for the pod
+  ##
+  podSecurityContext: {}
+    # fsGroup: 1000
+
+  ## @param deploy.serviceAccount.create Create a service account
+  ## @param deploy.serviceAccount.name Service account name to use
+  ## @param deploy.serviceAccount.annotations Service account annotations
+  ##
+  serviceAccount:
+    create: false
+    name: ""
+    annotations: {}
+
+  ## @param deploy.volumes Optionally specify extra list of additional volumes
+  ##
+  volumes: []
+  ## @param deploy.volumeMounts Optionally specify extra list of additional volumeMounts
+  ##
+  volumeMounts: []
+
+  ## @param deploy.env Environment variables for the container
+  ##
+  env: []
+
+service:
+  ## @param service.type Service type
+  ##
+  type: ClusterIP
+
+  ## @param service.ports Service ports configuration
+  ## Can be defined as simple values (port: 80) or objects (port: { port: 80, targetPort: 8080, protocol: TCP })
+  ##
+  ports:
+    http: 80
+
+  ## @param service.annotations Service annotations
+  ##
   annotations: {}
 
-  hostname: ""
-  path: /
+  ## @param service.labels Service labels
+  ##
+  labels: {}
+
+ingress:
+  ## @param ingress.enabled Enable ingress controller resource
+  ##
+  enabled: false
+
+  ## @param ingress.className IngressClass that will be be used to implement the Ingress
+  ## This is supported in Kubernetes 1.18+ and required if you have more than one IngressClass marked as the default for your cluster .
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class
+  ##
+  className: ""
+
+  ## @param ingress.annotations Annotations to add to the ingress resource
+  ##
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+  ## @param ingress.hosts Host configuration for ingress
+  ## host - Host to be used for ingress
+  ## paths - List of paths for the host
+  ## path - Path for the host
+  ## pathType - Path type (ImplementationSpecific, Prefix, Exact)
+  ## port - Service port to be used for the path
+  ##
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+          port: http
+
+  ## @param ingress.tls TLS configuration for ingress
+  ## secretName - Name of the secret containing TLS certificate
+  ## hosts - List of hosts for the TLS certificate
+  ##
+  tls: []
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
 
   
