@@ -28,15 +28,21 @@ The following table lists the configurable parameters of the common chart and th
 | `deploy.image.repository` | Container image repository | `""` |
 | `deploy.image.tag` | Container image tag | `""` |
 | `deploy.image.pullPolicy` | Container image pull policy | `IfNotPresent` |
-| `deploy.containerPorts.http` | HTTP container port | `0` |
+| `service.ports` | Service ports configuration | `{"http": 80}` |
 | `deploy.extraVolumes` | Additional volumes for the pod | `[]` |
 | `deploy.extraVolumeMounts` | Additional volume mounts for the container | `[]` |
 | `ingress.enabled` | Enable ingress | `false` |
 | `ingress.className` | Ingress class name | `"traefik"` |
 | `ingress.pathType` | Ingress path type | `ImplementationSpecific` |
 | `ingress.annotations` | Ingress annotations | `{}` |
-| `ingress.hostname` | Ingress hostname | `""` |
-| `ingress.path` | Ingress path | `/` |
+| `service.type` | Service type | `ClusterIP` |
+| `service.annotations` | Service annotations | `{}` |
+| `service.labels` | Service labels | `{}` |
+| `ingress.enabled` | Enable ingress | `false` |
+| `ingress.className` | Ingress class name | `""` |
+| `ingress.annotations` | Ingress annotations | `{}` |
+| `ingress.hosts` | Ingress host configuration | see values.yaml |
+| `ingress.tls` | TLS configuration | `[]` |
 
 ### Example Configuration
 
@@ -46,8 +52,6 @@ deploy:
     repository: nginx
     tag: "1.21"
     pullPolicy: Always
-  containerPorts:
-    http: 80
   extraVolumes:
     - name: config
       configMap:
@@ -56,13 +60,26 @@ deploy:
     - name: config
       mountPath: /etc/config
 
+service:
+  type: ClusterIP
+  ports:
+    http: 80
+    https:
+      port: 443
+      targetPort: 8443
+      protocol: TCP
+
 ingress:
   enabled: true
   className: nginx
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-  hostname: example.com
-  path: /app
+  hosts:
+    - host: example.com
+      paths:
+        - path: /app
+          pathType: Prefix
+          port: http
 ```
 
 ## Deployment
