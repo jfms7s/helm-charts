@@ -2,6 +2,15 @@ apiVersion: v1
 entries:
   common:
   - apiVersion: v2
+    created: "2025-11-20T00:36:07.787999726Z"
+    description: A Helm chart for Kubernetes
+    digest: 0fc078fe500b73f11612444b3fc869e8a8e43ef133065704ca7dc87781ddddc5
+    name: common
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/common-0.4.0/common-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v2
     created: "2025-11-18T21:59:16.348047241Z"
     description: A Helm chart for Kubernetes
     digest: 29029d6de860afba7e95e0d83cb4cc7e2a89cf6ace9d95ee99c585d95484098f
@@ -29,4 +38,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/common-0.1.0/common-0.1.0.tgz
     version: 0.1.0
-generated: "2025-11-18T21:59:16.348060266Z"
+generated: "2025-11-20T00:36:07.788019884Z"
