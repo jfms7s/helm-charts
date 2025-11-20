@@ -33,7 +33,7 @@ spec:
             pathType: {{ .pathType | default "Prefix" }}
             backend:
               service:
-                name: {{ .Release.Namespace }}-{{ include "common.names.fullname" $ }}
+                name: {{ $.Release.Namespace }}-{{ include "common.names.fullname" $ }}
                 port:
                   number: {{ .port | default 80 }}
           {{- end }}
