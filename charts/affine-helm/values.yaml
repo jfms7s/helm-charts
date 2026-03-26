@@ -1,0 +1,42 @@
+image:
+  repository: ghcr.io/toeverything/affine
+  tag: stable
+  pullPolicy: IfNotPresent
+
+replicas: 1
+
+nfs:
+  server: "192.168.10.3"
+  configPath: "/volume1/k8s/volumes/affine/config"
+  storagePath: "/volume1/k8s/volumes/affine/storage"
+  postgresDataPath: "/volume1/k8s/volumes/affine/postgres-data"
+
+postgres:
+  image:
+    repository: pgvector/pgvector
+    tag: "pg16"
+  db: affine
+  user: affine
+  password: "affine"
+
+redis:
+  image:
+    repository: redis
+    tag: latest
+
+openai:
+  apiKey: "none"
+  baseUrl: "http://192.168.0.244:11434/api/v1"
+
+ingress:
+  enabled: false
+  className: "traefik"
+  annotations:
+    traefik.ingress.kubernetes.io/rewrite-target: "/"
+  hosts:
+    - host: affine.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 3010
+  tls: []

@@ -78,6 +78,12 @@ deploy:
   ##
   env: []
 
+  ## @param deploy.containerPorts Container ports configuration
+  ##
+  containerPorts: {}
+    # http: 80
+    # https: 443
+
 service:
   ## @param service.type Service type
   ##

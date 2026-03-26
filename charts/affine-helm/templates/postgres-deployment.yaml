@@ -1,48 +1,47 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    kompose.cmd: kompose convert -c
-    kompose.version: 1.37.0 (fb0539e64)
   labels:
-    io.kompose.service: postgres
-  name: postgres
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: database
+  name: {{ .Release.Name }}-postgres
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: postgres
+      app.kubernetes.io/name: postgres
+      app.kubernetes.io/instance: {{ .Release.Name }}
   strategy:
     type: Recreate
   template:
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -c
-        kompose.version: 1.37.0 (fb0539e64)
       labels:
-        io.kompose.service: postgres
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: database
     spec:
       containers:
         - env:
             - name: POSTGRES_DB
-              value: affine
+              value: {{ .Values.postgres.db }}
             - name: POSTGRES_HOST_AUTH_METHOD
-              value: trust
+              value: md5
             - name: POSTGRES_INITDB_ARGS
               value: --data-checksums
             - name: POSTGRES_PASSWORD
-              value: affine
+              value: {{ .Values.postgres.password }}
             - name: POSTGRES_USER
-              value: affine
-          image: pgvector/pgvector:pg16
+              value: {{ .Values.postgres.user }}
+          image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
           livenessProbe:
             exec:
               command:
                 - pg_isready
                 - -U
-                - affine
+                - {{ .Values.postgres.user }}
                 - -d
-                - affine
+                - {{ .Values.postgres.db }}
             failureThreshold: 5
             periodSeconds: 10
             timeoutSeconds: 5
@@ -54,13 +53,5 @@ spec:
       volumes:
         - name: postgres-data
           nfs:
-            server: 192.168.10.3
-            path: /volume1/k8s/volumes/affine/postgres-data
-        - name: affine-config
-          nfs:
-            server: 192.168.10.3
-            path: /volume1/k8s/volumes/affine/config
-        - name: affine-storage
-          nfs:
-            server: 192.168.10.3
-            path: /volume1/k8s/volumes/affine/storage
+            server: {{ .Values.nfs.server }}
+            path: {{ .Values.nfs.postgresDataPath }}

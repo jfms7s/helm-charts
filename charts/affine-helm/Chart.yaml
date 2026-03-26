@@ -1,6 +1,10 @@
-name: docker-compose
-description: A generated Helm Chart for docker-compose from Skippbox Kompose
-version: 0.0.1
 apiVersion: v2
+name: affine-helm
+description: A Helm chart for Affine workspace application
+type: application
+version: 0.1.0
+appVersion: "stable"
 keywords:
-  - docker-compose
+  - affine
+  - workspace
+  - collaboration

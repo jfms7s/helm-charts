@@ -1,16 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  annotations:
-    kompose.cmd: kompose convert -c
-    kompose.version: 1.37.0 (fb0539e64)
   labels:
-    io.kompose.service: affine
-  name: affine
+    app.kubernetes.io/name: affine
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: server
+  name: {{ .Release.Name }}-affine
 spec:
   ports:
-    - name: "http"
+    - name: http
       port: 3010
       targetPort: 3010
+      protocol: TCP
   selector:
-    io.kompose.service: affine
+    app.kubernetes.io/name: affine
+    app.kubernetes.io/instance: {{ .Release.Name }}

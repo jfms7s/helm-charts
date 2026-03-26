@@ -1,27 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:
-    kompose.cmd: kompose convert -c
-    kompose.version: 1.37.0 (fb0539e64)
   labels:
-    io.kompose.service: redis
-  name: redis
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: cache
+  name: {{ .Release.Name }}-redis
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: redis
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
-      annotations:
-        kompose.cmd: kompose convert -c
-        kompose.version: 1.37.0 (fb0539e64)
       labels:
-        io.kompose.service: redis
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: cache
     spec:
       containers:
-        - image: redis
+        - image: {{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}
           livenessProbe:
             exec:
               command:
