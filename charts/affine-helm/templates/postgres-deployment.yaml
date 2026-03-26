@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -c
+    kompose.version: 1.37.0 (fb0539e64)
+  labels:
+    io.kompose.service: postgres
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -c
+        kompose.version: 1.37.0 (fb0539e64)
+      labels:
+        io.kompose.service: postgres
+    spec:
+      containers:
+        - env:
+            - name: POSTGRES_DB
+              value: affine
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: trust
+            - name: POSTGRES_INITDB_ARGS
+              value: --data-checksums
+            - name: POSTGRES_PASSWORD
+              value: affine
+            - name: POSTGRES_USER
+              value: affine
+          image: pgvector/pgvector:pg16
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - affine
+                - -d
+                - affine
+            failureThreshold: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          name: affine-postgres
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-data
+      restartPolicy: Always
+      volumes:
+        - name: postgres-data
+          nfs:
+            server: 192.168.10.3
+            path: /volume1/k8s/volumes/affine/postgres-data
+        - name: affine-config
+          nfs:
+            server: 192.168.10.3
+            path: /volume1/k8s/volumes/affine/config
+        - name: affine-storage
+          nfs:
+            server: 192.168.10.3
+            path: /volume1/k8s/volumes/affine/storage
