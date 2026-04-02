@@ -44,6 +44,15 @@ spec:
               protocol: TCP
   {{- end }}
 {{- end }}  
+{{- if .Values.deploy.livenessProbe }}
+          livenessProbe: {{- .Values.deploy.livenessProbe | toYaml | nindent 12 }}
+{{- end }}
+{{- if .Values.deploy.readinessProbe }}
+          readinessProbe: {{- .Values.deploy.readinessProbe | toYaml | nindent 12 }}
+{{- end }}
+{{- if .Values.deploy.startupProbe }}
+          startupProbe: {{- .Values.deploy.startupProbe | toYaml | nindent 12 }}
+{{- end }}
           resources: {{- .Values.deploy.resources | toYaml | nindent 12 }}
           volumeMounts: {{- .Values.deploy.volumeMounts | toYaml | nindent 12 }}
       volumes: {{- .Values.deploy.volumes | toYaml | nindent 8 }}
