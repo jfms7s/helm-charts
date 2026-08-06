@@ -37,13 +37,14 @@ spec:
           ports:
 {{- range $k, $v := .Values.deploy.containerPorts }}
   {{- if kindIs "map" $v }}
-            - containerPort: {{ $v.port }}
+            - name: {{ $k }}
+              containerPort: {{ $v.port }}
               protocol: {{ $v.protocol }}
   {{- else }}
             - containerPort: {{ $v }}
               protocol: TCP
   {{- end }}
-{{- end }}  
+{{- end }}
 {{- if .Values.deploy.livenessProbe }}
           livenessProbe: {{- .Values.deploy.livenessProbe | toYaml | nindent 12 }}
 {{- end }}

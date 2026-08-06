@@ -17,7 +17,8 @@ postgres:
     tag: "pg16"
   db: affine
   user: affine
-  password: "affine"
+  # Leave empty to auto-generate and persist a random password in a Secret.
+  password: ""
 
 redis:
   image:
@@ -28,13 +29,28 @@ openai:
   apiKey: "none"
   baseUrl: "http://192.168.0.244:11434/api/v1"
 
+resources: {}
+  # limits:
+  #   cpu: 1000m
+  #   memory: 1Gi
+  # requests:
+  #   cpu: 250m
+  #   memory: 512Mi
+
+securityContext: {}
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+podSecurityContext: {}
+  # fsGroup: 1000
+
 ingress:
-  enabled: false
+  enabled: true
   className: "traefik"
   annotations:
     traefik.ingress.kubernetes.io/rewrite-target: "/"
   hosts:
-    - host: affine.example.com
+    - host: affine.k3s.dragonbyte.myds.me
       paths:
         - path: /
           pathType: Prefix

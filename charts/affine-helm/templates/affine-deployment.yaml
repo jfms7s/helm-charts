@@ -26,23 +26,47 @@ spec:
             - name: AFFINE_INDEXER_ENABLED
               value: "false"
             - name: DATABASE_URL
-              value: postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.db }}
+              value: postgresql://{{ .Values.postgres.user }}:{{ include "affine.postgres.password" . }}@{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.db }}
             - name: REDIS_SERVER_HOST
               value: {{ .Release.Name }}-redis
             - name: OPENAI_API_KEY
-              value: {{ .Values.openai.apiKey | default "none" }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-affine-postgres
+                  key: openai-api-key
             - name: OPENAI_BASE_URL
               value: {{ .Values.openai.baseUrl }}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           name: affine-server
           ports:
-            - containerPort: 3010
+            - name: http
+              containerPort: 3010
               protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
           volumeMounts:
             - mountPath: /root/.affine/storage
               name: affine-storage
             - mountPath: /root/.affine/config
               name: affine-config
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       restartPolicy: Always
       volumes:
         - name: affine-config

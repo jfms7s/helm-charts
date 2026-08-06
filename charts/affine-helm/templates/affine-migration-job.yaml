@@ -1,20 +1,17 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   labels:
     app.kubernetes.io/name: affine
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: migration
   name: {{ .Release.Name }}-affine-migration
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: affine
-      app.kubernetes.io/instance: {{ .Release.Name }}
-      app.kubernetes.io/component: migration
-  strategy:
-    type: Recreate
+  backoffLimit: 6
   template:
     metadata:
       labels:
@@ -31,7 +28,7 @@ spec:
             - name: AFFINE_INDEXER_ENABLED
               value: "false"
             - name: DATABASE_URL
-              value: postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.db }}
+              value: postgresql://{{ .Values.postgres.user }}:{{ include "affine.postgres.password" . }}@{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.db }}
             - name: REDIS_SERVER_HOST
               value: {{ .Release.Name }}-redis
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
@@ -41,7 +38,7 @@ spec:
               name: affine-storage
             - mountPath: /root/.affine/config
               name: affine-config
-      restartPolicy: Always
+      restartPolicy: OnFailure
       volumes:
         - name: affine-config
           nfs:

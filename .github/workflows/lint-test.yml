@@ -23,10 +23,12 @@ jobs:
       - name: Lint Helm charts
         run: |
           helm lint charts/common
+          helm lint charts/affine-helm
 
       - name: Template Helm charts
         run: |
           helm template test-release charts/common --values charts/common/values.yaml
+          helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml
 
       - name: Install kubeval
         run: |
@@ -37,3 +39,4 @@ jobs:
       - name: Validate rendered templates
         run: |
           helm template test-release charts/common --values charts/common/values.yaml | kubeval
+          helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml | kubeval

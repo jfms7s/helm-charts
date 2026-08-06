@@ -30,7 +30,10 @@ spec:
             - name: POSTGRES_INITDB_ARGS
               value: --data-checksums
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.postgres.password }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-affine-postgres
+                  key: postgres-password
             - name: POSTGRES_USER
               value: {{ .Values.postgres.user }}
           image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
