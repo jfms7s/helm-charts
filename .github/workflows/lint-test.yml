@@ -30,13 +30,15 @@ jobs:
           helm template test-release charts/common --values charts/common/values.yaml
           helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml
 
-      - name: Install kubeval
+      - name: Install kubeconform
         run: |
-          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
-          tar xf kubeval-linux-amd64.tar.gz
-          sudo mv kubeval /usr/local/bin
+          # kubeval (previously used here) is archived upstream and its default
+          # schema host (kubernetesjsonschema.dev) is dead; kubeconform is its
+          # maintained successor.
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin
 
       - name: Validate rendered templates
         run: |
-          helm template test-release charts/common --values charts/common/values.yaml | kubeval
-          helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml | kubeval
+          helm template test-release charts/common --values charts/common/values.yaml | kubeconform -summary
+          helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml | kubeconform -summary
