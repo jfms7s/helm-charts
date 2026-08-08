@@ -105,4 +105,26 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/common-0.1.0/common-0.1.0.tgz
     version: 0.1.0
-generated: "2026-08-08T17:08:00.965155323Z"
+  patchmon-helm:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-08-08T17:47:25.077227425Z"
+    description: A Helm chart for PatchMon, a Linux patch management platform
+    digest: 07ebedf84a1eff416e4eaa435465e745a8bf6df47576754b62a8c44d97e92b81
+    home: https://patchmon.net/
+    keywords:
+    - patchmon
+    - patch-management
+    - monitoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: patchmon-helm
+    sources:
+    - https://github.com/PatchMon/PatchMon
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.1.0/patchmon-helm-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-08-08T17:47:25.077254776Z"
