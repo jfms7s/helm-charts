@@ -2,9 +2,16 @@ apiVersion: v2
 name: affine-helm
 description: A Helm chart for Affine workspace application
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "stable"
 keywords:
   - affine
   - workspace
   - collaboration
+home: https://affine.pro/
+sources:
+  - https://github.com/toeverything/AFFiNE
+  - https://github.com/jfms7s/helm-charts
+maintainers:
+  - name: jfms7s
+    url: https://github.com/jfms7s

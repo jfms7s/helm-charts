@@ -1,16 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    app.kubernetes.io/name: redis
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: cache
   name: {{ .Release.Name }}-redis
+  labels:
+    {{- include "affine-helm.labels" (dict "context" $ "name" "redis" "component" "cache") | nindent 4 }}
 spec:
   ports:
     - port: 6379
       targetPort: 6379
       protocol: TCP
   selector:
-    app.kubernetes.io/name: redis
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "affine-helm.selectorLabels" (dict "context" $ "name" "redis") | nindent 4 }}

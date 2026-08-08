@@ -5,29 +5,57 @@ image:
 
 replicas: 1
 
-nfs:
-  server: "192.168.10.3"
-  configPath: "/volume1/k8s/volumes/affine/config"
-  storagePath: "/volume1/k8s/volumes/affine/storage"
-  postgresDataPath: "/volume1/k8s/volumes/affine/postgres-data"
+# Volume sources for the affine server's persistent directories. Each value is
+# the full body of a Kubernetes volume source (excluding `name`) -- nfs,
+# hostPath, persistentVolumeClaim, etc. Left empty (emptyDir, non-persistent)
+# by default since the right backend is environment-specific; set explicitly
+# by the caller, e.g.:
+#   config:
+#     volume:
+#       nfs:
+#         server: 192.168.1.10
+#         path: /volumes/affine/config
+persistence:
+  config:
+    volume: {}
+  storage:
+    volume: {}
 
 postgres:
   image:
     repository: pgvector/pgvector
     tag: "pg16"
+    pullPolicy: IfNotPresent
   db: affine
   user: affine
-  # Leave empty to auto-generate and persist a random password in a Secret.
-  password: ""
+  # Pinned password for the affine-postgres database. Argo CD does not support
+  # Helm's `lookup` function, so a password can't be safely auto-generated and
+  # persisted across syncs -- set this explicitly (e.g. from a values-secrets
+  # file kept out of version control).
+  password: "CHANGE_ME"
+  resources: {}
+  # Volume source for the Postgres data directory. Same shape as
+  # persistence.config.volume above; defaults to emptyDir when unset.
+  persistence:
+    volume: {}
 
 redis:
   image:
     repository: redis
     tag: latest
+    pullPolicy: IfNotPresent
+  resources: {}
 
-openai:
-  apiKey: "none"
-  baseUrl: "http://192.168.0.244:11434/api/v1"
+# AFFiNE's AI features (server config.json, mounted read-only into
+# /root/.affine/config/config.json alongside the persistent config volume --
+# see https://docs.affine.pro/self-host-affine/install/configuration).
+# `OPENAI_API_KEY`/`OPENAI_BASE_URL` env vars stopped being read as of server
+# version 0.27; this is the only way to set a server-wide provider key now.
+copilot:
+  enabled: false
+  openai:
+    apiKey: ""
+    baseUrl: "https://api.openai.com/v1"
 
 resources: {}
   # limits:
@@ -45,12 +73,12 @@ podSecurityContext: {}
   # fsGroup: 1000
 
 ingress:
-  enabled: true
-  className: "traefik"
-  annotations:
-    traefik.ingress.kubernetes.io/rewrite-target: "/"
+  enabled: false
+  className: ""
+  annotations: {}
+    # traefik.ingress.kubernetes.io/rewrite-target: "/"
   hosts:
-    - host: affine.k3s.dragonbyte.myds.me
+    - host: affine.example.local
       paths:
         - path: /
           pathType: Prefix

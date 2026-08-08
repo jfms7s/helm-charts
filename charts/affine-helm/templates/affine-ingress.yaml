@@ -2,11 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  labels:
-    app.kubernetes.io/name: affine
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: server
   name: {{ .Release.Name }}-affine
+  labels:
+    {{- include "affine-helm.labels" (dict "context" $ "name" "affine" "component" "server") | nindent 4 }}
   annotations:
     {{- range $key, $value := .Values.ingress.annotations }}
     {{ $key }}: {{ $value | quote }}

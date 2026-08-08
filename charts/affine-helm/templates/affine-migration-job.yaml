@@ -1,11 +1,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  labels:
-    app.kubernetes.io/name: affine
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: migration
   name: {{ .Release.Name }}-affine-migration
+  labels:
+    {{- include "affine-helm.labels" (dict "context" $ "name" "affine" "component" "migration") | nindent 4 }}
   annotations:
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-weight: "0"
@@ -15,12 +13,13 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: affine
-        app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/component: migration
+        {{- include "affine-helm.labels" (dict "context" $ "name" "affine" "component" "migration") | nindent 8 }}
     spec:
       containers:
-        - args:
+        - name: affine-migration-job
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
             - sh
             - -c
             - node ./scripts/self-host-predeploy.js
@@ -28,11 +27,9 @@ spec:
             - name: AFFINE_INDEXER_ENABLED
               value: "false"
             - name: DATABASE_URL
-              value: postgresql://{{ .Values.postgres.user }}:{{ include "affine.postgres.password" . }}@{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.db }}
+              value: postgresql://{{ .Values.postgres.user }}:{{ include "affine-helm.postgres.password" . }}@{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.db }}
             - name: REDIS_SERVER_HOST
               value: {{ .Release.Name }}-redis
-          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-          name: affine-migration-job
           volumeMounts:
             - mountPath: /root/.affine/storage
               name: affine-storage
@@ -41,10 +38,14 @@ spec:
       restartPolicy: OnFailure
       volumes:
         - name: affine-config
-          nfs:
-            server: {{ .Values.nfs.server }}
-            path: {{ .Values.nfs.configPath }}
+          {{- if .Values.persistence.config.volume }}
+          {{- toYaml .Values.persistence.config.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
         - name: affine-storage
-          nfs:
-            server: {{ .Values.nfs.server }}
-            path: {{ .Values.nfs.storagePath }}
+          {{- if .Values.persistence.storage.volume }}
+          {{- toYaml .Values.persistence.storage.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
