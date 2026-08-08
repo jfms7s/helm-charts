@@ -24,11 +24,13 @@ jobs:
         run: |
           helm lint charts/common
           helm lint charts/affine-helm
+          helm lint charts/patchmon-helm
 
       - name: Template Helm charts
         run: |
           helm template test-release charts/common --values charts/common/values.yaml
           helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml
+          helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml
 
       - name: Install kubeconform
         run: |
@@ -42,3 +44,4 @@ jobs:
         run: |
           helm template test-release charts/common --values charts/common/values.yaml | kubeconform -summary
           helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml | kubeconform -summary
+          helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml | kubeconform -summary

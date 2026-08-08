@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-patchmon-redis
+  labels:
+    {{- include "patchmon-helm.labels" (dict "context" $ "name" "redis" "component" "cache") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "patchmon-helm.selectorLabels" (dict "context" $ "name" "redis") | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "patchmon-helm.labels" (dict "context" $ "name" "redis" "component" "cache") | nindent 8 }}
+    spec:
+      containers:
+        - name: patchmon-redis
+          image: {{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+          command:
+            - redis-server
+            - --requirepass
+            - $(REDIS_PASSWORD)
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-patchmon-redis
+                  key: redis-password
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping
+            failureThreshold: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          volumeMounts:
+            - mountPath: /data
+              name: redis-data
+      restartPolicy: Always
+      volumes:
+        - name: redis-data
+          {{- if .Values.redis.persistence.volume }}
+          {{- toYaml .Values.redis.persistence.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

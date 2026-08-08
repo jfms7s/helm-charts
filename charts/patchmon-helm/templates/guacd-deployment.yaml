@@ -1,0 +1,63 @@
+{{- if .Values.guacd.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-patchmon-guacd
+  labels:
+    {{- include "patchmon-helm.labels" (dict "context" $ "name" "guacd" "component" "rdp-proxy") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "patchmon-helm.selectorLabels" (dict "context" $ "name" "guacd") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "patchmon-helm.labels" (dict "context" $ "name" "guacd" "component" "rdp-proxy") | nindent 8 }}
+    spec:
+      containers:
+        - name: patchmon-guacd
+          image: {{ .Values.guacd.image.repository }}:{{ .Values.guacd.image.tag }}
+          imagePullPolicy: {{ .Values.guacd.image.pullPolicy }}
+          ports:
+            - name: rdp-proxy
+              containerPort: 4822
+              protocol: TCP
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - nc -z localhost 4822 || exit 1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - nc -z localhost 4822 || exit 1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.guacd.resources | nindent 12 }}
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+      restartPolicy: Always
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+{{- end }}

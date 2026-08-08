@@ -1,0 +1,17 @@
+apiVersion: v2
+name: patchmon-helm
+description: A Helm chart for PatchMon, a Linux patch management platform
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - patchmon
+  - patch-management
+  - monitoring
+home: https://patchmon.net/
+sources:
+  - https://github.com/PatchMon/PatchMon
+  - https://github.com/jfms7s/helm-charts
+maintainers:
+  - name: jfms7s
+    url: https://github.com/jfms7s

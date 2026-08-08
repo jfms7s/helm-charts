@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-patchmon-server
+  labels:
+    {{- include "patchmon-helm.labels" (dict "context" $ "name" "server" "component" "server") | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      {{- include "patchmon-helm.selectorLabels" (dict "context" $ "name" "server") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "patchmon-helm.labels" (dict "context" $ "name" "server" "component" "server") | nindent 8 }}
+    spec:
+      containers:
+        - name: patchmon-server
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: CORS_ORIGIN
+              value: {{ .Values.server.corsOrigin | quote }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-patchmon-server
+                  key: jwt-secret
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-patchmon-server
+                  key: session-secret
+            - name: AI_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-patchmon-server
+                  key: ai-encryption-key
+            - name: POSTGRES_HOST
+              value: {{ .Release.Name }}-patchmon-postgres
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.db }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-patchmon-postgres
+                  key: postgres-password
+            - name: DATABASE_URL
+              value: postgresql://{{ .Values.postgres.user }}:{{ include "patchmon-helm.postgres.password" . }}@{{ .Release.Name }}-patchmon-postgres:5432/{{ .Values.postgres.db }}
+            - name: REDIS_HOST
+              value: {{ .Release.Name }}-patchmon-redis
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_DB
+              value: "0"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-patchmon-redis
+                  key: redis-password
+            {{- if .Values.guacd.enabled }}
+            - name: GUACD_ADDRESS
+              value: {{ .Release.Name }}-patchmon-guacd:4822
+            {{- end }}
+            {{- range .Values.server.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      restartPolicy: Always

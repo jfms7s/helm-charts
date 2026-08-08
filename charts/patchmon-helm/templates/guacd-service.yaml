@@ -1,0 +1,16 @@
+{{- if .Values.guacd.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-patchmon-guacd
+  labels:
+    {{- include "patchmon-helm.labels" (dict "context" $ "name" "guacd" "component" "rdp-proxy") | nindent 4 }}
+spec:
+  ports:
+    - name: rdp-proxy
+      port: 4822
+      targetPort: 4822
+      protocol: TCP
+  selector:
+    {{- include "patchmon-helm.selectorLabels" (dict "context" $ "name" "guacd") | nindent 4 }}
+{{- end }}

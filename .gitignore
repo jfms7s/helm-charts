@@ -1,3 +1,5 @@
 **/charts/*.tgz
+*.tgz
 *.secret.yml
 .vscode
+.bin/

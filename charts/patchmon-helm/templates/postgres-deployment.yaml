@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-patchmon-postgres
+  labels:
+    {{- include "patchmon-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "patchmon-helm.selectorLabels" (dict "context" $ "name" "postgres") | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "patchmon-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 8 }}
+    spec:
+      containers:
+        - name: patchmon-postgres
+          image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.db }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-patchmon-postgres
+                  key: postgres-password
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgres.user }}
+                - -d
+                - {{ .Values.postgres.db }}
+            failureThreshold: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgres.user }}
+                - -d
+                - {{ .Values.postgres.db }}
+            failureThreshold: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-data
+      restartPolicy: Always
+      volumes:
+        - name: postgres-data
+          {{- if .Values.postgres.persistence.volume }}
+          {{- toYaml .Values.postgres.persistence.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

@@ -7,6 +7,12 @@ A collection of Helm charts for Kubernetes applications.
 ### Common
 A generic application chart that provides a standardized template for deploying containerized applications to Kubernetes.
 
+### affine-helm
+Deploys [Affine](https://affine.pro/), a self-hosted workspace/collaboration app, with its Postgres (pgvector) database and Redis cache. See [charts/affine-helm/README.md](charts/affine-helm/README.md).
+
+### patchmon-helm
+Deploys [PatchMon](https://patchmon.net/), a self-hosted Linux patch management platform, with its Postgres database, Redis cache, and guacd (in-browser RDP) sidecar. See [charts/patchmon-helm/README.md](charts/patchmon-helm/README.md).
+
 ## Installation
 
 Add the repository:
@@ -69,6 +75,8 @@ helm template my-release charts/common
 ```bash
 helm package charts/common
 ```
+
+Or use the [Makefile](Makefile) (`make help`) to lint, template, and validate every chart in the repo at once — the same checks CI runs.
 
 ## Contributing
 
