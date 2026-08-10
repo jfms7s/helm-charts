@@ -3,6 +3,27 @@ entries:
   affine-helm:
   - apiVersion: v2
     appVersion: stable
+    created: "2026-08-10T04:27:12.657445643Z"
+    description: A Helm chart for Affine workspace application
+    digest: 7835f338510143db5b07164789341c90163f337af9c264c361c30700993a7ceb
+    home: https://affine.pro/
+    keywords:
+    - affine
+    - workspace
+    - collaboration
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: affine-helm
+    sources:
+    - https://github.com/toeverything/AFFiNE
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/affine-helm-0.2.2/affine-helm-0.2.2.tgz
+    version: 0.2.2
+  - apiVersion: v2
+    appVersion: stable
     created: "2026-08-08T17:08:00.965130165Z"
     description: A Helm chart for Affine workspace application
     digest: 26afeacbe7aeb719877f716f4be1f3f5809bb848dec5950151e0250f437faf91
@@ -127,4 +148,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.1.0/patchmon-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-08-08T17:47:25.077254776Z"
+generated: "2026-08-10T04:27:12.657472554Z"
