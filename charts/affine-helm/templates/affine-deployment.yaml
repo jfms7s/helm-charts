@@ -4,6 +4,8 @@ metadata:
   name: {{ .Release.Name }}-affine
   labels:
     {{- include "affine-helm.labels" (dict "context" $ "name" "affine" "component" "server") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   replicas: {{ .Values.replicas }}
   selector:

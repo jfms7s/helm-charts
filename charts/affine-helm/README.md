@@ -83,8 +83,28 @@ per-workspace, from the Affine UI itself (Workspace Settings → Integrations
 This chart creates: a Deployment + Service (+ optional Ingress) for the
 Affine server, a Deployment + Service for Postgres, a Deployment + Service
 for Redis, a Secret holding the Postgres password, a Secret holding the
-rendered `copilot` `config.json`, and a post-install/post-upgrade migration
-Job.
+rendered `copilot` `config.json`, and a migration Job.
+
+### Migration Job ordering
+
+The migration Job runs `self-host-predeploy.js` against Postgres before the
+Affine server starts — the server crashes on boot (Prisma error `P2021`,
+table does not exist) if its tables aren't there yet. It's an Argo CD
+**`Sync`-phase hook** (`argocd.argoproj.io/hook: Sync`, not a Helm
+`post-install`/`post-upgrade` hook) with `sync-wave: "1"`; the Affine server
+Deployment is pinned to `sync-wave: "2"`. Postgres/Redis (wave `0`, the
+default) become healthy first, then the migration Job runs and must
+succeed, then the Affine server Deployment is created/updated.
+
+This ordering matters specifically under Argo CD. A `post-install,
+post-upgrade` Helm hook maps to Argo CD's PostSync phase, which only fires
+once *every* Sync-phase resource — including the Affine server Deployment —
+is Healthy. But the Deployment can never become Healthy without the
+migration having already run, so that combination deadlocks permanently:
+Argo CD sits forever on "waiting for healthy state of .../affine-affine"
+and the migration Job never gets created at all. Sync-wave ordering avoids
+this because a wave only waits on the *previous* wave, not on the resource
+the hook itself exists to unblock.
 
 ## Uninstalling
 
