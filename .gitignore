@@ -3,3 +3,4 @@
 *.secret.yml
 .vscode
 .bin/
+charts/*/tests/__snapshot__/

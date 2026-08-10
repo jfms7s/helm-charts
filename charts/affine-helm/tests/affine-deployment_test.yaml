@@ -1,0 +1,202 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: affine-deployment
+templates:
+  - templates/affine-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-affine
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: affine
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: server
+            app.kubernetes.io/part-of: affine
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: affine-helm-0.2.2
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "2"
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: affine
+            app.kubernetes.io/instance: RELEASE-NAME
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/toeverything/affine:stable
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: IfNotPresent
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            value: postgresql://affine:CHANGE_ME@RELEASE-NAME-postgres:5432/affine
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_SERVER_HOST
+            value: RELEASE-NAME-redis
+      - equal:
+          path: spec.template.spec.containers[0].ports[0]
+          value:
+            name: http
+            containerPort: 3010
+            protocol: TCP
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.initialDelaySeconds
+          value: 10
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value: {}
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value: {}
+      - equal:
+          path: spec.template.spec.securityContext
+          value: {}
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+      - lengthEqual:
+          path: spec.template.spec.containers[0].volumeMounts
+          count: 3
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            mountPath: /root/.affine/config/config.json
+            subPath: config.json
+            name: affine-copilot-config
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: affine-config
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: affine-storage
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: affine-copilot-config
+            secret:
+              secretName: RELEASE-NAME-affine-copilot-config
+              items:
+                - key: config.json
+                  path: config.json
+
+  - it: uses a custom image repository and tag
+    set:
+      image.repository: my-registry/affine
+      image.tag: "1.2.3"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-registry/affine:1.2.3
+
+  - it: scales replicas from values
+    set:
+      replicas: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+
+  - it: builds DATABASE_URL from custom postgres values
+    set:
+      postgres.user: custom_user
+      postgres.db: custom_db
+      postgres.password: s3cr3t
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            value: postgresql://custom_user:s3cr3t@RELEASE-NAME-postgres:5432/custom_db
+
+  - it: uses a custom volume source for config and storage persistence instead of emptyDir
+    set:
+      persistence.config.volume:
+        nfs:
+          server: 192.168.1.10
+          path: /volumes/affine/config
+      persistence.storage.volume:
+        nfs:
+          server: 192.168.1.10
+          path: /volumes/affine/storage
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: affine-config
+            nfs:
+              server: 192.168.1.10
+              path: /volumes/affine/config
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: affine-storage
+            nfs:
+              server: 192.168.1.10
+              path: /volumes/affine/storage
+
+  - it: renders resources, securityContext, and podSecurityContext when set
+    set:
+      resources:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      securityContext:
+        runAsNonRoot: true
+      podSecurityContext:
+        fsGroup: 1000
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "1"
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000
+
+  - it: reflects a custom release name in name, labels, and env host references
+    release:
+      name: my-affine
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-affine-affine
+      - equal:
+          path: metadata.labels["app.kubernetes.io/instance"]
+          value: my-affine
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_SERVER_HOST
+            value: my-affine-redis

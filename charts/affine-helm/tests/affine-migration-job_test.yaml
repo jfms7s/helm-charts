@@ -1,0 +1,71 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: affine-migration-job
+templates:
+  - templates/affine-migration-job.yaml
+tests:
+  - it: renders the predeploy migration Job with chart defaults
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-affine-migration
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: migration
+      - equal:
+          path: metadata.annotations
+          value:
+            argocd.argoproj.io/hook: Sync
+            argocd.argoproj.io/sync-wave: "1"
+            argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+      - equal:
+          path: spec.backoffLimit
+          value: 6
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/toeverything/affine:stable
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - sh
+            - -c
+            - node ./scripts/self-host-predeploy.js
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            value: postgresql://affine:CHANGE_ME@RELEASE-NAME-postgres:5432/affine
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: OnFailure
+      - lengthEqual:
+          path: spec.template.spec.containers[0].volumeMounts
+          count: 2
+      - lengthEqual:
+          path: spec.template.spec.volumes
+          count: 2
+
+  - it: uses a custom image for the migration container
+    set:
+      image.repository: my-registry/affine
+      image.tag: "1.2.3"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-registry/affine:1.2.3
+
+  - it: uses a custom volume source for config and storage persistence instead of emptyDir
+    set:
+      persistence.config.volume:
+        nfs:
+          server: 192.168.1.10
+          path: /volumes/affine/config
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: affine-config
+            nfs:
+              server: 192.168.1.10
+              path: /volumes/affine/config

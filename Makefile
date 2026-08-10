@@ -8,7 +8,17 @@ BIN_DIR       := .bin
 KUBECONFORM   := $(BIN_DIR)/kubeconform
 KUBECONFORM_URL := https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
 
-.PHONY: help lint template validate test package clean $(CHARTS)
+HELM_UNITTEST_VERSION := 1.1.2
+HELM_CHART            ?=
+HELM_UNITTEST_FILE    ?= tests/**/*.yaml
+
+ifeq ($(strip $(HELM_CHART)),)
+UNITTEST_CHARTS := $(CHARTS)
+else
+UNITTEST_CHARTS := $(HELM_CHART)
+endif
+
+.PHONY: help lint template validate helm-unittest-plugin helm-unittest test package clean $(CHARTS)
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -36,7 +46,17 @@ validate: $(KUBECONFORM) ## Validate rendered manifests against Kubernetes schem
 		helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/values.yaml | $(KUBECONFORM) -summary || exit 1; \
 	done
 
-test: lint template validate ## Run every check the lint-test CI workflow runs
+helm-unittest-plugin: ## Install the helm-unittest plugin (pinned version below) if not already present
+	@helm plugin list 2>/dev/null | grep -q '^unittest' || \
+		helm plugin install https://github.com/helm-unittest/helm-unittest.git --version $(HELM_UNITTEST_VERSION) --verify=false
+
+helm-unittest: helm-unittest-plugin ## Run helm-unittest for every chart, or one via HELM_CHART=<name> (same as CI)
+	@for c in $(UNITTEST_CHARTS); do \
+		echo "==> helm unittest $(CHARTS_DIR)/$$c"; \
+		helm unittest $(CHARTS_DIR)/$$c --file '$(HELM_UNITTEST_FILE)' || exit 1; \
+	done
+
+test: lint template validate helm-unittest ## Run every check the lint-test CI workflow runs
 
 package: ## helm package every chart
 	@for c in $(CHARTS); do \

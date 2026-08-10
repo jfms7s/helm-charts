@@ -1,0 +1,34 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: guacd-service
+templates:
+  - templates/guacd-service.yaml
+tests:
+  - it: renders the guacd Service since guacd is enabled by default
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-patchmon-guacd
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: rdp-proxy
+      - equal:
+          path: spec.ports[0]
+          value:
+            name: rdp-proxy
+            port: 4822
+            targetPort: 4822
+            protocol: TCP
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/name: guacd
+            app.kubernetes.io/instance: RELEASE-NAME
+
+  - it: does not render when guacd is disabled
+    set:
+      guacd.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

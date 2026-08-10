@@ -1,0 +1,88 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: service
+templates:
+  - templates/service.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: NAMESPACE-RELEASE-NAME-common
+      - equal:
+          path: metadata.namespace
+          value: NAMESPACE
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: common
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: common
+      - contains:
+          path: spec.ports
+          content:
+            name: http
+            port: 80
+            protocol: TCP
+            targetPort: 80
+
+  - it: sets the service type from values
+    set:
+      service.type: LoadBalancer
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+
+  - it: renders map-form ports with an explicit targetPort and protocol
+    set:
+      service.ports:
+        https:
+          port: 443
+          targetPort: 8443
+          protocol: TCP
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: https
+            port: 443
+            protocol: TCP
+            targetPort: 8443
+
+  - it: defaults map-form targetPort to port when unset
+    set:
+      service.ports:
+        https:
+          port: 443
+    asserts:
+      - contains:
+          path: spec.ports
+          content:
+            name: https
+            port: 443
+            protocol: TCP
+            targetPort: 443
+
+  - it: merges extra service labels and annotations
+    set:
+      service.labels:
+        example.com/label: "true"
+      service.annotations:
+        example.com/annotation: "true"
+    asserts:
+      - equal:
+          path: metadata.labels["example.com/label"]
+          value: "true"
+      - equal:
+          path: metadata.annotations["example.com/annotation"]
+          value: "true"
+
+  - it: omits the annotations key when service.annotations is empty
+    asserts:
+      - notExists:
+          path: metadata.annotations

@@ -1,0 +1,38 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: affine-service
+templates:
+  - templates/affine-service.yaml
+tests:
+  - it: renders the server Service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-affine
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: server
+      - equal:
+          path: spec.ports[0]
+          value:
+            name: http
+            port: 3010
+            targetPort: 3010
+            protocol: TCP
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/name: affine
+            app.kubernetes.io/instance: RELEASE-NAME
+
+  - it: reflects a custom release name
+    release:
+      name: my-affine
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-affine-affine
+      - equal:
+          path: spec.selector["app.kubernetes.io/instance"]
+          value: my-affine

@@ -1,0 +1,82 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: redis-deployment
+templates:
+  - templates/redis-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-patchmon-redis
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: redis
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: cache
+            app.kubernetes.io/part-of: patchmon
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: patchmon-helm-0.1.0
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: redis:7-alpine
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value:
+            - redis-server
+            - --requirepass
+            - $(REDIS_PASSWORD)
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-redis
+                key: redis-password
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value:
+            - sh
+            - -c
+            - redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: redis-data
+            emptyDir: {}
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+
+  - it: uses a custom redis image
+    set:
+      redis.image.repository: my-registry/redis
+      redis.image.tag: "7"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-registry/redis:7
+
+  - it: uses a custom volume source for redis persistence instead of emptyDir
+    set:
+      redis.persistence.volume:
+        nfs:
+          server: 192.168.1.10
+          path: /volumes/patchmon/redis
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: redis-data
+            nfs:
+              server: 192.168.1.10
+              path: /volumes/patchmon/redis

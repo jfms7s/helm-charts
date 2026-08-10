@@ -1,0 +1,98 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-deployment
+templates:
+  - templates/postgres-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-patchmon-postgres
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: postgres
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: database
+            app.kubernetes.io/part-of: patchmon
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: patchmon-helm-0.1.0
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: postgres:17-alpine
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_DB
+            value: patchmon_db
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_USER
+            value: patchmon_user
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-postgres
+                key: postgres-password
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value:
+            - pg_isready
+            - -U
+            - patchmon_user
+            - -d
+            - patchmon_db
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: postgres-data
+            emptyDir: {}
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+
+  - it: uses a custom postgres image, user, and db
+    set:
+      postgres.image.repository: my-registry/postgres
+      postgres.image.tag: "16-alpine"
+      postgres.user: custom_user
+      postgres.db: custom_db
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-registry/postgres:16-alpine
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value:
+            - pg_isready
+            - -U
+            - custom_user
+            - -d
+            - custom_db
+
+  - it: uses a custom volume source for postgres persistence instead of emptyDir
+    set:
+      postgres.persistence.volume:
+        nfs:
+          server: 192.168.1.10
+          path: /volumes/patchmon/postgres
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: postgres-data
+            nfs:
+              server: 192.168.1.10
+              path: /volumes/patchmon/postgres

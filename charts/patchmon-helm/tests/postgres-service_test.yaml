@@ -1,0 +1,26 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-service
+templates:
+  - templates/postgres-service.yaml
+tests:
+  - it: renders the postgres Service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-patchmon-postgres
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: database
+      - equal:
+          path: spec.ports[0]
+          value:
+            port: 5432
+            targetPort: 5432
+            protocol: TCP
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/name: postgres
+            app.kubernetes.io/instance: RELEASE-NAME

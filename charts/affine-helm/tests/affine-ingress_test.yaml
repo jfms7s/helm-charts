@@ -1,0 +1,84 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: affine-ingress
+templates:
+  - templates/affine-ingress.yaml
+tests:
+  - it: does not render when disabled by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the default host and path when enabled
+    set:
+      ingress.enabled: true
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-affine
+      - equal:
+          path: spec.rules[0].host
+          value: affine.example.local
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: RELEASE-NAME-affine
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 3010
+      - notExists:
+          path: spec.ingressClassName
+      - notExists:
+          path: spec.tls
+
+  - it: sets the ingress class name when provided
+    set:
+      ingress.enabled: true
+      ingress.className: traefik
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+
+  - it: renders annotations as quoted strings
+    set:
+      ingress.enabled: true
+      ingress.annotations:
+        traefik.ingress.kubernetes.io/rewrite-target: "/"
+    asserts:
+      - equal:
+          path: metadata.annotations["traefik.ingress.kubernetes.io/rewrite-target"]
+          value: "/"
+
+  - it: renders tls hosts and secretName when provided
+    set:
+      ingress.enabled: true
+      ingress.tls:
+        - secretName: affine-tls
+          hosts:
+            - affine.example.local
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: affine-tls
+      - equal:
+          path: spec.tls[0].hosts[0]
+          value: affine.example.local
+
+  - it: falls back to the default backend port when a path omits it
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: affine.example.local
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 3010

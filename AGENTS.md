@@ -56,11 +56,12 @@ helm package charts/affine-helm
 helm package charts/patchmon-helm
 helm package charts/common
 
-# Run tests
-helm lint charts/*
+# Run helm-unittest tests (rendered-manifest assertions, see charts/*/tests/)
+make helm-unittest
+make helm-unittest HELM_CHART=affine-helm
 ```
 
-See the [Makefile](Makefile) (`make help`) for the same checks CI runs, including `kubeconform` schema validation.
+See the [Makefile](Makefile) (`make help`) for the same checks CI runs, including `kubeconform` schema validation and `helm-unittest`. Use the `helm-chart-test` skill (`.claude/skills/helm-chart-test/SKILL.md`) to add or expand test coverage for a chart.
 
 ## Release Process
 

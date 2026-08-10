@@ -76,7 +76,16 @@ helm template my-release charts/common
 helm package charts/common
 ```
 
-Or use the [Makefile](Makefile) (`make help`) to lint, template, and validate every chart in the repo at once — the same checks CI runs.
+### Unit Testing
+
+Each chart has [helm-unittest](https://github.com/helm-unittest/helm-unittest) coverage in `charts/*/tests/` that asserts on rendered manifests (labels, conditionals, secrets, etc.):
+
+```bash
+make helm-unittest                        # every chart
+make helm-unittest HELM_CHART=common      # one chart
+```
+
+Or use the [Makefile](Makefile) (`make help`) to lint, template, validate, and unit-test every chart in the repo at once — the same checks CI runs.
 
 ## Contributing
 

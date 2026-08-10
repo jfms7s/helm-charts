@@ -1,0 +1,61 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: redis-deployment
+templates:
+  - templates/redis-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-redis
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: redis
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: cache
+            app.kubernetes.io/part-of: affine
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: affine-helm-0.2.2
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: redis:latest
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value:
+            - redis-cli
+            - --raw
+            - incr
+            - ping
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value: {}
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+      - notExists:
+          path: spec.template.spec.containers[0].env
+
+  - it: uses a custom redis image
+    set:
+      redis.image.repository: my-registry/redis
+      redis.image.tag: "7-alpine"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-registry/redis:7-alpine
+
+  - it: renders resources when set
+    set:
+      redis.resources:
+        limits:
+          cpu: 500m
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: 500m

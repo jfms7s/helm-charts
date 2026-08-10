@@ -1,0 +1,26 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: redis-service
+templates:
+  - templates/redis-service.yaml
+tests:
+  - it: renders the redis Service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-patchmon-redis
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: cache
+      - equal:
+          path: spec.ports[0]
+          value:
+            port: 6379
+            targetPort: 6379
+            protocol: TCP
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/name: redis
+            app.kubernetes.io/instance: RELEASE-NAME

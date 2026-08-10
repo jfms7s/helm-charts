@@ -1,0 +1,117 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-deployment
+templates:
+  - templates/postgres-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-postgres
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: postgres
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: database
+            app.kubernetes.io/part-of: affine
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: affine-helm-0.2.2
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: pgvector/pgvector:pg16
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_DB
+            value: affine
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_USER
+            value: affine
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-affine-postgres
+                key: postgres-password
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value:
+            - pg_isready
+            - -U
+            - affine
+            - -d
+            - affine
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value: {}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: postgres-data
+            emptyDir: {}
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+
+  - it: uses a custom postgres image, user, and db
+    set:
+      postgres.image.repository: my-registry/postgres
+      postgres.image.tag: "16"
+      postgres.user: custom_user
+      postgres.db: custom_db
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-registry/postgres:16
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_USER
+            value: custom_user
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value:
+            - pg_isready
+            - -U
+            - custom_user
+            - -d
+            - custom_db
+
+  - it: uses a custom volume source for postgres persistence instead of emptyDir
+    set:
+      postgres.persistence.volume:
+        nfs:
+          server: 192.168.1.10
+          path: /volumes/affine/postgres
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: postgres-data
+            nfs:
+              server: 192.168.1.10
+              path: /volumes/affine/postgres
+
+  - it: renders resources when set
+    set:
+      postgres.resources:
+        limits:
+          cpu: "1"
+          memory: 512Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "1"

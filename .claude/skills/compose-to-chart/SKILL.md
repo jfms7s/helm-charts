@@ -141,21 +141,26 @@ the new one alongside it, don't restructure:
 2. `README.md` (repo root) — an entry under "Available Charts" linking to
    the chart's own README.
 3. `.github/workflows/lint-test.yml` — add one line each to the "Lint Helm
-   charts", "Template Helm charts", and "Validate rendered templates" steps.
+   charts", "Template Helm charts", "Validate rendered templates", and
+   "Run helm-unittest" steps.
 4. `Makefile` — nothing to do; its targets glob `charts/*` automatically.
+5. `charts/<app>-helm/tests/` — use the `helm-chart-test` skill to add
+   helm-unittest coverage for the new or changed templates before calling the
+   chart done.
 
 ## Validation — do not skip, do not hand-wave
 
 Run the exact same checks CI runs, locally, before calling the work done:
 
 ```bash
-make test          # lint + template + kubeconform for every chart in the repo
+make test          # lint + template + kubeconform + helm-unittest for every chart
 ```
 
 This downloads `kubeconform` to `.bin/` on first run (same binary CI fetches
-from `yannh/kubeconform` releases) and runs `helm lint`, `helm template`,
-and schema validation against every chart's default `values.yaml`. Fix
-every failure — a chart that fails `make test` locally will fail CI. If you
+from `yannh/kubeconform` releases), installs the `helm-unittest` plugin if
+missing, and runs `helm lint`, `helm template`, schema validation, and any
+`charts/*/tests/**` helm-unittest suites. Fix every failure — a chart that
+fails `make test` locally will fail CI. If you
 changed `values.yaml` defaults in a way that makes the chart un-installable
 without overrides (e.g. a `CHANGE_ME` password), that's expected and
 `kubeconform` still passes since it only validates schema shape, not values

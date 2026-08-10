@@ -1,0 +1,74 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: guacd-deployment
+templates:
+  - templates/guacd-deployment.yaml
+tests:
+  - it: renders with chart defaults since guacd is enabled by default
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-patchmon-guacd
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: guacd
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: rdp-proxy
+            app.kubernetes.io/part-of: patchmon
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: patchmon-helm-0.1.0
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: guacamole/guacd:latest
+      - equal:
+          path: spec.template.spec.containers[0].ports[0]
+          value:
+            name: rdp-proxy
+            containerPort: 4822
+            protocol: TCP
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits
+          value:
+            cpu: "1"
+            memory: 512Mi
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0]
+          value:
+            mountPath: /tmp
+            name: tmp
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value:
+            name: tmp
+            emptyDir:
+              medium: Memory
+              sizeLimit: 64Mi
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+
+  - it: does not render when guacd is disabled
+    set:
+      guacd.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: uses a custom guacd image
+    set:
+      guacd.image.repository: my-registry/guacd
+      guacd.image.tag: "1.5.5"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-registry/guacd:1.5.5

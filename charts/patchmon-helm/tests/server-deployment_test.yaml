@@ -1,0 +1,169 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: server-deployment
+templates:
+  - templates/server-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-patchmon-server
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: server
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: server
+            app.kubernetes.io/part-of: patchmon
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: patchmon-helm-0.1.0
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: server
+            app.kubernetes.io/instance: RELEASE-NAME
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/patchmon/patchmon-server:latest
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CORS_ORIGIN
+            value: "http://localhost:3000"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-server
+                key: jwt-secret
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            value: postgresql://patchmon_user:CHANGE_ME@RELEASE-NAME-patchmon-postgres:5432/patchmon_db
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_HOST
+            value: RELEASE-NAME-patchmon-redis
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-redis
+                key: redis-password
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GUACD_ADDRESS
+            value: RELEASE-NAME-patchmon-guacd:4822
+      - equal:
+          path: spec.template.spec.containers[0].ports[0]
+          value:
+            name: http
+            containerPort: 3000
+            protocol: TCP
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.tcpSocket.port
+          value: http
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value: {}
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value: {}
+      - equal:
+          path: spec.template.spec.securityContext
+          value: {}
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+
+  - it: omits GUACD_ADDRESS when guacd is disabled
+    set:
+      guacd.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GUACD_ADDRESS
+            value: RELEASE-NAME-patchmon-guacd:4822
+
+  - it: appends extraEnv entries after the built-in vars
+    set:
+      server.extraEnv:
+        - name: LOG_LEVEL
+          value: debug
+        - name: TZ
+          value: UTC
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LOG_LEVEL
+            value: debug
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TZ
+            value: UTC
+
+  - it: uses a custom image repository and tag
+    set:
+      image.repository: my-registry/patchmon-server
+      image.tag: "1.2.3"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-registry/patchmon-server:1.2.3
+
+  - it: builds CORS_ORIGIN and DATABASE_URL from custom values
+    set:
+      server.corsOrigin: "https://patchmon.example.com"
+      postgres.user: custom_user
+      postgres.db: custom_db
+      postgres.password: s3cr3t
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CORS_ORIGIN
+            value: "https://patchmon.example.com"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            value: postgresql://custom_user:s3cr3t@RELEASE-NAME-patchmon-postgres:5432/custom_db
+
+  - it: scales replicas and renders resources/securityContext when set
+    set:
+      replicas: 3
+      resources:
+        limits:
+          cpu: "1"
+      securityContext:
+        runAsNonRoot: true
+      podSecurityContext:
+        fsGroup: 1000
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "1"
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000

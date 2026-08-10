@@ -20,6 +20,10 @@ jobs:
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
 
+      - name: Install helm-unittest plugin
+        run: |
+          helm plugin install https://github.com/helm-unittest/helm-unittest.git --version 1.1.2 --verify=false
+
       - name: Lint Helm charts
         run: |
           helm lint charts/common
@@ -45,3 +49,9 @@ jobs:
           helm template test-release charts/common --values charts/common/values.yaml | kubeconform -summary
           helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml | kubeconform -summary
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml | kubeconform -summary
+
+      - name: Run helm-unittest
+        run: |
+          helm unittest charts/common --file 'tests/**/*.yaml'
+          helm unittest charts/affine-helm --file 'tests/**/*.yaml'
+          helm unittest charts/patchmon-helm --file 'tests/**/*.yaml'
