@@ -45,6 +45,15 @@ entries:
     version: 0.2.1
   common:
   - apiVersion: v2
+    created: "2026-08-11T00:10:13.065796922Z"
+    description: A Helm chart for Kubernetes
+    digest: 9c7ba15ebe352d968d62f7d0b954094e5114078de3208fbbb5aa9591a1fe3343
+    name: common
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/common-0.5.5/common-0.5.5.tgz
+    version: 0.5.5
+  - apiVersion: v2
     created: "2026-08-08T17:05:50.590698718Z"
     description: A Helm chart for Kubernetes
     digest: 5e60e52d9435478feef00afae30236a88dfcab66dc38433db6382862e5330440
@@ -148,4 +157,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.1.0/patchmon-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-08-10T04:27:12.657472554Z"
+generated: "2026-08-11T00:10:13.231359314Z"
