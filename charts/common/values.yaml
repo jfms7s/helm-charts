@@ -74,6 +74,17 @@ deploy:
   ##
   volumeMounts: []
 
+  ## @param deploy.initContainers Optionally specify a list of initContainers, rendered verbatim
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+  ##
+  initContainers: []
+    # - name: init-example
+    #   image: busybox:1.36
+    #   command: ["sh", "-c", "echo init"]
+    #   volumeMounts:
+    #     - name: extra
+    #       mountPath: /extra
+
   ## @param deploy.env Environment variables for the container
   ##
   env: []

@@ -173,6 +173,31 @@ tests:
             name: extra
             mountPath: /extra
 
+  - it: omits initContainers when not set
+    asserts:
+      - notExists:
+          path: spec.template.spec.initContainers
+
+  - it: renders initContainers verbatim when set
+    set:
+      deploy.initContainers:
+        - name: init-example
+          image: busybox:1.36
+          command: ["sh", "-c", "echo init"]
+          volumeMounts:
+            - name: extra
+              mountPath: /extra
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers
+          content:
+            name: init-example
+            image: busybox:1.36
+            command: ["sh", "-c", "echo init"]
+            volumeMounts:
+              - name: extra
+                mountPath: /extra
+
   - it: renders commonAnnotations on the pod template
     set:
       commonAnnotations:
