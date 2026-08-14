@@ -97,6 +97,27 @@ tests:
             name: MY_VAR
             value: my-value
 
+  - it: omits command and args when not set
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].command
+      - notExists:
+          path: spec.template.spec.containers[0].args
+
+  - it: renders command and args when set
+    set:
+      deploy.command:
+        - flood
+      deploy.args:
+        - --auth=none
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value: ["flood"]
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: ["--auth=none"]
+
   - it: renders liveness, readiness, and startup probes only when set
     set:
       deploy.livenessProbe:

@@ -89,6 +89,16 @@ deploy:
   ##
   env: []
 
+  ## @param deploy.command Override the container's ENTRYPOINT (Docker exec form)
+  ##
+  command: []
+    # - flood
+
+  ## @param deploy.args Override the container's CMD (Docker exec form)
+  ##
+  args: []
+    # - --auth=none
+
   ## @param deploy.containerPorts Container ports configuration
   ##
   containerPorts: {}

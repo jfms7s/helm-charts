@@ -37,6 +37,12 @@ spec:
 {{- if .Values.deploy.env }}
           env: {{- .Values.deploy.env | toYaml | nindent 12 }}
 {{- end }}
+{{- if .Values.deploy.command }}
+          command: {{- .Values.deploy.command | toYaml | nindent 12 }}
+{{- end }}
+{{- if .Values.deploy.args }}
+          args: {{- .Values.deploy.args | toYaml | nindent 12 }}
+{{- end }}
           ports:
 {{- range $k, $v := .Values.deploy.containerPorts }}
   {{- if kindIs "map" $v }}
