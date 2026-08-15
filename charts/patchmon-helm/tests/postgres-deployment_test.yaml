@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: database
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.1.0
+            helm.sh/chart: patchmon-helm-0.2.0
       - equal:
           path: spec.strategy.type
           value: Recreate
@@ -96,3 +96,17 @@ tests:
             nfs:
               server: 192.168.1.10
               path: /volumes/patchmon/postgres
+
+  - it: sources POSTGRES_PASSWORD from postgres.existingSecret when set
+    set:
+      postgres.existingSecret: my-external-secret
+      postgres.existingSecretPasswordKey: MY_KEY
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-external-secret
+                key: MY_KEY

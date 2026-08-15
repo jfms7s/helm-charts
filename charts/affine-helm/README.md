@@ -28,6 +28,7 @@ Set `postgres.password` explicitly before installing — see the note below.
 | `postgres.image.*` | Postgres (pgvector) image | `pgvector/pgvector:pg16` |
 | `postgres.db` / `postgres.user` | Postgres database/user | `affine` / `affine` |
 | `postgres.password` | Postgres password (see note below) | `"CHANGE_ME"` |
+| `postgres.existingSecret` / `postgres.existingSecretPasswordKey` | Use a pre-existing Secret for the password instead of `postgres.password` (see note below) | `""` / `"postgres-password"` |
 | `postgres.resources` | Postgres container resources | `{}` |
 | `postgres.persistence.volume` | Volume source (excl. `name`) for the Postgres data dir | `{}` (emptyDir) |
 | `redis.image.*` | Redis image | `redis:latest` |
@@ -44,6 +45,16 @@ auto-generate a random password and persist it across syncs the way a plain
 `helm install` could — it would silently rotate (and lock you out of your
 data) on the next sync. `postgres.password` must be set explicitly by the
 caller, e.g. from a secrets file kept out of version control.
+
+Alternatively, set `postgres.existingSecret` to the name of a Secret you
+manage yourself (e.g. one synced by an external secrets manager) holding the
+password under `postgres.existingSecretPasswordKey` (default
+`postgres-password`). When set, this chart stops rendering its own Secret
+from `postgres.password` and every consumer (the Postgres container itself,
+the server's `DATABASE_URL`, the migration Job) references the external one
+instead. Leave `existingSecret` unset to keep the default
+plaintext-`values.yaml` behavior described above — the two are mutually
+exclusive, not layered.
 
 ### Persistent storage
 

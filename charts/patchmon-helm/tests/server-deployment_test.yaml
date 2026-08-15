@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: server
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.1.0
+            helm.sh/chart: patchmon-helm-0.2.0
       - equal:
           path: spec.replicas
           value: 1
@@ -46,8 +46,16 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-postgres
+                key: postgres-password
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
             name: DATABASE_URL
-            value: postgresql://patchmon_user:CHANGE_ME@RELEASE-NAME-patchmon-postgres:5432/patchmon_db
+            value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@RELEASE-NAME-patchmon-postgres:5432/patchmon_db
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -142,7 +150,58 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: DATABASE_URL
-            value: postgresql://custom_user:s3cr3t@RELEASE-NAME-patchmon-postgres:5432/custom_db
+            value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@RELEASE-NAME-patchmon-postgres:5432/custom_db
+
+  - it: sources JWT_SECRET/SESSION_SECRET/AI_ENCRYPTION_KEY from server.existingSecret when set
+    set:
+      server.existingSecret: ext-server-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: JWT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: ext-server-secret
+                key: jwt-secret
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SESSION_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: ext-server-secret
+                key: session-secret
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: AI_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: ext-server-secret
+                key: ai-encryption-key
+
+  - it: sources POSTGRES_PASSWORD/REDIS_PASSWORD from existingSecret when set
+    set:
+      postgres.existingSecret: ext-pg-secret
+      redis.existingSecret: ext-redis-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ext-pg-secret
+                key: postgres-password
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ext-redis-secret
+                key: redis-password
 
   - it: scales replicas and renders resources/securityContext when set
     set:

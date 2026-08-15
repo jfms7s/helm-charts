@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: rdp-proxy
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.1.0
+            helm.sh/chart: patchmon-helm-0.2.0
       - equal:
           path: spec.template.spec.containers[0].image
           value: guacamole/guacd:latest

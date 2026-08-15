@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: database
             app.kubernetes.io/part-of: affine
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: affine-helm-0.2.2
+            helm.sh/chart: affine-helm-0.3.0
       - equal:
           path: spec.replicas
           value: 1
@@ -115,3 +115,17 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.cpu
           value: "1"
+
+  - it: sources POSTGRES_PASSWORD from postgres.existingSecret when set
+    set:
+      postgres.existingSecret: my-external-secret
+      postgres.existingSecretPasswordKey: MY_KEY
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-external-secret
+                key: MY_KEY

@@ -17,6 +17,16 @@ server:
   jwtSecret: "CHANGE_ME"
   sessionSecret: "CHANGE_ME"
   aiEncryptionKey: "CHANGE_ME"
+  # Optional: name of a pre-existing Kubernetes Secret holding
+  # jwtSecret/sessionSecret/aiEncryptionKey instead of the plaintext values
+  # above (e.g. one synced by an external secrets manager). When set, this
+  # chart stops rendering its own Secret and every consumer references this
+  # one instead -- leave unset to keep the default plaintext-values.yaml
+  # behavior untouched. Must contain all three keys named below.
+  existingSecret: ""
+  existingSecretJwtKey: "jwt-secret"
+  existingSecretSessionKey: "session-secret"
+  existingSecretAiEncryptionKey: "ai-encryption-key"
   # Extra environment variables appended to the server container, for any of
   # the optional settings in PatchMon's docker/env.example (LOG_LEVEL,
   # OIDC_*, rate limits, TZ, ...). Each entry is {name, value}.
@@ -34,6 +44,16 @@ postgres:
   # auto-generated and persisted across syncs -- set this explicitly (e.g.
   # from a values-secrets file kept out of version control).
   password: "CHANGE_ME"
+  # Optional: name of a pre-existing Kubernetes Secret holding the password
+  # instead of the plaintext value above. When set, this chart stops
+  # rendering its own Secret from `password` and every consumer references
+  # this one instead -- leave unset to keep the default plaintext-values.yaml
+  # behavior untouched.
+  existingSecret: ""
+  # Key within existingSecret holding the password. Only read when
+  # existingSecret is set; the chart's own generated Secret always uses
+  # "postgres-password".
+  existingSecretPasswordKey: "postgres-password"
   resources: {}
   # Volume source for the Postgres data directory. Each value is the full
   # body of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
@@ -56,6 +76,14 @@ redis:
   # Pinned password for Redis (started with --requirepass). Same rationale
   # as postgres.password -- set explicitly, not auto-generated.
   password: "CHANGE_ME"
+  # Optional: name of a pre-existing Kubernetes Secret holding the password
+  # instead of the plaintext value above. Same behavior/rationale as
+  # postgres.existingSecret above.
+  existingSecret: ""
+  # Key within existingSecret holding the password. Only read when
+  # existingSecret is set; the chart's own generated Secret always uses
+  # "redis-password".
+  existingSecretPasswordKey: "redis-password"
   resources: {}
   # Volume source for the Redis data directory. Same shape as
   # postgres.persistence.volume above; defaults to emptyDir when unset.

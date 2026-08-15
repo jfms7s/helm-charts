@@ -37,3 +37,22 @@ explicitly; values.yaml ships "CHANGE_ME" as a placeholder.
 {{- define "affine-helm.postgres.password" -}}
 {{- .Values.postgres.password | default "CHANGE_ME" -}}
 {{- end -}}
+
+{{/*
+Name of the Secret holding the Postgres password. Defaults to this chart's
+own auto-generated Secret; set postgres.existingSecret to point at a
+pre-existing Secret instead (e.g. one synced by an external secrets
+manager) without any other template changes.
+*/}}
+{{- define "affine-helm.postgres.secretName" -}}
+{{- .Values.postgres.existingSecret | default (printf "%s-affine-postgres" .Release.Name) -}}
+{{- end -}}
+
+{{/*
+Key within that Secret holding the password. Only relevant when
+postgres.existingSecret is set -- the chart's own generated Secret always
+uses "postgres-password".
+*/}}
+{{- define "affine-helm.postgres.secretKey" -}}
+{{- .Values.postgres.existingSecretPasswordKey | default "postgres-password" -}}
+{{- end -}}

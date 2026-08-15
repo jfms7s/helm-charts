@@ -28,8 +28,8 @@ spec:
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-patchmon-redis
-                  key: redis-password
+                  name: {{ include "patchmon-helm.redis.secretName" . }}
+                  key: {{ include "patchmon-helm.redis.secretKey" . }}
           livenessProbe:
             exec:
               command:

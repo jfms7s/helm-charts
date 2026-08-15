@@ -26,8 +26,13 @@ spec:
           env:
             - name: AFFINE_INDEXER_ENABLED
               value: "false"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "affine-helm.postgres.secretName" . }}
+                  key: {{ include "affine-helm.postgres.secretKey" . }}
             - name: DATABASE_URL
-              value: postgresql://{{ .Values.postgres.user }}:{{ include "affine-helm.postgres.password" . }}@{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.db }}
+              value: postgresql://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@{{ .Release.Name }}-postgres:5432/{{ .Values.postgres.db }}
             - name: REDIS_SERVER_HOST
               value: {{ .Release.Name }}-redis
           volumeMounts:

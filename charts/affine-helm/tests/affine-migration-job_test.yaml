@@ -34,8 +34,16 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-affine-postgres
+                key: postgres-password
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
             name: DATABASE_URL
-            value: postgresql://affine:CHANGE_ME@RELEASE-NAME-postgres:5432/affine
+            value: postgresql://affine:$(POSTGRES_PASSWORD)@RELEASE-NAME-postgres:5432/affine
       - equal:
           path: spec.template.spec.restartPolicy
           value: OnFailure

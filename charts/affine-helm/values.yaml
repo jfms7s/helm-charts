@@ -33,6 +33,16 @@ postgres:
   # persisted across syncs -- set this explicitly (e.g. from a values-secrets
   # file kept out of version control).
   password: "CHANGE_ME"
+  # Optional: name of a pre-existing Kubernetes Secret holding the password
+  # instead of the plaintext value above (e.g. one synced by an external
+  # secrets manager). When set, this chart stops rendering its own Secret
+  # from `password` and every consumer references this one instead -- leave
+  # unset to keep the default plaintext-values.yaml behavior untouched.
+  existingSecret: ""
+  # Key within existingSecret holding the password. Only read when
+  # existingSecret is set; the chart's own generated Secret always uses
+  # "postgres-password".
+  existingSecretPasswordKey: "postgres-password"
   resources: {}
   # Volume source for the Postgres data directory. Same shape as
   # persistence.config.volume above; defaults to emptyDir when unset.

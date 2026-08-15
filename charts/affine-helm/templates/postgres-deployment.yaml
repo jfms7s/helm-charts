@@ -30,8 +30,8 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-affine-postgres
-                  key: postgres-password
+                  name: {{ include "affine-helm.postgres.secretName" . }}
+                  key: {{ include "affine-helm.postgres.secretKey" . }}
             - name: POSTGRES_USER
               value: {{ .Values.postgres.user }}
           livenessProbe:

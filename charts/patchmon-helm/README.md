@@ -28,14 +28,18 @@ installing — see the note below.
 | `replicas` | PatchMon server replica count | `1` |
 | `server.corsOrigin` | Allowed frontend origin(s), comma-separated | `http://localhost:3000` |
 | `server.jwtSecret` / `server.sessionSecret` / `server.aiEncryptionKey` | Server secrets (see note below) | `"CHANGE_ME"` |
+| `server.existingSecret` | Use a pre-existing Secret for the three server secrets above instead (see note below) | `""` |
+| `server.existingSecretJwtKey` / `server.existingSecretSessionKey` / `server.existingSecretAiEncryptionKey` | Keys within `server.existingSecret` | `"jwt-secret"` / `"session-secret"` / `"ai-encryption-key"` |
 | `server.extraEnv` | Extra `{name, value}` env vars for the server container | `[]` |
 | `postgres.image.*` | Postgres image | `postgres:17-alpine` |
 | `postgres.db` / `postgres.user` | Postgres database/user | `patchmon_db` / `patchmon_user` |
 | `postgres.password` | Postgres password (see note below) | `"CHANGE_ME"` |
+| `postgres.existingSecret` / `postgres.existingSecretPasswordKey` | Use a pre-existing Secret for the password instead of `postgres.password` (see note below) | `""` / `"postgres-password"` |
 | `postgres.resources` | Postgres container resources | `{}` |
 | `postgres.persistence.volume` | Volume source (excl. `name`) for the Postgres data dir | `{}` (emptyDir) |
 | `redis.image.*` | Redis image | `redis:7-alpine` |
 | `redis.password` | Redis password (see note below) | `"CHANGE_ME"` |
+| `redis.existingSecret` / `redis.existingSecretPasswordKey` | Use a pre-existing Secret for the password instead of `redis.password` (see note below) | `""` / `"redis-password"` |
 | `redis.resources` | Redis container resources | `{}` |
 | `redis.persistence.volume` | Volume source (excl. `name`) for the Redis data dir | `{}` (emptyDir) |
 | `guacd.enabled` | Deploy the guacd sidecar (in-browser RDP to Windows hosts) | `true` |
@@ -58,6 +62,16 @@ control. Generate each of the server secrets with:
 ```bash
 openssl rand -hex 64
 ```
+
+Alternatively, set the matching `<resource>.existingSecret` (`server.`,
+`postgres.`, `redis.`) to the name of a Secret you manage yourself (e.g. one
+synced by an external secrets manager) holding the values under the
+corresponding `existingSecret*Key` value(s) above. When set, this chart
+stops rendering its own Secret for that resource and every consumer
+references the external one instead. Leave `existingSecret` unset to keep
+the default plaintext-`values.yaml` behavior described above — the two are
+mutually exclusive per resource, not layered, and each of the three
+resources (server/postgres/redis) toggles independently.
 
 ### Persistent storage
 

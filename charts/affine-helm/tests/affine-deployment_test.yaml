@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: server
             app.kubernetes.io/part-of: affine
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: affine-helm-0.2.2
+            helm.sh/chart: affine-helm-0.3.0
       - equal:
           path: metadata.annotations["argocd.argoproj.io/sync-wave"]
           value: "2"
@@ -42,8 +42,16 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-affine-postgres
+                key: postgres-password
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
             name: DATABASE_URL
-            value: postgresql://affine:CHANGE_ME@RELEASE-NAME-postgres:5432/affine
+            value: postgresql://affine:$(POSTGRES_PASSWORD)@RELEASE-NAME-postgres:5432/affine
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -126,7 +134,7 @@ tests:
           path: spec.replicas
           value: 3
 
-  - it: builds DATABASE_URL from custom postgres values
+  - it: builds DATABASE_URL from custom postgres values via $(POSTGRES_PASSWORD) substitution
     set:
       postgres.user: custom_user
       postgres.db: custom_db
@@ -136,7 +144,21 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: DATABASE_URL
-            value: postgresql://custom_user:s3cr3t@RELEASE-NAME-postgres:5432/custom_db
+            value: postgresql://custom_user:$(POSTGRES_PASSWORD)@RELEASE-NAME-postgres:5432/custom_db
+
+  - it: sources POSTGRES_PASSWORD and the Secret name from postgres.existingSecret when set
+    set:
+      postgres.existingSecret: my-external-secret
+      postgres.existingSecretPasswordKey: MY_KEY
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-external-secret
+                key: MY_KEY
 
   - it: uses a custom volume source for config and storage persistence instead of emptyDir
     set:

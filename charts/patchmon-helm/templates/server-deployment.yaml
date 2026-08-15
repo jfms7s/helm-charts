@@ -24,18 +24,18 @@ spec:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-patchmon-server
-                  key: jwt-secret
+                  name: {{ include "patchmon-helm.server.secretName" . }}
+                  key: {{ include "patchmon-helm.server.jwtSecretKey" . }}
             - name: SESSION_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-patchmon-server
-                  key: session-secret
+                  name: {{ include "patchmon-helm.server.secretName" . }}
+                  key: {{ include "patchmon-helm.server.sessionSecretKey" . }}
             - name: AI_ENCRYPTION_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-patchmon-server
-                  key: ai-encryption-key
+                  name: {{ include "patchmon-helm.server.secretName" . }}
+                  key: {{ include "patchmon-helm.server.aiEncryptionKeyKey" . }}
             - name: POSTGRES_HOST
               value: {{ .Release.Name }}-patchmon-postgres
             - name: POSTGRES_USER
@@ -45,10 +45,10 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-patchmon-postgres
-                  key: postgres-password
+                  name: {{ include "patchmon-helm.postgres.secretName" . }}
+                  key: {{ include "patchmon-helm.postgres.secretKey" . }}
             - name: DATABASE_URL
-              value: postgresql://{{ .Values.postgres.user }}:{{ include "patchmon-helm.postgres.password" . }}@{{ .Release.Name }}-patchmon-postgres:5432/{{ .Values.postgres.db }}
+              value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@{{ .Release.Name }}-patchmon-postgres:5432/{{ .Values.postgres.db }}
             - name: REDIS_HOST
               value: {{ .Release.Name }}-patchmon-redis
             - name: REDIS_PORT
@@ -58,8 +58,8 @@ spec:
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-patchmon-redis
-                  key: redis-password
+                  name: {{ include "patchmon-helm.redis.secretName" . }}
+                  key: {{ include "patchmon-helm.redis.secretKey" . }}
             {{- if .Values.guacd.enabled }}
             - name: GUACD_ADDRESS
               value: {{ .Release.Name }}-patchmon-guacd:4822
