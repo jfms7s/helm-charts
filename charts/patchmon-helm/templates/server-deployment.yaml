@@ -22,20 +22,11 @@ spec:
             - name: CORS_ORIGIN
               value: {{ .Values.server.corsOrigin | quote }}
             - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "patchmon-helm.server.secretName" . }}
-                  key: {{ include "patchmon-helm.server.jwtSecretKey" . }}
+              {{- include "patchmon-helm.credentialEnv" .Values.server.jwtSecret | nindent 14 }}
             - name: SESSION_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "patchmon-helm.server.secretName" . }}
-                  key: {{ include "patchmon-helm.server.sessionSecretKey" . }}
+              {{- include "patchmon-helm.credentialEnv" .Values.server.sessionSecret | nindent 14 }}
             - name: AI_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "patchmon-helm.server.secretName" . }}
-                  key: {{ include "patchmon-helm.server.aiEncryptionKeyKey" . }}
+              {{- include "patchmon-helm.credentialEnv" .Values.server.aiEncryptionKey | nindent 14 }}
             - name: POSTGRES_HOST
               value: {{ .Release.Name }}-patchmon-postgres
             - name: POSTGRES_USER
@@ -43,10 +34,7 @@ spec:
             - name: POSTGRES_DB
               value: {{ .Values.postgres.db }}
             - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "patchmon-helm.postgres.secretName" . }}
-                  key: {{ include "patchmon-helm.postgres.secretKey" . }}
+              {{- include "patchmon-helm.credentialEnv" .Values.postgres.password | nindent 14 }}
             - name: DATABASE_URL
               value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@{{ .Release.Name }}-patchmon-postgres:5432/{{ .Values.postgres.db }}
             - name: REDIS_HOST
@@ -56,10 +44,7 @@ spec:
             - name: REDIS_DB
               value: "0"
             - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "patchmon-helm.redis.secretName" . }}
-                  key: {{ include "patchmon-helm.redis.secretKey" . }}
+              {{- include "patchmon-helm.credentialEnv" .Values.redis.password | nindent 14 }}
             {{- if .Values.guacd.enabled }}
             - name: GUACD_ADDRESS
               value: {{ .Release.Name }}-patchmon-guacd:4822

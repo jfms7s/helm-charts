@@ -15,7 +15,8 @@ Redis cache.
 helm install my-release .
 ```
 
-Set `postgres.password` explicitly before installing — see the note below.
+Set `postgres.password.value` (or `postgres.password.valueFrom`) explicitly
+before installing — see the note below.
 
 ## Configuration
 
@@ -27,8 +28,7 @@ Set `postgres.password` explicitly before installing — see the note below.
 | `persistence.storage.volume` | Volume source (excl. `name`) for `/root/.affine/storage` | `{}` (emptyDir) |
 | `postgres.image.*` | Postgres (pgvector) image | `pgvector/pgvector:pg16` |
 | `postgres.db` / `postgres.user` | Postgres database/user | `affine` / `affine` |
-| `postgres.password` | Postgres password (see note below) | `"CHANGE_ME"` |
-| `postgres.existingSecret` / `postgres.existingSecretPasswordKey` | Use a pre-existing Secret for the password instead of `postgres.password` (see note below) | `""` / `"postgres-password"` |
+| `postgres.password.value` / `postgres.password.valueFrom` | Postgres password, as a standard Kubernetes EnvVarSource (see note below) | `"CHANGE_ME"` / unset |
 | `postgres.resources` | Postgres container resources | `{}` |
 | `postgres.persistence.volume` | Volume source (excl. `name`) for the Postgres data dir | `{}` (emptyDir) |
 | `redis.image.*` | Redis image | `redis:latest` |
@@ -43,18 +43,23 @@ Set `postgres.password` explicitly before installing — see the note below.
 Argo CD does not support Helm's `lookup` function, so this chart can't safely
 auto-generate a random password and persist it across syncs the way a plain
 `helm install` could — it would silently rotate (and lock you out of your
-data) on the next sync. `postgres.password` must be set explicitly by the
-caller, e.g. from a secrets file kept out of version control.
+data) on the next sync. `postgres.password` is a standard Kubernetes
+`EnvVarSource` (the same shape as a container's `env[].valueFrom`): set
+`postgres.password.value` to a plain literal, e.g. from a secrets file kept
+out of version control, or `postgres.password.valueFrom` (e.g. a
+`secretKeyRef`) to source it from a Secret you manage yourself instead (an
+external secrets manager, ...). `valueFrom` takes precedence whenever it's
+set — every consumer (the Postgres container itself, the server's
+`DATABASE_URL`, the migration Job) resolves the same way:
 
-Alternatively, set `postgres.existingSecret` to the name of a Secret you
-manage yourself (e.g. one synced by an external secrets manager) holding the
-password under `postgres.existingSecretPasswordKey` (default
-`postgres-password`). When set, this chart stops rendering its own Secret
-from `postgres.password` and every consumer (the Postgres container itself,
-the server's `DATABASE_URL`, the migration Job) references the external one
-instead. Leave `existingSecret` unset to keep the default
-plaintext-`values.yaml` behavior described above — the two are mutually
-exclusive, not layered.
+```yaml
+postgres:
+  password:
+    valueFrom:
+      secretKeyRef:
+        name: affine-secrets
+        key: postgres-password
+```
 
 ### Persistent storage
 
@@ -93,8 +98,8 @@ per-workspace, from the Affine UI itself (Workspace Settings → Integrations
 
 This chart creates: a Deployment + Service (+ optional Ingress) for the
 Affine server, a Deployment + Service for Postgres, a Deployment + Service
-for Redis, a Secret holding the Postgres password, a Secret holding the
-rendered `copilot` `config.json`, and a migration Job.
+for Redis, a Secret holding the rendered `copilot` `config.json`, and a
+migration Job.
 
 ### Migration Job ordering
 

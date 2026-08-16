@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: database
             app.kubernetes.io/part-of: affine
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: affine-helm-0.3.0
+            helm.sh/chart: affine-helm-0.4.0
       - equal:
           path: spec.replicas
           value: 1
@@ -42,10 +42,7 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: POSTGRES_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: RELEASE-NAME-affine-postgres
-                key: postgres-password
+            value: "CHANGE_ME"
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.exec.command
           value:
@@ -116,10 +113,10 @@ tests:
           path: spec.template.spec.containers[0].resources.limits.cpu
           value: "1"
 
-  - it: sources POSTGRES_PASSWORD from postgres.existingSecret when set
+  - it: sources POSTGRES_PASSWORD from postgres.password.valueFrom when set, taking precedence over the value default
     set:
-      postgres.existingSecret: my-external-secret
-      postgres.existingSecretPasswordKey: MY_KEY
+      postgres.password.valueFrom.secretKeyRef.name: my-external-secret
+      postgres.password.valueFrom.secretKeyRef.key: MY_KEY
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env

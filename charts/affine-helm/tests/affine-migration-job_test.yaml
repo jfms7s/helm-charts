@@ -35,10 +35,7 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: POSTGRES_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: RELEASE-NAME-affine-postgres
-                key: postgres-password
+            value: "CHANGE_ME"
       - contains:
           path: spec.template.spec.containers[0].env
           content:

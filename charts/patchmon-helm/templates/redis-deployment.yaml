@@ -26,10 +26,7 @@ spec:
             - $(REDIS_PASSWORD)
           env:
             - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "patchmon-helm.redis.secretName" . }}
-                  key: {{ include "patchmon-helm.redis.secretKey" . }}
+              {{- include "patchmon-helm.credentialEnv" .Values.redis.password | nindent 14 }}
           livenessProbe:
             exec:
               command:

@@ -10,23 +10,23 @@ server:
   # multiple origins. See PatchMon's docker/env.example (CORS_ORIGIN).
   corsOrigin: "http://localhost:3000"
   # Secrets consumed by the server (JWT signing, session cookies, and AI
-  # credential encryption). Argo CD does not support Helm's `lookup`
+  # credential encryption), each a standard Kubernetes EnvVarSource: set
+  # `value` for a plain literal (Argo CD does not support Helm's `lookup`
   # function, so these can't be safely auto-generated and persisted across
-  # syncs -- set them explicitly (e.g. from a values-secrets file kept out
-  # of version control). Generate each with: openssl rand -hex 64
-  jwtSecret: "CHANGE_ME"
-  sessionSecret: "CHANGE_ME"
-  aiEncryptionKey: "CHANGE_ME"
-  # Optional: name of a pre-existing Kubernetes Secret holding
-  # jwtSecret/sessionSecret/aiEncryptionKey instead of the plaintext values
-  # above (e.g. one synced by an external secrets manager). When set, this
-  # chart stops rendering its own Secret and every consumer references this
-  # one instead -- leave unset to keep the default plaintext-values.yaml
-  # behavior untouched. Must contain all three keys named below.
-  existingSecret: ""
-  existingSecretJwtKey: "jwt-secret"
-  existingSecretSessionKey: "session-secret"
-  existingSecretAiEncryptionKey: "ai-encryption-key"
+  # syncs -- pin explicitly, e.g. from a values-secrets file kept out of
+  # version control; generate each with `openssl rand -hex 64`), or
+  # `valueFrom` (e.g. a `secretKeyRef`) to source it from a Secret you manage
+  # yourself instead. `valueFrom` takes precedence when both are set; each
+  # of the three toggles independently.
+  jwtSecret:
+    value: "CHANGE_ME"
+    valueFrom: {}
+  sessionSecret:
+    value: "CHANGE_ME"
+    valueFrom: {}
+  aiEncryptionKey:
+    value: "CHANGE_ME"
+    valueFrom: {}
   # Extra environment variables appended to the server container, for any of
   # the optional settings in PatchMon's docker/env.example (LOG_LEVEL,
   # OIDC_*, rate limits, TZ, ...). Each entry is {name, value}.
@@ -39,21 +39,16 @@ postgres:
     pullPolicy: IfNotPresent
   db: patchmon_db
   user: patchmon_user
-  # Pinned password for the patchmon-postgres database. Argo CD does not
-  # support Helm's `lookup` function, so a password can't be safely
-  # auto-generated and persisted across syncs -- set this explicitly (e.g.
-  # from a values-secrets file kept out of version control).
-  password: "CHANGE_ME"
-  # Optional: name of a pre-existing Kubernetes Secret holding the password
-  # instead of the plaintext value above. When set, this chart stops
-  # rendering its own Secret from `password` and every consumer references
-  # this one instead -- leave unset to keep the default plaintext-values.yaml
-  # behavior untouched.
-  existingSecret: ""
-  # Key within existingSecret holding the password. Only read when
-  # existingSecret is set; the chart's own generated Secret always uses
-  # "postgres-password".
-  existingSecretPasswordKey: "postgres-password"
+  # Password for the patchmon-postgres database, as a standard Kubernetes
+  # EnvVarSource: set `value` for a plain literal (Argo CD does not support
+  # Helm's `lookup` function, so this can't be safely auto-generated and
+  # persisted across syncs -- pin it explicitly, e.g. from a values-secrets
+  # file kept out of version control), or `valueFrom` (e.g. a
+  # `secretKeyRef`) to source it from a Secret you manage yourself instead.
+  # `valueFrom` takes precedence when both are set.
+  password:
+    value: "CHANGE_ME"
+    valueFrom: {}
   resources: {}
   # Volume source for the Postgres data directory. Each value is the full
   # body of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
@@ -73,17 +68,11 @@ redis:
     repository: redis
     tag: "7-alpine"
     pullPolicy: IfNotPresent
-  # Pinned password for Redis (started with --requirepass). Same rationale
-  # as postgres.password -- set explicitly, not auto-generated.
-  password: "CHANGE_ME"
-  # Optional: name of a pre-existing Kubernetes Secret holding the password
-  # instead of the plaintext value above. Same behavior/rationale as
-  # postgres.existingSecret above.
-  existingSecret: ""
-  # Key within existingSecret holding the password. Only read when
-  # existingSecret is set; the chart's own generated Secret always uses
-  # "redis-password".
-  existingSecretPasswordKey: "redis-password"
+  # Password for Redis (started with --requirepass), as a standard
+  # Kubernetes EnvVarSource. Same shape/rationale as postgres.password above.
+  password:
+    value: "CHANGE_ME"
+    valueFrom: {}
   resources: {}
   # Volume source for the Redis data directory. Same shape as
   # postgres.persistence.volume above; defaults to emptyDir when unset.

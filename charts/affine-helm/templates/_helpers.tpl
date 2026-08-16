@@ -29,30 +29,18 @@ app.kubernetes.io/instance: {{ .context.Release.Name }}
 {{- end -}}
 
 {{/*
-Resolve the Postgres password from values. Argo CD does not support Helm's
-`lookup` function, so -- unlike a plain `helm install` -- a password can't be
-safely auto-generated and persisted across syncs. Callers must pin one
-explicitly; values.yaml ships "CHANGE_ME" as a placeholder.
+Render an env var's value/valueFrom body from a {value, valueFrom} map, e.g.
+{{- include "affine-helm.credentialEnv" .Values.postgres.password | nindent N }}
+valueFrom (a standard corev1 EnvVarSource body, e.g. secretKeyRef) takes
+precedence over value when both are set. value defaults to "CHANGE_ME",
+since Argo CD does not support Helm's `lookup` function, so -- unlike a
+plain `helm install` -- a password can't be safely auto-generated and
+persisted across syncs; callers must pin one explicitly.
 */}}
-{{- define "affine-helm.postgres.password" -}}
-{{- .Values.postgres.password | default "CHANGE_ME" -}}
+{{- define "affine-helm.credentialEnv" -}}
+{{- if .valueFrom -}}
+valueFrom: {{- toYaml .valueFrom | nindent 2 }}
+{{- else -}}
+value: {{ .value | default "CHANGE_ME" | quote }}
 {{- end -}}
-
-{{/*
-Name of the Secret holding the Postgres password. Defaults to this chart's
-own auto-generated Secret; set postgres.existingSecret to point at a
-pre-existing Secret instead (e.g. one synced by an external secrets
-manager) without any other template changes.
-*/}}
-{{- define "affine-helm.postgres.secretName" -}}
-{{- .Values.postgres.existingSecret | default (printf "%s-affine-postgres" .Release.Name) -}}
-{{- end -}}
-
-{{/*
-Key within that Secret holding the password. Only relevant when
-postgres.existingSecret is set -- the chart's own generated Secret always
-uses "postgres-password".
-*/}}
-{{- define "affine-helm.postgres.secretKey" -}}
-{{- .Values.postgres.existingSecretPasswordKey | default "postgres-password" -}}
 {{- end -}}

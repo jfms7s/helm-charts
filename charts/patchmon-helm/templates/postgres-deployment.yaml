@@ -26,10 +26,7 @@ spec:
             - name: POSTGRES_USER
               value: {{ .Values.postgres.user }}
             - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "patchmon-helm.postgres.secretName" . }}
-                  key: {{ include "patchmon-helm.postgres.secretKey" . }}
+              {{- include "patchmon-helm.credentialEnv" .Values.postgres.password | nindent 14 }}
           livenessProbe:
             exec:
               command:

@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: database
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.2.0
+            helm.sh/chart: patchmon-helm-0.3.0
       - equal:
           path: spec.strategy.type
           value: Recreate
@@ -39,10 +39,7 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: POSTGRES_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: RELEASE-NAME-patchmon-postgres
-                key: postgres-password
+            value: "CHANGE_ME"
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.exec.command
           value:
@@ -97,10 +94,10 @@ tests:
               server: 192.168.1.10
               path: /volumes/patchmon/postgres
 
-  - it: sources POSTGRES_PASSWORD from postgres.existingSecret when set
+  - it: sources POSTGRES_PASSWORD from postgres.password.valueFrom when set, taking precedence over the value default
     set:
-      postgres.existingSecret: my-external-secret
-      postgres.existingSecretPasswordKey: MY_KEY
+      postgres.password.valueFrom.secretKeyRef.name: my-external-secret
+      postgres.password.valueFrom.secretKeyRef.key: MY_KEY
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env

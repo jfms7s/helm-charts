@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: server
             app.kubernetes.io/part-of: affine
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: affine-helm-0.3.0
+            helm.sh/chart: affine-helm-0.4.0
       - equal:
           path: metadata.annotations["argocd.argoproj.io/sync-wave"]
           value: "2"
@@ -43,10 +43,7 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: POSTGRES_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: RELEASE-NAME-affine-postgres
-                key: postgres-password
+            value: "CHANGE_ME"
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -138,7 +135,7 @@ tests:
     set:
       postgres.user: custom_user
       postgres.db: custom_db
-      postgres.password: s3cr3t
+      postgres.password.value: s3cr3t
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
@@ -146,10 +143,10 @@ tests:
             name: DATABASE_URL
             value: postgresql://custom_user:$(POSTGRES_PASSWORD)@RELEASE-NAME-postgres:5432/custom_db
 
-  - it: sources POSTGRES_PASSWORD and the Secret name from postgres.existingSecret when set
+  - it: sources POSTGRES_PASSWORD from postgres.password.valueFrom when set, taking precedence over the value default
     set:
-      postgres.existingSecret: my-external-secret
-      postgres.existingSecretPasswordKey: MY_KEY
+      postgres.password.valueFrom.secretKeyRef.name: my-external-secret
+      postgres.password.valueFrom.secretKeyRef.key: MY_KEY
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env

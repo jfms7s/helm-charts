@@ -2,7 +2,7 @@ apiVersion: v2
 name: affine-helm
 description: A Helm chart for Affine workspace application
 type: application
-version: 0.3.0
+version: 0.4.0
 appVersion: "stable"
 keywords:
   - affine

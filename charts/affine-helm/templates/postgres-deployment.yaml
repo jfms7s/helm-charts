@@ -28,10 +28,7 @@ spec:
             - name: POSTGRES_INITDB_ARGS
               value: --data-checksums
             - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "affine-helm.postgres.secretName" . }}
-                  key: {{ include "affine-helm.postgres.secretKey" . }}
+              {{- include "affine-helm.credentialEnv" .Values.postgres.password | nindent 14 }}
             - name: POSTGRES_USER
               value: {{ .Values.postgres.user }}
           livenessProbe:

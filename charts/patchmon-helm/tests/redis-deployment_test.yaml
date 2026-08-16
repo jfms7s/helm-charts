@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: cache
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.2.0
+            helm.sh/chart: patchmon-helm-0.3.0
       - equal:
           path: spec.strategy.type
           value: Recreate
@@ -35,10 +35,7 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: REDIS_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: RELEASE-NAME-patchmon-redis
-                key: redis-password
+            value: "CHANGE_ME"
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.exec.command
           value:
@@ -81,10 +78,10 @@ tests:
               server: 192.168.1.10
               path: /volumes/patchmon/redis
 
-  - it: sources REDIS_PASSWORD from redis.existingSecret when set
+  - it: sources REDIS_PASSWORD from redis.password.valueFrom when set, taking precedence over the value default
     set:
-      redis.existingSecret: my-external-secret
-      redis.existingSecretPasswordKey: MY_KEY
+      redis.password.valueFrom.secretKeyRef.name: my-external-secret
+      redis.password.valueFrom.secretKeyRef.key: MY_KEY
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
