@@ -3,6 +3,27 @@ entries:
   affine-helm:
   - apiVersion: v2
     appVersion: stable
+    created: "2026-08-16T21:22:43.240222007Z"
+    description: A Helm chart for Affine workspace application
+    digest: dbc925a92baa97b491173b973f7aef7db38c3d95cfb83b7629139dd685adeb90
+    home: https://affine.pro/
+    keywords:
+    - affine
+    - workspace
+    - collaboration
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: affine-helm
+    sources:
+    - https://github.com/toeverything/AFFiNE
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/affine-helm-0.4.0/affine-helm-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v2
+    appVersion: stable
     created: "2026-08-15T22:19:04.250573928Z"
     description: A Helm chart for Affine workspace application
     digest: fbd149f67831214b6bc40d84bf027ab2d4e1426bf94637cd3c4d780179c416e0
@@ -168,6 +189,27 @@ entries:
   patchmon-helm:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-08-16T21:22:43.38065408Z"
+    description: A Helm chart for PatchMon, a Linux patch management platform
+    digest: e840d71035d563290f91c27e3b3647a5bdae577eef487dfcdfd1164bc2028214
+    home: https://patchmon.net/
+    keywords:
+    - patchmon
+    - patch-management
+    - monitoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: patchmon-helm
+    sources:
+    - https://github.com/PatchMon/PatchMon
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.3.0/patchmon-helm-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-08-15T22:19:04.366926736Z"
     description: A Helm chart for PatchMon, a Linux patch management platform
     digest: 97052e1ab0586781d1c7659627733164dc7eddb6630dc661f1a5894cd2a92f3c
@@ -208,4 +250,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.1.0/patchmon-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-08-15T22:19:04.36697157Z"
+generated: "2026-08-16T21:22:43.380706215Z"
