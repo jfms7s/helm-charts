@@ -1,0 +1,90 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: nats-deployment
+templates:
+  - templates/nats-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-ticket-scanner-nats
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: nats
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: message-bus
+            app.kubernetes.io/part-of: ticket-scanner
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: ticket-live-event-scanner-helm-0.1.0
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: nats
+            app.kubernetes.io/instance: RELEASE-NAME
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nats:2-alpine
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - -js
+            - -sd
+            - /data
+      - equal:
+          path: spec.template.spec.containers[0].ports[0]
+          value:
+            name: client
+            containerPort: 4222
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            emptyDir: {}
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+
+  - it: uses a custom volume source for nats persistence instead of emptyDir
+    set:
+      nats.persistence.volume:
+        nfs:
+          server: 192.168.1.10
+          path: /volumes/ticket-scanner/nats
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            nfs:
+              server: 192.168.1.10
+              path: /volumes/ticket-scanner/nats
+
+  - it: uses a custom image repository and tag
+    set:
+      nats.image.repository: my-registry/nats
+      nats.image.tag: "2.10-alpine"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: my-registry/nats:2.10-alpine

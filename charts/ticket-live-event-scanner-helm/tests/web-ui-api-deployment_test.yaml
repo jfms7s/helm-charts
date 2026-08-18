@@ -1,0 +1,115 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: web-ui-api-deployment
+templates:
+  - templates/web-ui-api-deployment.yaml
+tests:
+  - it: renders with chart defaults, always at 1 replica
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-ticket-scanner-web-ui-api
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: web-ui-api
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: api
+            app.kubernetes.io/part-of: ticket-scanner
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: ticket-live-event-scanner-helm-0.1.0
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api:latest
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+      - equal:
+          path: spec.template.spec.containers[0].ports[0]
+          value:
+            name: http
+            containerPort: 8080
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_URL
+            value: nats://RELEASE-NAME-ticket-scanner-nats:4222
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_DATABASE_URL
+            value: "CHANGE_ME"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_AUTH_TOKEN
+            value: "CHANGE_ME"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LISTEN_ADDR
+            value: ":8080"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CORS_ORIGIN
+            value: "*"
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: http
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+
+  - it: sources TURSO_DATABASE_URL/TURSO_AUTH_TOKEN from their valueFrom when set, taking precedence over the value default
+    set:
+      turso.databaseUrl.valueFrom.secretKeyRef.name: turso-credentials
+      turso.databaseUrl.valueFrom.secretKeyRef.key: database_url
+      turso.authToken.valueFrom.secretKeyRef.name: turso-credentials
+      turso.authToken.valueFrom.secretKeyRef.key: auth_token
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: turso-credentials
+                key: database_url
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: turso-credentials
+                key: auth_token
+
+  - it: uses a custom CORS origin
+    set:
+      webUiApi.corsOrigin: "https://ticket-scanner.example.com"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CORS_ORIGIN
+            value: "https://ticket-scanner.example.com"

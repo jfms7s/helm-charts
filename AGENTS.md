@@ -9,6 +9,7 @@ helm-charts/
 ├── charts/
 │   ├── affine-helm/     # Chart for Affine application
 │   ├── patchmon-helm/   # Chart for PatchMon application
+│   ├── ticket-live-event-scanner-helm/  # Chart for Ticket Live Event Scanner
 │   └── common/          # Generic chart for multiple applications
 └── .github/workflows/   # CI/CD pipelines
 ```
@@ -29,6 +30,15 @@ Application-specific chart for deploying [PatchMon](https://patchmon.net/), a Li
 - PostgreSQL database
 - Redis cache
 - guacd (in-browser RDP) sidecar
+- Ingress configuration
+
+### ticket-live-event-scanner-helm
+Application-specific chart for deploying [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings. Modeled on upstream's own [deploy/k8s](https://github.com/jfms7s/ticket-live-event-scanner/tree/main/deploy/k8s) manifests. Includes:
+- In-cluster NATS (JetStream) message bus
+- Scraper CronJob (+ ServiceAccount/Role/RoleBinding)
+- Telegram notifier deployment
+- Web UI API deployment + Service
+- Web UI frontend deployment + Service
 - Ingress configuration
 
 ### common

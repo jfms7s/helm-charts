@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-web-ui-frontend
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "web-ui-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    {{- include "ticket-live-event-scanner-helm.selectorLabels" (dict "context" $ "name" "web-ui-frontend") | nindent 4 }}

@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-scraper
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "scraper" "component" "scraper") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-ticket-scanner-scraper
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-ticket-scanner-scraper
+    namespace: {{ .Release.Namespace }}

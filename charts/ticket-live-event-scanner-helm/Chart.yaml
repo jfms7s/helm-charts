@@ -1,0 +1,16 @@
+apiVersion: v2
+name: ticket-live-event-scanner-helm
+description: A Helm chart for Ticket Live Event Scanner, a scraper/notifier pipeline for ticketline.pt event listings
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - ticket-scanner
+  - scraper
+  - notifications
+sources:
+  - https://github.com/jfms7s/ticket-live-event-scanner
+  - https://github.com/jfms7s/helm-charts
+maintainers:
+  - name: jfms7s
+    url: https://github.com/jfms7s

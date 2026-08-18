@@ -1,0 +1,131 @@
+# NATS (JetStream) message bus wiring the scraper, telegram-notifier, and
+# web-ui-api together. A single-replica in-cluster broker, not exposed
+# outside the release.
+nats:
+  image:
+    repository: nats
+    tag: "2-alpine"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # Volume source for NATS JetStream file storage. Each value is the full
+  # body of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
+  # persistentVolumeClaim, etc. Left empty (emptyDir, non-persistent) by
+  # default since the right backend is environment-specific; set explicitly
+  # by the caller, e.g.:
+  #   persistence:
+  #     volume:
+  #       nfs:
+  #         server: 192.168.1.10
+  #         path: /volumes/ticket-scanner/nats
+  persistence:
+    volume: {}
+
+# Turso (libSQL) database credentials, shared by the scraper (writer) and
+# web-ui-api (reader). Each is a standard Kubernetes EnvVarSource: set
+# `value` for a plain literal (Argo CD does not support Helm's `lookup`
+# function, so these can't be safely auto-generated and persisted across
+# syncs -- pin explicitly, e.g. from a values-secrets file kept out of
+# version control), or `valueFrom` (e.g. a `secretKeyRef`) to source it from
+# a Secret you manage yourself instead. `valueFrom` takes precedence when
+# both are set; each field toggles independently.
+turso:
+  databaseUrl:
+    value: "CHANGE_ME"
+    valueFrom: {}
+  authToken:
+    value: "CHANGE_ME"
+    valueFrom: {}
+
+# Telegram bot credentials for telegram-notifier. Same shape/rationale as
+# turso above.
+telegram:
+  botToken:
+    value: "CHANGE_ME"
+    valueFrom: {}
+  chatId:
+    value: "CHANGE_ME"
+    valueFrom: {}
+
+scraper:
+  image:
+    repository: ghcr.io/jfms7s/ticket-live-event-scanner-scraper
+    tag: latest
+    pullPolicy: IfNotPresent
+  # Cron schedule the scraper CronJob runs on.
+  schedule: "0 * * * *"
+  backoffLimit: 2
+  # Comma-separated ticketline.pt hub page slugs the scraper re-checks for
+  # new session IDs.
+  hubPages: "auchan-live-academia-maia-98164,auchan-live-academia-aveiro-98167"
+  userAgent: "ticket-live-event-scanner/0.1 (personal project; contact: jfms7s@gmail.com)"
+  requestDelayMs: 1500
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+telegramNotifier:
+  image:
+    repository: ghcr.io/jfms7s/ticket-live-event-scanner-telegram-notifier
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+webUiApi:
+  image:
+    repository: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  # Allowed frontend origin(s). "*" matches upstream's own default: the API
+  # is unauthenticated and only reachable in-cluster, so relaxing CORS here
+  # exposes nothing sensitive (see upstream docs/design.md).
+  corsOrigin: "*"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+webUiFrontend:
+  image:
+    repository: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # traefik.ingress.kubernetes.io/rewrite-target: "/"
+  hosts:
+    - host: ticket-scanner.example.local
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 80
+  tls: []

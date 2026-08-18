@@ -1,0 +1,30 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: web-ui-api-service
+templates:
+  - templates/web-ui-api-service.yaml
+tests:
+  - it: renders the web-ui-api Service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-ticket-scanner-web-ui-api
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: api
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0]
+          value:
+            name: http
+            port: 80
+            targetPort: 8080
+            protocol: TCP
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/name: web-ui-api
+            app.kubernetes.io/instance: RELEASE-NAME

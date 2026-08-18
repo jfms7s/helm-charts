@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-web-ui-api
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "web-ui-api" "component" "api") | nindent 4 }}
+  annotations:
+    # This deployment MUST remain at 1 replica: multiple replicas would
+    # consume the same JetStream consumer group and duplicate data in Turso.
+    # Use a PodDisruptionBudget or scaling restrictions if HA is needed.
+    description: "Web UI API backend. Do not scale beyond 1 replica."
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ticket-live-event-scanner-helm.selectorLabels" (dict "context" $ "name" "web-ui-api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "web-ui-api" "component" "api") | nindent 8 }}
+    spec:
+      containers:
+        - name: web-ui-api
+          image: {{ .Values.webUiApi.image.repository }}:{{ .Values.webUiApi.image.tag }}
+          imagePullPolicy: {{ .Values.webUiApi.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: NATS_URL
+              value: nats://{{ .Release.Name }}-ticket-scanner-nats:4222
+            - name: TURSO_DATABASE_URL
+              {{- include "ticket-live-event-scanner-helm.credentialEnv" .Values.turso.databaseUrl | nindent 14 }}
+            - name: TURSO_AUTH_TOKEN
+              {{- include "ticket-live-event-scanner-helm.credentialEnv" .Values.turso.authToken | nindent 14 }}
+            - name: LISTEN_ADDR
+              value: ":8080"
+            - name: CORS_ORIGIN
+              value: {{ .Values.webUiApi.corsOrigin | quote }}
+          resources:
+            {{- toYaml .Values.webUiApi.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+      restartPolicy: Always

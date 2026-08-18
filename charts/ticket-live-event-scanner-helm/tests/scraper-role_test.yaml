@@ -1,0 +1,15 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: scraper-role
+templates:
+  - templates/scraper-role.yaml
+tests:
+  - it: renders an empty scraper Role
+    asserts:
+      - isKind:
+          of: Role
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-ticket-scanner-scraper
+      - equal:
+          path: rules
+          value: []

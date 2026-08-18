@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-nats
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ticket-live-event-scanner-helm.selectorLabels" (dict "context" $ "name" "nats") | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 8 }}
+    spec:
+      containers:
+        - name: nats
+          image: {{ .Values.nats.image.repository }}:{{ .Values.nats.image.tag }}
+          imagePullPolicy: {{ .Values.nats.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+          args:
+            - -js
+            - -sd
+            - /data
+          ports:
+            - name: client
+              containerPort: 4222
+          readinessProbe:
+            tcpSocket:
+              port: client
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.nats.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      restartPolicy: Always
+      volumes:
+        - name: data
+          {{- if .Values.nats.persistence.volume }}
+          {{- toYaml .Values.nats.persistence.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

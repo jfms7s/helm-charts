@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-nats
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 4 }}
+spec:
+  ports:
+    - name: client
+      port: 4222
+      targetPort: 4222
+      protocol: TCP
+  selector:
+    {{- include "ticket-live-event-scanner-helm.selectorLabels" (dict "context" $ "name" "nats") | nindent 4 }}

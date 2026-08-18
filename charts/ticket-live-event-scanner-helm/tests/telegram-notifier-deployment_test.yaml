@@ -1,0 +1,90 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: telegram-notifier-deployment
+templates:
+  - templates/telegram-notifier-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-ticket-scanner-telegram-notifier
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: telegram-notifier
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: notifier
+            app.kubernetes.io/part-of: ticket-scanner
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: ticket-live-event-scanner-helm-0.1.0
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/ticket-live-event-scanner-telegram-notifier:latest
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_URL
+            value: nats://RELEASE-NAME-ticket-scanner-nats:4222
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TELEGRAM_BOT_TOKEN
+            value: "CHANGE_ME"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TELEGRAM_CHAT_ID
+            value: "CHANGE_ME"
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value:
+            - sh
+            - -c
+            - "kill -0 1"
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+
+  - it: sources TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID from their valueFrom when set, taking precedence over the value default
+    set:
+      telegram.botToken.valueFrom.secretKeyRef.name: telegram-bot-token
+      telegram.botToken.valueFrom.secretKeyRef.key: bot_token
+      telegram.chatId.valueFrom.secretKeyRef.name: telegram-bot-token
+      telegram.chatId.valueFrom.secretKeyRef.key: chat_id
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TELEGRAM_BOT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: telegram-bot-token
+                key: bot_token
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TELEGRAM_CHAT_ID
+            valueFrom:
+              secretKeyRef:
+                name: telegram-bot-token
+                key: chat_id

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-web-ui-frontend
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "web-ui-frontend" "component" "frontend") | nindent 4 }}
+spec:
+  replicas: {{ .Values.webUiFrontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ticket-live-event-scanner-helm.selectorLabels" (dict "context" $ "name" "web-ui-frontend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "web-ui-frontend" "component" "frontend") | nindent 8 }}
+    spec:
+      containers:
+        - name: web-ui-frontend
+          image: {{ .Values.webUiFrontend.image.repository }}:{{ .Values.webUiFrontend.image.tag }}
+          imagePullPolicy: {{ .Values.webUiFrontend.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: API_BASE_URL
+              value: http://{{ .Release.Name }}-ticket-scanner-web-ui-api
+            - name: PORT
+              value: "3000"
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.webUiFrontend.resources | nindent 12 }}
+      restartPolicy: Always

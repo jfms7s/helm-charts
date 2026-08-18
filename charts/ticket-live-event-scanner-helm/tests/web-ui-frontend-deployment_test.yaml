@@ -1,0 +1,71 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: web-ui-frontend-deployment
+templates:
+  - templates/web-ui-frontend-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-ticket-scanner-web-ui-frontend
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: web-ui-frontend
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/component: frontend
+            app.kubernetes.io/part-of: ticket-scanner
+            app.kubernetes.io/managed-by: Helm
+            helm.sh/chart: ticket-live-event-scanner-helm-0.1.0
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-frontend:latest
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+      - equal:
+          path: spec.template.spec.containers[0].ports[0]
+          value:
+            name: http
+            containerPort: 3000
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_BASE_URL
+            value: http://RELEASE-NAME-ticket-scanner-web-ui-api
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PORT
+            value: "3000"
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.tcpSocket.port
+          value: http
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
+
+  - it: scales replicas when set
+    set:
+      webUiFrontend.replicas: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
