@@ -250,4 +250,26 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.1.0/patchmon-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-08-16T21:22:43.380706215Z"
+  ticket-live-event-scanner-helm:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-08-18T21:59:28.336416082Z"
+    description: A Helm chart for Ticket Live Event Scanner, a scraper/notifier pipeline
+      for ticketline.pt event listings
+    digest: 19ab45a5a764ede282e5702c2ad1d4d1d06282eb8f86fe88d2569832a93bdab2
+    keywords:
+    - ticket-scanner
+    - scraper
+    - notifications
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: ticket-live-event-scanner-helm
+    sources:
+    - https://github.com/jfms7s/ticket-live-event-scanner
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.1.0/ticket-live-event-scanner-helm-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-08-18T21:59:28.336453993Z"
