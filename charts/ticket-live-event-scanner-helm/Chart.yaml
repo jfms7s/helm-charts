@@ -2,7 +2,7 @@ apiVersion: v2
 name: ticket-live-event-scanner-helm
 description: A Helm chart for Ticket Live Event Scanner, a scraper/notifier pipeline for ticketline.pt event listings
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "latest"
 keywords:
   - ticket-scanner

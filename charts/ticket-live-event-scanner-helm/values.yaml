@@ -109,6 +109,12 @@ webUiFrontend:
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
+  # Public origin the browser should call for API requests (no trailing
+  # /api -- the frontend's own JS already appends /api/... per request).
+  # Empty defaults to the in-cluster Service DNS name, which only works if
+  # the browser itself is inside the cluster network -- set this to the
+  # ingress's public URL wherever the API is exposed externally.
+  apiBaseUrl: ""
   resources:
     requests:
       cpu: 50m

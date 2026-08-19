@@ -33,7 +33,10 @@ spec:
             pathType: {{ .pathType | default "Prefix" }}
             backend:
               service:
-                name: {{ $.Release.Name }}-ticket-scanner-web-ui-frontend
+                # Per-path service override (e.g. routing /api to
+                # web-ui-api) -- defaults to the frontend service so
+                # existing single-path (`/`) configs are unaffected.
+                name: {{ .service | default (printf "%s-ticket-scanner-web-ui-frontend" $.Release.Name) }}
                 port:
                   number: {{ .port | default 80 }}
           {{- end }}

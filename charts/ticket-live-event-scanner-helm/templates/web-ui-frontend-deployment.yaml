@@ -27,7 +27,16 @@ spec:
               containerPort: 3000
           env:
             - name: API_BASE_URL
-              value: http://{{ .Release.Name }}-ticket-scanner-web-ui-api
+              # This becomes window.API_BASE_URL in the browser (see
+              # web/frontend/server.js's config.js generation) -- it must be
+              # reachable from the user's browser, not just in-cluster, so
+              # it defaults to the internal Service DNS name (fine for
+              # cluster-internal testing) but should be overridden to the
+              # public ingress origin (e.g. https://ticket-scanner.example.com,
+              # no trailing /api -- the frontend's own JS already appends
+              # /api/... per request) wherever the API is exposed outside
+              # the cluster.
+              value: {{ .Values.webUiFrontend.apiBaseUrl | default (printf "http://%s-ticket-scanner-web-ui-api" .Release.Name) | quote }}
             - name: PORT
               value: "3000"
           readinessProbe:

@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: frontend
             app.kubernetes.io/part-of: ticket-scanner
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: ticket-live-event-scanner-helm-0.1.0
+            helm.sh/chart: ticket-live-event-scanner-helm-0.2.0
       - equal:
           path: spec.replicas
           value: 1
@@ -69,3 +69,16 @@ tests:
       - equal:
           path: spec.replicas
           value: 3
+
+  - it: overrides API_BASE_URL with the public ingress origin when set
+    # window.API_BASE_URL must be browser-reachable, not just in-cluster --
+    # the in-cluster Service DNS default only works for callers inside the
+    # cluster network.
+    set:
+      webUiFrontend.apiBaseUrl: https://ticket-scanner.example.com
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_BASE_URL
+            value: https://ticket-scanner.example.com
