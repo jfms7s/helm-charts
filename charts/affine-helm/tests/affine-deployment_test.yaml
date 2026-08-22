@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: server
             app.kubernetes.io/part-of: affine
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: affine-helm-0.4.0
+            helm.sh/chart: affine-helm-0.6.0
       - equal:
           path: metadata.annotations["argocd.argoproj.io/sync-wave"]
           value: "2"
