@@ -53,19 +53,25 @@ redis:
 
 # AFFiNE's AI features (server config.json, mounted read-only into
 # /root/.affine/config/config.json alongside the persistent config volume --
-# see https://docs.affine.pro/self-host-affine/install/configuration).
-# `OPENAI_API_KEY`/`OPENAI_BASE_URL` env vars stopped being read as of server
-# version 0.27; this is the only way to set a server-wide provider key now.
+# see https://docs.affine.pro/self-host-affine/administer/ai). As of server
+# version 0.27+, AI is BYOK-only: there is no server-config field for a
+# provider API key/model override any more (a previous `copilot.openai.*`
+# key here rendered into a `providers.openai` config.json block that the
+# server silently ignores -- that field doesn't exist in the current config
+# schema). Workspace owners add real provider keys themselves via
+# Settings -> Integrations -> AI BYOK in the app; these values only control
+# whether that UI is reachable at all and whether it's allowed to point at a
+# custom (e.g. self-hosted/private-network) endpoint.
 copilot:
   enabled: false
-  openai:
-    apiKey: ""
-    baseUrl: "https://api.openai.com/v1"
-    # AFFiNE's own AI providers default to calling POST /v1/responses, which
-    # only OpenAI itself implements. Every other OpenAI-compatible server
-    # (Ollama included) only implements /v1/chat/completions -- set this true
-    # to make the chart request that endpoint instead.
-    oldApiStyle: false
+  byok:
+    enabled: true
+    allowCustomEndpoint: false
+    # Lets a workspace BYOK custom endpoint resolve to a private-network
+    # address (e.g. a LAN-hosted Ollama). Off by default -- flipping this on
+    # means any workspace admin can direct provider requests at internal
+    # services, so only enable it where every workspace admin is trusted.
+    allowPrivateEndpoint: false
 
 resources: {}
   # limits:
