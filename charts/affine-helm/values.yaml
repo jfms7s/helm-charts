@@ -61,6 +61,11 @@ copilot:
   openai:
     apiKey: ""
     baseUrl: "https://api.openai.com/v1"
+    # AFFiNE's own AI providers default to calling POST /v1/responses, which
+    # only OpenAI itself implements. Every other OpenAI-compatible server
+    # (Ollama included) only implements /v1/chat/completions -- set this true
+    # to make the chart request that endpoint instead.
+    oldApiStyle: false
 
 resources: {}
   # limits:
