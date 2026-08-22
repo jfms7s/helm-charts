@@ -3,6 +3,27 @@ entries:
   affine-helm:
   - apiVersion: v2
     appVersion: stable
+    created: "2026-08-22T00:12:28.949775928Z"
+    description: A Helm chart for Affine workspace application
+    digest: e32681198e6867c82f9dddbd45563c1b8c14518efdffdfa12385b19851fe48d4
+    home: https://affine.pro/
+    keywords:
+    - affine
+    - workspace
+    - collaboration
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: affine-helm
+    sources:
+    - https://github.com/toeverything/AFFiNE
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/affine-helm-0.6.0/affine-helm-0.6.0.tgz
+    version: 0.6.0
+  - apiVersion: v2
+    appVersion: stable
     created: "2026-08-22T00:01:14.018466433Z"
     description: A Helm chart for Affine workspace application
     digest: 451319a3455ac5cf7b7e2d3b948439329d97effa17d8f4103e2c3e56ad28a28f
@@ -314,4 +335,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.1.0/ticket-live-event-scanner-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-08-22T00:01:14.018502956Z"
+generated: "2026-08-22T00:12:28.949836618Z"
