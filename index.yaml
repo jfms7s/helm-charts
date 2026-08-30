@@ -228,6 +228,28 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/common-0.1.0/common-0.1.0.tgz
     version: 0.1.0
+  data-lab-helm:
+  - apiVersion: v2
+    appVersion: "1"
+    created: "2026-08-30T18:40:12.937783648Z"
+    description: Shared infrastructure for the Spark and Flink learning labs — namespaces,
+      engine RBAC, an NFS-backed MinIO object store, and an in-cluster dataset seeder
+    digest: 29c95ca92eb094865b7187db1624ab71e0905dfbdeaf1b75ae8f145ab3665362
+    keywords:
+    - spark
+    - flink
+    - minio
+    - lab
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: data-lab-helm
+    sources:
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/data-lab-helm-0.1.0/data-lab-helm-0.1.0.tgz
+    version: 0.1.0
   patchmon-helm:
   - apiVersion: v2
     appVersion: latest
@@ -335,4 +357,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.1.0/ticket-live-event-scanner-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-08-22T00:12:28.949836618Z"
+generated: "2026-08-30T18:40:12.937837248Z"
