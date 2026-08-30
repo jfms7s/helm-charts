@@ -1,0 +1,17 @@
+{{- if .Values.spark.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.spark.namespace }}
+  labels:
+    {{- include "data-lab-helm.labels" (dict "context" $ "name" "spark" "component" "namespace") | nindent 4 }}
+{{- end }}
+{{- if .Values.flink.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.flink.namespace }}
+  labels:
+    {{- include "data-lab-helm.labels" (dict "context" $ "name" "flink" "component" "namespace") | nindent 4 }}
+{{- end }}

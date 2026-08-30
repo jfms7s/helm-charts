@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "data-lab-helm.fullname" . }}-minio
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-lab-helm.labels" (dict "context" $ "name" "minio" "component" "object-store") | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.minio.storage | quote }}

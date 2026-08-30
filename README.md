@@ -16,6 +16,9 @@ Deploys [PatchMon](https://patchmon.net/), a self-hosted Linux patch management 
 ### ticket-live-event-scanner-helm
 Deploys [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings, with its in-cluster NATS (JetStream) message bus. See [charts/ticket-live-event-scanner-helm/README.md](charts/ticket-live-event-scanner-helm/README.md).
 
+### data-lab-helm
+Shared infrastructure for the Spark and Flink learning labs: `spark`/`flink` namespaces with scoped RBAC and an NFS-backed MinIO object store that both a local Spark driver and in-cluster executors reach over `s3a://`. See [charts/data-lab-helm/README.md](charts/data-lab-helm/README.md).
+
 ## Installation
 
 Add the repository:

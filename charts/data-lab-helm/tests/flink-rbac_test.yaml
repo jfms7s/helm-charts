@@ -1,0 +1,30 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: flink-rbac
+templates:
+  - templates/flink-rbac.yaml
+tests:
+  - it: renders SA + Role + RoleBinding in the flink namespace by default
+    asserts:
+      - hasDocuments:
+          count: 3
+      - isKind: { of: ServiceAccount }
+        documentIndex: 0
+      - equal: { path: metadata.namespace, value: flink }
+        documentIndex: 0
+
+  - it: additionally grants apps/deployments (needed by native session mode)
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: rules[1].apiGroups
+          value: ["apps"]
+      - contains:
+          path: rules[1].resources
+          content: deployments
+
+  - it: renders nothing when flink is disabled
+    set:
+      flink.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

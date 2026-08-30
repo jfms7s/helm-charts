@@ -1,0 +1,85 @@
+# Default values for data-lab-helm.
+
+## @section Common parameters
+
+## @param nameOverride Partially override the chart name in resource names
+## @param fullnameOverride Fully override the release-derived name
+##
+nameOverride: ""
+fullnameOverride: ""
+
+## @param storageClass StorageClass for the MinIO PVC (the cluster's NFS class)
+##
+storageClass: nfs-client
+
+## @section MinIO object store
+## Single-node MinIO, PVC-backed on `storageClass`. Both the local Spark driver
+## and the in-cluster executors / Flink TMs reach it over S3 (`s3a://`), so no
+## host mounts are needed anywhere.
+##
+minio:
+  ## @param minio.image MinIO server image (pin to a dated release)
+  ##
+  image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+  ## @param minio.mcImage MinIO client image, used by the bucket-creation job
+  ##
+  mcImage: minio/mc:RELEASE.2025-08-13T08-35-41Z
+  ## @param minio.rootUser MinIO root access key
+  ## @param minio.rootPassword MinIO root secret key
+  ## Lab credentials — fine to keep in values for a home lab; swap for a
+  ## sealed/external secret if this ever leaves the LAN.
+  ##
+  rootUser: minioadmin
+  rootPassword: minioadmin
+  ## @param minio.buckets Buckets to create on install/upgrade
+  ##
+  buckets:
+    - datasets
+    - warehouse
+    - checkpoints
+  ## @param minio.storage Size of the backing PVC
+  ##
+  storage: 20Gi
+  ## @param minio.resources Resource requests/limits for the MinIO pod
+  ##
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  service:
+    ## @param minio.service.type Service type — NodePort lets the local Spark driver reach it without a port-forward
+    ##
+    type: NodePort
+    ## @param minio.service.apiNodePort NodePort for the S3 API (9000); null = auto-assign
+    ## @param minio.service.consoleNodePort NodePort for the web console (9001); null = auto-assign
+    ##
+    apiNodePort: 30900
+    consoleNodePort: 30901
+
+## @section Engine namespaces + RBAC
+
+spark:
+  ## @param spark.enabled Create the Spark namespace, ServiceAccount and Role
+  ## @param spark.namespace Namespace for Spark drivers/executors
+  ## @param spark.serviceAccount ServiceAccount the driver authenticates as
+  ##
+  enabled: true
+  namespace: spark
+  serviceAccount: spark
+
+flink:
+  ## @param flink.enabled Create the Flink namespace, ServiceAccount and Role
+  ## @param flink.namespace Namespace for Flink JobManager/TaskManagers
+  ## @param flink.serviceAccount ServiceAccount the JobManager authenticates as
+  ##
+  enabled: true
+  namespace: flink
+  serviceAccount: flink
+
+# Datasets are seeded by the exercise scripts (obsidian-vault:
+# learning/engineering/spark/exercises/scripts/seed.sh) running the generator
+# locally and writing to s3a://datasets/... — this chart only provisions the
+# empty buckets.

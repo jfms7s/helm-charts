@@ -1,0 +1,53 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: spark-rbac
+templates:
+  - templates/spark-rbac.yaml
+tests:
+  - it: renders SA + Role + RoleBinding in the spark namespace by default
+    asserts:
+      - hasDocuments:
+          count: 3
+      - isKind: { of: ServiceAccount }
+        documentIndex: 0
+      - equal: { path: metadata.namespace, value: spark }
+        documentIndex: 0
+      - isKind: { of: Role }
+        documentIndex: 1
+      - isKind: { of: RoleBinding }
+        documentIndex: 2
+
+  - it: grants only namespaced core resources, no wildcards
+    documentIndex: 1
+    asserts:
+      - equal:
+          path: rules[0].apiGroups
+          value: [""]
+      - equal:
+          path: rules[0].resources
+          value: ["pods", "services", "configmaps", "persistentvolumeclaims"]
+      - notContains:
+          path: rules[0].verbs
+          content: "*"
+
+  - it: honours custom namespace and service account name
+    set:
+      spark.namespace: spark-lab
+      spark.serviceAccount: driver
+    documentIndex: 2
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: spark-lab
+      - equal:
+          path: subjects[0].name
+          value: driver
+      - equal:
+          path: roleRef.name
+          value: driver
+
+  - it: renders nothing when spark is disabled
+    set:
+      spark.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

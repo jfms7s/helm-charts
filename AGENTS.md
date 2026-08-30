@@ -8,6 +8,7 @@ This is a Helm charts repository containing application-specific and shared char
 helm-charts/
 ├── charts/
 │   ├── affine-helm/     # Chart for Affine application
+│   ├── data-lab-helm/   # Shared infra for the Spark/Flink learning labs
 │   ├── patchmon-helm/   # Chart for PatchMon application
 │   ├── ticket-live-event-scanner-helm/  # Chart for Ticket Live Event Scanner
 │   └── common/          # Generic chart for multiple applications
@@ -15,6 +16,11 @@ helm-charts/
 ```
 
 ## Charts
+
+### data-lab-helm
+Shared infrastructure for the Spark and Flink learning labs (the exercise scripts live in the obsidian-vault repo). Includes:
+- `spark` / `flink` namespaces, each with a ServiceAccount + scoped namespaced Role
+- Single-node MinIO (Deployment + Service + PVC + Secret + bucket-creation hook Job), PVC-backed on the NFS StorageClass, reached over `s3a://` (datasets are seeded by the vault's exercise scripts, not this chart)
 
 ### affine-helm
 Application-specific chart for deploying the [Affine](https://affine.pro/) workspace application. Includes:

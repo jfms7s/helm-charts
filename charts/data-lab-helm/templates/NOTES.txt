@@ -1,0 +1,23 @@
+data-lab-helm installed as {{ .Release.Name }} in namespace {{ .Release.Namespace }}.
+
+MinIO object store
+  in-cluster S3 endpoint : {{ include "data-lab-helm.minioEndpoint" . }}
+{{- if eq .Values.minio.service.type "NodePort" }}
+  from your machine      : http://<any-node-ip>:{{ .Values.minio.service.apiNodePort }}   (S3)
+  web console            : http://<any-node-ip>:{{ .Values.minio.service.consoleNodePort }}
+{{- else }}
+  port-forward           : kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "data-lab-helm.fullname" . }}-minio 9000:9000 9001:9001
+{{- end }}
+  credentials            : {{ .Values.minio.rootUser }} / (see secret {{ include "data-lab-helm.fullname" . }}-minio)
+  buckets                : {{ join ", " .Values.minio.buckets }}
+
+{{- if .Values.spark.enabled }}
+
+Spark : namespace {{ .Values.spark.namespace }}, service account {{ .Values.spark.serviceAccount }}
+{{- end }}
+{{- if .Values.flink.enabled }}
+Flink : namespace {{ .Values.flink.namespace }}, service account {{ .Values.flink.serviceAccount }}
+{{- end }}
+
+The buckets are empty. Seed a dataset from the exercise scripts:
+  learning/engineering/spark/exercises/scripts/seed.sh 2000000
