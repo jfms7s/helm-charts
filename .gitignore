@@ -4,3 +4,4 @@
 .vscode
 .bin/
 charts/*/tests/__snapshot__/
+.superpowers/
