@@ -40,10 +40,3 @@ Pass (dict "context" $ "name" "minio").
 app.kubernetes.io/name: {{ .name }}
 app.kubernetes.io/instance: {{ .context.Release.Name }}
 {{- end -}}
-
-{{/*
-In-cluster S3 endpoint for the MinIO service.
-*/}}
-{{- define "data-lab-helm.minioEndpoint" -}}
-{{- printf "http://%s-minio.%s.svc:9000" (include "data-lab-helm.fullname" .) .Release.Namespace -}}
-{{- end -}}

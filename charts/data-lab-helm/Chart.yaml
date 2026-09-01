@@ -1,13 +1,12 @@
 apiVersion: v2
 name: data-lab-helm
-description: Shared infrastructure for the Spark and Flink learning labs — namespaces, engine RBAC, an NFS-backed MinIO object store, and an in-cluster dataset seeder
+description: Shared infrastructure for the Spark and Flink learning labs — namespaces and engine RBAC
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "1"
 keywords:
   - spark
   - flink
-  - minio
   - lab
 sources:
   - https://github.com/jfms7s/helm-charts
