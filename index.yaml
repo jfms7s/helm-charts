@@ -231,6 +231,26 @@ entries:
   data-lab-helm:
   - apiVersion: v2
     appVersion: "1"
+    created: "2026-09-01T00:44:31.134234109Z"
+    description: Shared infrastructure for the Spark and Flink learning labs — namespaces
+      and engine RBAC
+    digest: 46634568a96a805faf4bbb9af02d5fa0877ef74d7164365004e970b9ebebbd27
+    keywords:
+    - spark
+    - flink
+    - lab
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: data-lab-helm
+    sources:
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/data-lab-helm-0.2.0/data-lab-helm-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: "1"
     created: "2026-08-30T18:40:12.937783648Z"
     description: Shared infrastructure for the Spark and Flink learning labs — namespaces,
       engine RBAC, an NFS-backed MinIO object store, and an in-cluster dataset seeder
@@ -357,4 +377,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.1.0/ticket-live-event-scanner-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-08-30T18:40:12.937837248Z"
+generated: "2026-09-01T00:44:31.134277833Z"
