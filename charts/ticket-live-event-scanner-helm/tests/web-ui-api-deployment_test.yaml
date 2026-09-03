@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: api
             app.kubernetes.io/part-of: ticket-scanner
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: ticket-live-event-scanner-helm-0.2.0
+            helm.sh/chart: ticket-live-event-scanner-helm-0.3.0
       - equal:
           path: spec.replicas
           value: 1

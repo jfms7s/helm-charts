@@ -43,6 +43,7 @@ Application-specific chart for deploying [Ticket Live Event Scanner](https://git
 - In-cluster NATS (JetStream) message bus
 - Scraper CronJob (+ ServiceAccount/Role/RoleBinding)
 - Telegram notifier deployment
+- Email notifier deployment (calendar-invite emails on purchase)
 - Web UI API deployment + Service
 - Web UI frontend deployment + Service
 - Ingress configuration

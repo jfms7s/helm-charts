@@ -1,9 +1,10 @@
 # ticket-live-event-scanner-helm
 
 A Helm chart for deploying [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner),
-a scraper/notifier pipeline that watches ticketline.pt event listings and
-pushes Telegram alerts, along with its in-cluster NATS (JetStream) message
-bus. Modeled on upstream's own
+a scraper/notifier pipeline that watches ticketline.pt event listings, pushes
+Telegram alerts, and emails a calendar invite (.ics) when an event is marked
+purchased, along with its in-cluster NATS (JetStream) message bus. Modeled on
+upstream's own
 [deploy/k8s](https://github.com/jfms7s/ticket-live-event-scanner/tree/main/deploy/k8s)
 manifests.
 
@@ -11,8 +12,9 @@ manifests.
 
 - Kubernetes 1.19+
 - Helm 3.0+
-- A [Turso](https://turso.tech/) (libSQL) database and a Telegram bot,
-  credentials for both supplied by the caller (see Secrets below)
+- A [Turso](https://turso.tech/) (libSQL) database, a Telegram bot, and an
+  SMTP relay (e.g. Gmail with an App Password), credentials for all three
+  supplied by the caller (see Secrets below)
 
 ## Installing the Chart
 
@@ -21,8 +23,9 @@ helm install my-release .
 ```
 
 Set `turso.databaseUrl.value`, `turso.authToken.value`, `telegram.botToken.value`,
-and `telegram.chatId.value` (or the matching `.valueFrom`) explicitly before
-installing — see the note below.
+`telegram.chatId.value`, `smtp.username.value`, and `smtp.password.value`
+(or the matching `.valueFrom`) explicitly before installing — see the note
+below.
 
 ## Configuration
 
@@ -42,6 +45,11 @@ installing — see the note below.
 | `scraper.resources` | Scraper container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
 | `telegramNotifier.image.*` | Telegram notifier image | `ghcr.io/jfms7s/ticket-live-event-scanner-telegram-notifier:latest` |
 | `telegramNotifier.resources` | Telegram notifier container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
+| `smtp.host` / `smtp.port` | SMTP relay address for email-notifier | `smtp.gmail.com` / `587` |
+| `smtp.username` / `smtp.password` | SMTP auth credentials, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
+| `smtp.from` / `smtp.to` | From address and comma-separated recipient list for the calendar-invite email | `CHANGE_ME` |
+| `emailNotifier.image.*` | Email notifier image | `ghcr.io/jfms7s/ticket-live-event-scanner-email-notifier:latest` |
+| `emailNotifier.resources` | Email notifier container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
 | `webUiApi.image.*` | Web UI API image | `ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api:latest` |
 | `webUiApi.corsOrigin` | Allowed frontend origin(s) for the API | `*` |
 | `webUiApi.resources` | Web UI API container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
@@ -55,8 +63,8 @@ installing — see the note below.
 Argo CD does not support Helm's `lookup` function, so this chart can't
 safely auto-generate random secrets and persist them across syncs the way a
 plain `helm install` could — they would silently rotate on the next sync.
-`turso.databaseUrl`, `turso.authToken`, `telegram.botToken`, and
-`telegram.chatId` are each a standard Kubernetes `EnvVarSource` (the same
+`turso.databaseUrl`, `turso.authToken`, `telegram.botToken`,
+`telegram.chatId`, `smtp.username`, and `smtp.password` are each a standard Kubernetes `EnvVarSource` (the same
 shape as a container's `env[].valueFrom`): set `<field>.value` to a plain
 literal, e.g. from a secrets file kept out of version control, or
 `<field>.valueFrom` (e.g. a `secretKeyRef`) to source it from a Secret you
@@ -104,8 +112,9 @@ scaling out.
 
 This chart creates: a Deployment + Service for NATS, a CronJob (+
 ServiceAccount/Role/RoleBinding) for the scraper, a Deployment for
-telegram-notifier, a Deployment + Service for web-ui-api, and a Deployment +
-Service (+ optional Ingress) for web-ui-frontend.
+telegram-notifier, a Deployment for email-notifier, a Deployment + Service
+for web-ui-api, and a Deployment + Service (+ optional Ingress) for
+web-ui-frontend.
 
 ## Uninstalling
 

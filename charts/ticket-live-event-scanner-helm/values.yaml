@@ -52,6 +52,26 @@ telegram:
     value: "CHANGE_ME"
     valueFrom: {}
 
+# SMTP relay credentials for email-notifier, which emails a calendar
+# invite (.ics) when an event is marked purchased. host/port/from/to are
+# plain config (not secret-worthy on their own), so they're bare scalars
+# rather than the value/valueFrom shape used for username/password below
+# -- those two follow turso/telegram's shape/rationale above. Defaults
+# below assume Gmail (smtp.gmail.com:587 with STARTTLS); username must be
+# a full Gmail address and password a Gmail App Password, not the account
+# password.
+smtp:
+  host: "smtp.gmail.com"
+  port: 587
+  username:
+    value: "CHANGE_ME"
+    valueFrom: {}
+  password:
+    value: "CHANGE_ME"
+    valueFrom: {}
+  from: "CHANGE_ME"
+  to: "CHANGE_ME"
+
 scraper:
   image:
     repository: ghcr.io/jfms7s/ticket-live-event-scanner-scraper
@@ -76,6 +96,19 @@ scraper:
 telegramNotifier:
   image:
     repository: ghcr.io/jfms7s/ticket-live-event-scanner-telegram-notifier
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+emailNotifier:
+  image:
+    repository: ghcr.io/jfms7s/ticket-live-event-scanner-email-notifier
     tag: latest
     pullPolicy: IfNotPresent
   resources:

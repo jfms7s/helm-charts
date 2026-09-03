@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-email-notifier
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "email-notifier" "component" "notifier") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ticket-live-event-scanner-helm.selectorLabels" (dict "context" $ "name" "email-notifier") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "email-notifier" "component" "notifier") | nindent 8 }}
+    spec:
+      containers:
+        - name: email-notifier
+          image: {{ .Values.emailNotifier.image.repository }}:{{ .Values.emailNotifier.image.tag }}
+          imagePullPolicy: {{ .Values.emailNotifier.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+          env:
+            - name: NATS_URL
+              value: nats://{{ .Release.Name }}-ticket-scanner-nats:4222
+            - name: SMTP_HOST
+              value: {{ .Values.smtp.host | quote }}
+            - name: SMTP_PORT
+              value: {{ .Values.smtp.port | quote }}
+            - name: SMTP_USERNAME
+              {{- include "ticket-live-event-scanner-helm.credentialEnv" .Values.smtp.username | nindent 14 }}
+            - name: SMTP_PASSWORD
+              {{- include "ticket-live-event-scanner-helm.credentialEnv" .Values.smtp.password | nindent 14 }}
+            - name: EMAIL_FROM
+              value: {{ .Values.smtp.from | quote }}
+            - name: EMAIL_TO
+              value: {{ .Values.smtp.to | quote }}
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "kill -0 1"
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.emailNotifier.resources | nindent 12 }}
+      restartPolicy: Always
