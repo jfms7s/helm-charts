@@ -31,6 +31,7 @@ jobs:
           helm lint charts/data-lab-helm
           helm lint charts/patchmon-helm
           helm lint charts/ticket-live-event-scanner-helm
+          helm lint -f charts/budget-manager-helm/ci/test-values.yaml charts/budget-manager-helm
 
       - name: Template Helm charts
         run: |
@@ -39,6 +40,7 @@ jobs:
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml
+          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml
 
       - name: Install kubeconform
         run: |
@@ -55,6 +57,7 @@ jobs:
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml | kubeconform -summary
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml | kubeconform -summary
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml | kubeconform -summary
+          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml | kubeconform -summary
 
       - name: Run helm-unittest
         run: |
@@ -63,3 +66,4 @@ jobs:
           helm unittest charts/data-lab-helm --file 'tests/**/*.yaml'
           helm unittest charts/patchmon-helm --file 'tests/**/*.yaml'
           helm unittest charts/ticket-live-event-scanner-helm --file 'tests/**/*.yaml'
+          helm unittest charts/budget-manager-helm --file 'tests/**/*.yaml'

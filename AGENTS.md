@@ -8,6 +8,7 @@ This is a Helm charts repository containing application-specific and shared char
 helm-charts/
 ├── charts/
 │   ├── affine-helm/     # Chart for Affine application
+│   ├── budget-manager-helm/  # Chart for Budget Manager personal finance application
 │   ├── data-lab-helm/   # Shared infra for the Spark/Flink learning labs
 │   ├── patchmon-helm/   # Chart for PatchMon application
 │   ├── ticket-live-event-scanner-helm/  # Chart for Ticket Live Event Scanner
@@ -29,6 +30,16 @@ Application-specific chart for deploying the [Affine](https://affine.pro/) works
 - Redis cache
 - Ingress configuration
 - Migration job
+
+### budget-manager-helm
+Application-specific chart for deploying [Budget Manager](https://github.com/jfms7s/budget-manager), a personal finance application. Includes:
+- API server deployment + Service + Ingress
+- Web UI frontend deployment + Service + Ingress
+- Async worker deployment (scheduler, event relay)
+- NATS JetStream message bus deployment + Service
+- Libsql (Turso) database integration
+- File attachments shared storage
+- Security hardening: non-root containers, read-only root filesystem, dropped capabilities
 
 ### patchmon-helm
 Application-specific chart for deploying [PatchMon](https://patchmon.net/), a Linux patch management platform. Modeled on upstream's [docker-compose.yml](https://github.com/PatchMon/PatchMon/blob/main/docker/docker-compose.yml). Includes:
@@ -60,22 +71,25 @@ Reusable chart for deploying containerized applications. Provides:
 ```bash
 # Lint a chart
 helm lint charts/affine-helm
+helm lint charts/budget-manager-helm
 helm lint charts/patchmon-helm
 helm lint charts/common
 
 # Template a chart
 helm template my-release charts/affine-helm
+helm template my-release charts/budget-manager-helm
 helm template my-release charts/patchmon-helm
 helm template my-release charts/common
 
 # Package a chart
 helm package charts/affine-helm
+helm package charts/budget-manager-helm
 helm package charts/patchmon-helm
 helm package charts/common
 
 # Run helm-unittest tests (rendered-manifest assertions, see charts/*/tests/)
 make helm-unittest
-make helm-unittest HELM_CHART=affine-helm
+make helm-unittest HELM_CHART=budget-manager-helm
 ```
 
 See the [Makefile](Makefile) (`make help`) for the same checks CI runs, including `kubeconform` schema validation and `helm-unittest`. Use the `helm-chart-test` skill (`.claude/skills/helm-chart-test/SKILL.md`) to add or expand test coverage for a chart.

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-budget-manager-api
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" "api" "component" "api") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "budget-manager-helm.selectorLabels" (dict "context" $ "name" "api") | nindent 4 }}

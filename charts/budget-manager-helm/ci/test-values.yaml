@@ -1,0 +1,24 @@
+# Test values for CI/CD - contains valid dummy credentials for rendering and testing
+# This file is used by: .github/workflows/lint-test.yml, Makefile, and helm-unittest
+
+# Leave database.url empty to test derived URL (sqld.enabled=true → http://...-budget-manager-sqld:8080)
+database:
+  authToken:
+    value: "test-auth-token-1234567890abcdef"
+
+sessionCookieSecret:
+  value: "test-session-secret-1234567890abcdefghijklmnop"
+
+appEncryptionKey:
+  value: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+
+sqld:
+  persistence:
+    volume:
+      persistentVolumeClaim:
+        claimName: budget-manager-sqld-data
+
+attachments:
+  volume:
+    persistentVolumeClaim:
+      claimName: budget-manager-attachments

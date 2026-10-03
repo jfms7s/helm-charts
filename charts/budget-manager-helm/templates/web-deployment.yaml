@@ -1,0 +1,72 @@
+{{- include "budget-manager-helm.validateOrigin" (dict "context" $ "originName" "apiOrigin" "origin" .Values.apiOrigin) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-budget-manager-web
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" "web" "component" "frontend") | nindent 4 }}
+  annotations:
+    description: "Budget Manager web UI frontend (Nginx)"
+spec:
+  replicas: {{ .Values.web.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "budget-manager-helm.selectorLabels" (dict "context" $ "name" "web") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "budget-manager-helm.labels" (dict "context" $ "name" "web" "component" "frontend") | nindent 8 }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.web.runAsUser }}
+        runAsGroup: {{ .Values.web.runAsGroup }}
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      containers:
+        - name: web
+          image: {{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: {{ .Values.web.port }}
+          env:
+            - name: API_ORIGIN
+              value: "{{ .Values.apiOrigin | default (printf "https://%s" .Values.ingress.api.host) }}"
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 1
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}

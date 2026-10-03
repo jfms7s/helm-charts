@@ -1,0 +1,78 @@
+{{- if .Values.sqld.enabled }}
+{{- if not .Values.sqld.persistence.volume -}}
+  {{- fail "budget-manager-helm: sqld.persistence.volume must be persistent storage (the database lives there)" -}}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-budget-manager-sqld
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" "sqld" "component" "database") | nindent 4 }}
+  annotations:
+    description: "LibSQL (Turso) database server. MUST run at exactly 1 replica."
+spec:
+  # HARDCODED: Single replica (never two sqld processes on one SQLite file — corruption risk)
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "budget-manager-helm.selectorLabels" (dict "context" $ "name" "sqld") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "budget-manager-helm.labels" (dict "context" $ "name" "sqld" "component" "database") | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.sqld.runAsUser }}
+        runAsGroup: {{ .Values.sqld.runAsGroup }}
+        fsGroup: {{ .Values.sqld.fsGroup }}
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      containers:
+        - name: sqld
+          image: {{ .Values.sqld.image.repository }}:{{ .Values.sqld.image.tag }}
+          imagePullPolicy: {{ .Values.sqld.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          command:
+            - /bin/sqld
+          args:
+            - --db-path
+            - /var/lib/sqld/data.sqld
+            - --http-listen-addr
+            - "0.0.0.0:8080"
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            {{- toYaml .Values.sqld.resources | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 2
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/sqld
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          {{- toYaml .Values.sqld.persistence.volume | nindent 10 }}
+        - name: tmp
+          emptyDir: {}
+{{- end }}

@@ -1,0 +1,15 @@
+apiVersion: v2
+name: budget-manager-helm
+description: A Helm chart for deploying Budget Manager on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - budget-manager
+  - personal-finance
+sources:
+  - https://github.com/jfms7s/budget-manager
+  - https://github.com/jfms7s/helm-charts
+maintainers:
+  - name: jfms7s
+    url: https://github.com/jfms7s

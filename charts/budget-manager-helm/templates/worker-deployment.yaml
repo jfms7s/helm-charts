@@ -1,0 +1,120 @@
+{{- include "budget-manager-helm.validate" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-budget-manager-worker
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" "worker" "component" "worker") | nindent 4 }}
+  annotations:
+    description: "Budget Manager async task worker, scheduler, and event relay. Must run at exactly 1 replica."
+spec:
+  # HARDCODED: The worker must run at exactly 1 replica (handles scheduler and outbox relay)
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "budget-manager-helm.selectorLabels" (dict "context" $ "name" "worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "budget-manager-helm.labels" (dict "context" $ "name" "worker" "component" "worker") | nindent 8 }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ .Values.worker.runAsUser }}
+        runAsGroup: {{ .Values.worker.runAsGroup }}
+        fsGroup: {{ .Values.worker.fsGroup }}
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      containers:
+        - name: worker
+          image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: TURSO_SYNC_URL
+              value: {{ include "budget-manager-helm.databaseUrl" . | quote }}
+            - name: TURSO_AUTH_TOKEN
+              {{- include "budget-manager-helm.credentialEnv" .Values.database.authToken | nindent 14 }}
+            - name: APP_ENCRYPTION_KEY
+              {{- include "budget-manager-helm.credentialEnv" .Values.appEncryptionKey | nindent 14 }}
+            - name: NATS_URL
+              value: "nats://{{ .Release.Name }}-budget-manager-nats:4222"
+            {{- if or .Values.webOrigin (and .Values.ingress.web .Values.ingress.web.host) }}
+            - name: WEB_ORIGIN
+              value: "{{ .Values.webOrigin | default (printf "https://%s" .Values.ingress.web.host) }}"
+            {{- end }}
+            - name: ATTACHMENTS_DIR
+              value: "/data/attachments"
+            - name: WEBHOOK_ALLOW_PRIVATE_NETWORKS
+              value: {{ .Values.worker.webhookAllowPrivateNetworks | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.worker.logLevel | quote }}
+            {{- if and .Values.smtp.url.value (ne .Values.smtp.url.value "") }}
+            - name: SMTP_URL
+              {{- include "budget-manager-helm.credentialEnv" .Values.smtp.url | nindent 14 }}
+            - name: SMTP_FROM
+              {{- include "budget-manager-helm.credentialEnv" .Values.smtp.from | nindent 14 }}
+            {{- else if .Values.smtp.url.valueFrom }}
+            - name: SMTP_URL
+              {{- include "budget-manager-helm.credentialEnv" .Values.smtp.url | nindent 14 }}
+            - name: SMTP_FROM
+              {{- include "budget-manager-helm.credentialEnv" .Values.smtp.from | nindent 14 }}
+            {{- end }}
+            {{- if .Values.otelEndpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otelEndpoint | quote }}
+            {{- end }}
+            - name: TZ
+              value: {{ .Values.tz | quote }}
+            - name: WORKER_HEARTBEAT_FILE
+              value: "/tmp/worker-heartbeat"
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - test -f "$WORKER_HEARTBEAT_FILE" && [ $(( $(date +%s) - $(stat -c %Y "$WORKER_HEARTBEAT_FILE") )) -lt 30 ]
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - test -f "$WORKER_HEARTBEAT_FILE" && [ $(( $(date +%s) - $(stat -c %Y "$WORKER_HEARTBEAT_FILE") )) -lt 30 ]
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: attachments
+              mountPath: /data/attachments
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: attachments
+          {{- if .Values.attachments.volume }}
+          {{- toYaml .Values.attachments.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}

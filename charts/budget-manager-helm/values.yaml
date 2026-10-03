@@ -1,0 +1,196 @@
+# Global settings
+imagePullSecrets: []
+  # - name: my-registry-secret
+
+registrationEnabled: true
+
+# Time zone for the application (used by api and worker)
+tz: UTC
+
+# LibSQL (sqld) database server (in-cluster, Kubernetes-native, strategy: Recreate)
+sqld:
+  enabled: true
+  image:
+    repository: ghcr.io/tursodatabase/libsql-server
+    tag: "v0.24.33"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      memory: 160Mi
+    limits:
+      memory: 384Mi
+  # Non-root user ID (numeric)
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  # Volume source for sqld database file (REQUIRED). Each value is the full
+  # body of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
+  # persistentVolumeClaim, etc. On NFS, fsGroup is not applied; the directory
+  # must be writable by uid 1000.
+  persistence:
+    volume:
+
+# API server configuration
+api:
+  image:
+    repository: ghcr.io/jfms7s/budget-manager-api
+    tag: "v0.1.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      memory: 160Mi
+    limits:
+      memory: 384Mi
+  # Port the API listens on
+  port: 3000
+  # Non-root user ID (numeric; the 'node' user in the image maps to uid 1000)
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# Worker (async tasks, scheduler, outbox relay) configuration.
+# MUST run at exactly 1 replica with Recreate strategy (hardcoded in the template).
+worker:
+  image:
+    repository: ghcr.io/jfms7s/budget-manager-worker
+    tag: "v0.1.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      memory: 160Mi
+    limits:
+      memory: 384Mi
+  # Log level for the worker
+  logLevel: info
+  # Allow webhooks to call private network addresses
+  webhookAllowPrivateNetworks: false
+  # Non-root user ID (numeric; the 'node' user in the image maps to uid 1000)
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# Web UI (frontend) configuration
+web:
+  image:
+    repository: ghcr.io/jfms7s/budget-manager-web
+    tag: "v0.1.0"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources:
+    requests:
+      memory: 16Mi
+    limits:
+      memory: 64Mi
+  # Port the web server listens on
+  port: 8080
+  # Non-root user ID (nginx-unprivileged: uid 101)
+  runAsUser: 101
+  runAsGroup: 101
+
+# NATS JetStream message bus (handles webhooks, events, scheduling)
+nats:
+  image:
+    repository: nats
+    tag: "2.15.0-alpine"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  # Non-root user ID (numeric)
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  # Volume source for NATS JetStream file storage. Each value is the full
+  # body of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
+  # persistentVolumeClaim, etc. Left empty (emptyDir, non-persistent) by
+  # default since the right backend is environment-specific; set explicitly
+  # by the caller, e.g.:
+  #   persistence:
+  #     volume:
+  #       nfs:
+  #         server: 192.168.1.10
+  #         path: /volume1/k8s/volumes/budget-manager/nats
+  # NOTE: On NFS, fsGroup is not applied (NFS ignores it). Ensure NFS
+  # directories are writable by uid 1000 (see README storage section).
+  persistence:
+    volume: {}
+
+# Database (Turso / libSQL) credentials. Each is a standard Kubernetes
+# EnvVarSource: set `value` for a plain literal, or `valueFrom`
+# (e.g. secretKeyRef) to source it from a Secret.
+# valueFrom takes precedence when both are set.
+database:
+  # URL to the libSQL (Turso) server. If empty and sqld.enabled=true,
+  # derived as http://<release>-budget-manager-sqld:8080. If empty and
+  # sqld.enabled=false, chart render fails.
+  url: ""
+  # Authentication token for the libSQL server
+  authToken:
+    value: "CHANGE_ME"
+    valueFrom: {}
+
+# Session cookie secret (required credential)
+sessionCookieSecret:
+  value: "CHANGE_ME"
+  valueFrom: {}
+
+# Application encryption key (required credential, used for webhook secrets and 2FA)
+appEncryptionKey:
+  value: "CHANGE_ME"
+  valueFrom: {}
+
+# Attachments storage volume. REQUIRED: must be a shared volume (RWX/NFS) accessible to both api and worker pods.
+# Using emptyDir (the default) breaks the shared-storage contract and causes data loss when pods restart.
+# Example NFS volume:
+#   volume:
+#     nfs:
+#       server: 192.168.1.10
+#       path: /volume1/k8s/volumes/budget-manager/attachments
+# Example ReadWriteMany PersistentVolumeClaim:
+#   volume:
+#     persistentVolumeClaim:
+#       claimName: budget-manager-attachments
+attachments:
+  volume:
+
+# SMTP configuration for email notifications (optional)
+# Both smtpUrl and smtpFrom must be configured together for email to work
+smtp:
+  # SMTP URL (e.g., smtp://user:password@smtp.example.com:587)
+  url:
+    value: ""
+    valueFrom: {}
+  # Email address to send from
+  from:
+    value: ""
+    valueFrom: {}
+
+# OpenTelemetry exporter endpoint (optional, e.g. http://localhost:4317)
+otelEndpoint: ""
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: traefik
+  annotations: {}
+  # Hosts for the web UI and API
+  web:
+    host: budget.example.com
+  api:
+    host: budget-api.example.com
+  # TLS configuration (optional; defaults to cluster's default TLSStore certificate)
+  tls: []
+  # Example:
+  #   - secretName: budget-manager-tls
+  #     hosts:
+  #       - budget.example.com
+  #       - budget-api.example.com
+
+# Origin values derived from ingress hosts (can be overridden)
+# API origin sent to the web frontend (derived from ingress.api.host by default)
+apiOrigin: ""
+# Web origin sent to the API for CORS/session cookies (derived from ingress.web.host by default)
+webOrigin: ""

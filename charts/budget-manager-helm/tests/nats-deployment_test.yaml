@@ -1,0 +1,149 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: nats-deployment
+templates:
+  - templates/nats-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-budget-manager-nats
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: uses Recreate strategy (hardcoded)
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+
+  - it: uses correct pinned image
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nats:2.15.0-alpine
+
+  - it: starts with JetStream, data dir, and monitor port
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -js
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -sd
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: /data
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -m
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "8222"
+
+  - it: exposes client port 4222 and monitor port 8222
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: client
+            containerPort: 4222
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content:
+            name: monitor
+            containerPort: 8222
+
+  - it: runs as numeric non-root user 1000 with fsGroup
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000
+
+  - it: has read-only root filesystem
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+
+  - it: mounts data volume at /data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /data
+
+  - it: mounts tmp emptyDir at /tmp
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+
+  - it: uses emptyDir by default for data volume
+    asserts:
+      - isNotNull:
+          path: spec.template.spec.volumes[0].emptyDir
+
+  - it: uses configured persistence volume (nfs example)
+    set:
+      nats:
+        persistence:
+          volume:
+            nfs:
+              server: 192.168.1.10
+              path: /volume1/k8s/volumes/budget-manager/nats
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0].nfs.server
+          value: 192.168.1.10
+      - equal:
+          path: spec.template.spec.volumes[0].nfs.path
+          value: /volume1/k8s/volumes/budget-manager/nats
+
+  - it: includes readiness probe on /healthz at port 8222
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: monitor
+
+  - it: includes liveness probe on /healthz at port 8222
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: monitor
+
+  - it: respects custom resource limits
+    set:
+      nats:
+        resources:
+          requests:
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 64Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 256Mi
