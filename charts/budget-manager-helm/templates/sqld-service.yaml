@@ -1,0 +1,17 @@
+{{- if .Values.sqld.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-budget-manager-sqld
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" "sqld" "component" "database") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "budget-manager-helm.selectorLabels" (dict "context" $ "name" "sqld") | nindent 4 }}
+{{- end }}

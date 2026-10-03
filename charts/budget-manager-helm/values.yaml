@@ -7,6 +7,29 @@ registrationEnabled: true
 # Time zone for the application (used by api and worker)
 tz: UTC
 
+# LibSQL (sqld) database server (in-cluster, Kubernetes-native, strategy: Recreate)
+sqld:
+  enabled: true
+  image:
+    repository: ghcr.io/tursodatabase/libsql-server
+    tag: "v0.24.33"
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      memory: 160Mi
+    limits:
+      memory: 384Mi
+  # Non-root user ID (numeric)
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  # Volume source for sqld database file (REQUIRED). Each value is the full
+  # body of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
+  # persistentVolumeClaim, etc. On NFS, fsGroup is not applied; the directory
+  # must be writable by uid 1000.
+  persistence:
+    volume:
+
 # API server configuration
 api:
   image:
@@ -100,7 +123,9 @@ nats:
 # (e.g. secretKeyRef) to source it from a Secret.
 # valueFrom takes precedence when both are set.
 database:
-  # URL to the libSQL (Turso) server (required; must be set via values or -f option)
+  # URL to the libSQL (Turso) server. If empty and sqld.enabled=true,
+  # derived as http://<release>-budget-manager-sqld:8080. If empty and
+  # sqld.enabled=false, chart render fails.
   url: ""
   # Authentication token for the libSQL server
   authToken:

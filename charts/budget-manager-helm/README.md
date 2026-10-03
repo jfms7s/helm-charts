@@ -9,16 +9,17 @@ This chart deploys a complete Budget Manager stack on Kubernetes, including:
 - **API Server**: Node.js Express API on port 3000 (Deployment + Service + Ingress)
 - **Web Frontend**: Nginx static file server on port 8080 (Deployment + Service + Ingress)
 - **Worker**: Async task processor, scheduler, and event bus relay (Deployment)
+- **Database (sqld)**: LibSQL server (Deployment + Service, enabled by default, strategy: Recreate)
 - **NATS JetStream**: In-cluster message bus for webhooks and events (Deployment + Service)
 
-The application uses [libSQL (Turso)](https://turso.tech/) for the database and stores user attachments in a shared volume.
+The application stores user attachments in a shared volume. By default, the chart deploys an in-cluster LibSQL database; you can optionally disable it and point to an external Turso database instead.
 
 ## Prerequisites
 
 1. Kubernetes 1.24+
 2. Helm 3.0+
-3. A libSQL (Turso) database URL and authentication token
-4. For production: shared (RWX) storage (NFS recommended) for attachments and NATS data
+3. For production: shared (RWX) storage (NFS recommended) for attachments, NATS data, and sqld database file (if sqld.enabled: true)
+4. Optional: external Turso database URL and token (if sqld.enabled: false)
 
 ## Installation
 

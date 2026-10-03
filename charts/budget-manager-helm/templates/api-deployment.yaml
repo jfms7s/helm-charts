@@ -1,4 +1,6 @@
-{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "database.url" "value" .Values.database.url) }}
+{{- if and (eq .Values.database.url "") (not .Values.sqld.enabled) -}}
+  {{- fail "budget-manager-helm: database.url must be set (or enable sqld.enabled)" -}}
+{{- end -}}
 {{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "database.authToken" "credential" .Values.database.authToken) }}
 {{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "sessionCookieSecret" "credential" .Values.sessionCookieSecret) }}
 {{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "appEncryptionKey" "credential" .Values.appEncryptionKey) }}
@@ -52,7 +54,7 @@ spec:
             - name: NODE_ENV
               value: "production"
             - name: TURSO_SYNC_URL
-              value: {{ .Values.database.url | quote }}
+              value: {{ if .Values.database.url }}{{ .Values.database.url | quote }}{{ else if .Values.sqld.enabled }}"http://{{ .Release.Name }}-budget-manager-sqld:8080"{{ else }}""{{ end }}
             - name: TURSO_AUTH_TOKEN
               {{- include "budget-manager-helm.credentialEnv" .Values.database.authToken | nindent 14 }}
             - name: SESSION_COOKIE_SECRET
