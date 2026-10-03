@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-budget-manager-nats
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 4 }}
+  annotations:
+    description: "NATS JetStream message bus for webhooks and events"
+spec:
+  # HARDCODED: Single replica (NATS cluster setup not configured)
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "budget-manager-helm.selectorLabels" (dict "context" $ "name" "nats") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "budget-manager-helm.labels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      containers:
+        - name: nats
+          image: {{ .Values.nats.image.repository }}:{{ .Values.nats.image.tag }}
+          imagePullPolicy: {{ .Values.nats.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          args:
+            - -js
+            - -sd
+            - /data
+            - -m
+            - "8222"
+          ports:
+            - name: client
+              containerPort: 4222
+            - name: monitor
+              containerPort: 8222
+          resources:
+            {{- toYaml .Values.nats.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: monitor
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: monitor
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 2
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          {{- if .Values.nats.persistence.volume }}
+          {{- toYaml .Values.nats.persistence.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

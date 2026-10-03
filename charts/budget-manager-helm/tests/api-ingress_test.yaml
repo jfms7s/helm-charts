@@ -1,0 +1,33 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: api-ingress
+templates:
+  - templates/api-ingress.yaml
+tests:
+  - it: renders when ingress.enabled is true
+    set:
+      ingress.enabled: true
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-budget-manager-api
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+      - equal:
+          path: spec.rules[0].host
+          value: budget-api.example.com
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: RELEASE-NAME-budget-manager-api
+
+  - it: does not render when ingress.enabled is false
+    set:
+      ingress.enabled: false
+    asserts:
+      - isNull:
+          path: kind

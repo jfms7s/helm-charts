@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-budget-manager-api
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" "api" "component" "api") | nindent 4 }}
+  annotations:
+    description: "Budget Manager API server"
+spec:
+  replicas: {{ .Values.api.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "budget-manager-helm.selectorLabels" (dict "context" $ "name" "api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "budget-manager-helm.labels" (dict "context" $ "name" "api" "component" "api") | nindent 8 }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      containers:
+        - name: api
+          image: {{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.api.port | quote }}
+            - name: NODE_ENV
+              value: "production"
+            - name: TURSO_SYNC_URL
+              value: {{ .Values.database.url | quote }}
+            - name: TURSO_AUTH_TOKEN
+              {{- include "budget-manager-helm.credentialEnv" .Values.database.authToken | nindent 14 }}
+            - name: SESSION_COOKIE_SECRET
+              {{- include "budget-manager-helm.credentialEnv" .Values.sessionCookieSecret | nindent 14 }}
+            - name: APP_ENCRYPTION_KEY
+              {{- include "budget-manager-helm.credentialEnv" .Values.appEncryptionKey | nindent 14 }}
+            - name: NATS_URL
+              value: "nats://{{ .Release.Name }}-budget-manager-nats:4222"
+            {{- if or .Values.webOrigin (and .Values.ingress.web .Values.ingress.web.host) }}
+            - name: WEB_ORIGIN
+              value: "https://{{ .Values.webOrigin | default .Values.ingress.web.host }}"
+            {{- end }}
+            - name: ATTACHMENTS_DIR
+              value: "/data/attachments"
+            - name: REGISTRATION_ENABLED
+              value: {{ .Values.registrationEnabled | quote }}
+            {{- if and .Values.smtp.url.value (ne .Values.smtp.url.value "") }}
+            - name: EMAIL_CONFIGURED
+              value: "true"
+            {{- else if .Values.smtp.url.valueFrom }}
+            - name: EMAIL_CONFIGURED
+              value: "true"
+            {{- end }}
+            {{- if .Values.otelEndpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otelEndpoint | quote }}
+            {{- end }}
+            - name: TZ
+              value: {{ .Values.tz | quote }}
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 1
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 1
+          volumeMounts:
+            - name: attachments
+              mountPath: /data/attachments
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: attachments
+          {{- if .Values.attachments.volume }}
+          {{- toYaml .Values.attachments.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}

@@ -1,0 +1,184 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: worker-deployment
+templates:
+  - templates/worker-deployment.yaml
+tests:
+  - it: renders with chart defaults
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-budget-manager-worker
+
+  - it: is hardcoded to 1 replica regardless of values
+    set:
+      worker:
+        replicas: 3
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: uses Recreate strategy (hardcoded)
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+
+  - it: requires database.authToken at CHANGE_ME
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_AUTH_TOKEN
+            value: "CHANGE_ME"
+
+  - it: requires appEncryptionKey at CHANGE_ME and same source as api
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: APP_ENCRYPTION_KEY
+            value: "CHANGE_ME"
+
+  - it: uses valueFrom for credentials when set
+    set:
+      database.authToken.valueFrom.secretKeyRef.name: budget-manager-secrets
+      database.authToken.valueFrom.secretKeyRef.key: db-auth-token
+      appEncryptionKey.valueFrom.secretKeyRef.name: budget-manager-secrets
+      appEncryptionKey.valueFrom.secretKeyRef.key: app-encryption-key
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: budget-manager-secrets
+                key: db-auth-token
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: APP_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: budget-manager-secrets
+                key: app-encryption-key
+
+  - it: sets NODE_ENV to production
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NODE_ENV
+            value: "production"
+
+  - it: sets NATS_URL with release name
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_URL
+            value: "nats://RELEASE-NAME-budget-manager-nats:4222"
+
+  - it: sets ATTACHMENTS_DIR
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ATTACHMENTS_DIR
+            value: "/data/attachments"
+
+  - it: sets WEBHOOK_ALLOW_PRIVATE_NETWORKS
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WEBHOOK_ALLOW_PRIVATE_NETWORKS
+            value: "false"
+
+  - it: sets LOG_LEVEL
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LOG_LEVEL
+            value: "info"
+
+  - it: sets WEB_ORIGIN from ingress.web.host
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WEB_ORIGIN
+            value: "https://budget.example.com"
+
+  - it: includes SMTP_URL and SMTP_FROM when configured
+    set:
+      smtp:
+        url:
+          value: "smtp://user:pass@smtp.example.com:587"
+        from:
+          value: "noreply@example.com"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_URL
+            value: "smtp://user:pass@smtp.example.com:587"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_FROM
+            value: "noreply@example.com"
+
+  - it: mounts attachments volume at /data/attachments
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: attachments
+            mountPath: /data/attachments
+
+  - it: mounts tmp emptyDir at /tmp
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+
+  - it: uses liveness probe with exec heartbeat check
+    asserts:
+      - isNotNull:
+          path: spec.template.spec.containers[0].livenessProbe.exec
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.initialDelaySeconds
+          value: 60
+
+  - it: includes imagePullSecrets when configured
+    set:
+      imagePullSecrets:
+        - name: my-registry-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: my-registry-secret
+
+  - it: respects custom resource limits
+    set:
+      worker:
+        resources:
+          requests:
+            memory: 200Mi
+          limits:
+            memory: 512Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 200Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 512Mi
