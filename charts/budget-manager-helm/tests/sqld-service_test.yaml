@@ -2,6 +2,8 @@
 suite: sqld-service
 templates:
   - templates/sqld-service.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders with chart defaults when enabled
     set:

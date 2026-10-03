@@ -76,3 +76,27 @@ Pass: (dict "context" $ "originName" "webOrigin" "origin" .Values.webOrigin)
   {{- fail (printf "budget-manager-helm: %s must be a valid origin (e.g. https://example.com, got %q)" .originName .origin) -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Every chart-wide render-time guard, in one place. Both the api and the worker
+template include it, so neither can ever render on its own with a placeholder
+credential, a missing database, an unshared attachments volume or a bad origin.
+*/}}
+{{- define "budget-manager-helm.validate" -}}
+{{- $ := . -}}
+{{- if and (eq $.Values.database.url "") (not $.Values.sqld.enabled) -}}
+  {{- fail "budget-manager-helm: database.url must be set (or enable sqld.enabled)" -}}
+{{- end -}}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "database.authToken" "credential" $.Values.database.authToken) }}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "sessionCookieSecret" "credential" $.Values.sessionCookieSecret) }}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "appEncryptionKey" "credential" $.Values.appEncryptionKey) }}
+{{- include "budget-manager-helm.validateOrigin" (dict "context" $ "originName" "webOrigin" "origin" $.Values.webOrigin) }}
+{{- if or ($.Values.smtp.url.value) ($.Values.smtp.url.valueFrom) -}}
+  {{- if and (or (eq ($.Values.smtp.from.value | default "") "") (eq ($.Values.smtp.from.value | default "") "CHANGE_ME")) (not $.Values.smtp.from.valueFrom) -}}
+    {{- fail "budget-manager-helm: smtp.from must be set when smtp.url is configured" -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $.Values.attachments.volume -}}
+  {{- fail "budget-manager-helm: attachments.volume must be a volume shared by the api and the worker (e.g. nfs: or a ReadWriteMany persistentVolumeClaim)" -}}
+{{- end -}}
+{{- end -}}

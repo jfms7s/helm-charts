@@ -1,11 +1,4 @@
-{{- if or (.Values.smtp.url.value) (.Values.smtp.url.valueFrom) -}}
-  {{- if and (or (eq (.Values.smtp.from.value | default "") "") (eq (.Values.smtp.from.value | default "") "CHANGE_ME")) (not .Values.smtp.from.valueFrom) -}}
-    {{- fail "budget-manager-helm: smtp.from must be set when smtp.url is configured" -}}
-  {{- end -}}
-{{- end -}}
-{{- if not .Values.attachments.volume -}}
-  {{- fail "budget-manager-helm: attachments.volume must be a volume shared by the api and the worker (e.g. nfs: or a ReadWriteMany persistentVolumeClaim)" -}}
-{{- end -}}
+{{- include "budget-manager-helm.validate" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

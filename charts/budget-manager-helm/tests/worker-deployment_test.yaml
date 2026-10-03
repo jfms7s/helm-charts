@@ -1,42 +1,218 @@
 # $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
 suite: worker-deployment
-values:
-  - ../ci/test-values.yaml
 templates:
   - templates/worker-deployment.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
-  - it: renders with chart defaults (ci values)
+  - it: renders with chart defaults
     asserts:
       - isKind:
           of: Deployment
       - equal:
           path: metadata.name
           value: RELEASE-NAME-budget-manager-worker
+
+  - it: is hardcoded to 1 replica regardless of values
+    set:
+      worker:
+        replicas: 3
+    asserts:
       - equal:
           path: spec.replicas
           value: 1
+
+  - it: uses Recreate strategy (hardcoded)
+    asserts:
       - equal:
           path: spec.strategy.type
           value: Recreate
 
-  - it: is hardcoded to 1 replica even when overridden
-    set:
-      worker.replicas: 3
-    asserts:
-      - equal:
-          path: spec.replicas
-          value: 1
-
-  - it: runs as numeric non-root user 1000
+  - it: runs as numeric non-root user 1000 with fsGroup
     asserts:
       - equal:
           path: spec.template.spec.securityContext.runAsUser
           value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000
 
-  - it: includes startupProbe with heartbeat check
+  - it: fails when database.authToken is unset
+    set:
+      database.authToken.value: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "database.authToken must be set"
+
+  - it: fails when appEncryptionKey is unset
+    set:
+      appEncryptionKey.value: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "appEncryptionKey must be set"
+
+  - it: fails without a shared attachments volume
+    set:
+      attachments.volume: null
+    asserts:
+      - failedTemplate:
+          errorPattern: "attachments.volume must be a volume shared by the api and the worker"
+
+  - it: fails when an SMTP URL is set without smtp.from
+    set:
+      smtp.url.value: smtp://user:pass@mail.example:587
+    asserts:
+      - failedTemplate:
+          errorPattern: "smtp.from must be set when smtp.url is configured"
+
+  - it: uses valueFrom for credentials when set
+    set:
+      database.authToken.valueFrom.secretKeyRef.name: budget-manager-secrets
+      database.authToken.valueFrom.secretKeyRef.key: db-auth-token
+      appEncryptionKey.valueFrom.secretKeyRef.name: budget-manager-secrets
+      appEncryptionKey.valueFrom.secretKeyRef.key: app-encryption-key
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: budget-manager-secrets
+                key: db-auth-token
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: APP_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: budget-manager-secrets
+                key: app-encryption-key
+
+  - it: sets NODE_ENV to production
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NODE_ENV
+            value: "production"
+
+  - it: sets NATS_URL with release name
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_URL
+            value: "nats://RELEASE-NAME-budget-manager-nats:4222"
+
+  - it: sets ATTACHMENTS_DIR
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: ATTACHMENTS_DIR
+            value: "/data/attachments"
+
+  - it: sets WEBHOOK_ALLOW_PRIVATE_NETWORKS
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WEBHOOK_ALLOW_PRIVATE_NETWORKS
+            value: "false"
+
+  - it: sets LOG_LEVEL
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LOG_LEVEL
+            value: "info"
+
+  - it: sets WEB_ORIGIN from ingress.web.host
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WEB_ORIGIN
+            value: "https://budget.example.com"
+
+  - it: includes SMTP_URL and SMTP_FROM when configured
+    set:
+      smtp:
+        url:
+          value: "smtp://user:pass@smtp.example.com:587"
+        from:
+          value: "noreply@example.com"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_URL
+            value: "smtp://user:pass@smtp.example.com:587"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_FROM
+            value: "noreply@example.com"
+
+  - it: mounts attachments volume at /data/attachments
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: attachments
+            mountPath: /data/attachments
+
+  - it: mounts tmp emptyDir at /tmp
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+
+  - it: gives slow first migrations a startupProbe budget before liveness applies
     asserts:
       - isNotNull:
-          path: spec.template.spec.containers[0].startupProbe
+          path: spec.template.spec.containers[0].startupProbe.exec
       - equal:
           path: spec.template.spec.containers[0].startupProbe.failureThreshold
           value: 30
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.periodSeconds
+          value: 10
+      - isNotNull:
+          path: spec.template.spec.containers[0].livenessProbe.exec
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.initialDelaySeconds
+          value: 0
+
+  - it: includes imagePullSecrets when configured
+    set:
+      imagePullSecrets:
+        - name: my-registry-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: my-registry-secret
+
+  - it: respects custom resource limits
+    set:
+      worker:
+        resources:
+          requests:
+            memory: 200Mi
+          limits:
+            memory: 512Mi
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 200Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 512Mi

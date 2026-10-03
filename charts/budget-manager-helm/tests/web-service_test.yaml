@@ -2,6 +2,8 @@
 suite: web-service
 templates:
   - templates/web-service.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders with chart defaults
     asserts:

@@ -1,10 +1,4 @@
-{{- if and (eq .Values.database.url "") (not .Values.sqld.enabled) -}}
-  {{- fail "budget-manager-helm: database.url must be set (or enable sqld.enabled)" -}}
-{{- end -}}
-{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "database.authToken" "credential" .Values.database.authToken) }}
-{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "sessionCookieSecret" "credential" .Values.sessionCookieSecret) }}
-{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "appEncryptionKey" "credential" .Values.appEncryptionKey) }}
-{{- include "budget-manager-helm.validateOrigin" (dict "context" $ "originName" "webOrigin" "origin" .Values.webOrigin) }}
+{{- include "budget-manager-helm.validate" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

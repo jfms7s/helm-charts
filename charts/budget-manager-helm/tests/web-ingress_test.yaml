@@ -2,6 +2,8 @@
 suite: web-ingress
 templates:
   - templates/web-ingress.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders when ingress.enabled is true
     set:
