@@ -127,6 +127,26 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/affine-helm-0.2.1/affine-helm-0.2.1.tgz
     version: 0.2.1
+  budget-manager-helm:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2026-10-03T08:27:07.616229294Z"
+    description: A Helm chart for deploying Budget Manager on Kubernetes
+    digest: 5c8e36e8b96ffcdbb9bf4255402443a9d7ee9c864004c49bf46a80cfd81428d6
+    keywords:
+    - budget-manager
+    - personal-finance
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: budget-manager-helm
+    sources:
+    - https://github.com/jfms7s/budget-manager
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/budget-manager-helm-0.1.0/budget-manager-helm-0.1.0.tgz
+    version: 0.1.0
   common:
   - apiVersion: v2
     created: "2026-08-14T09:29:10.143642863Z"
@@ -398,4 +418,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.1.0/ticket-live-event-scanner-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-09-03T12:50:26.778759326Z"
+generated: "2026-10-03T08:27:07.61628546Z"
