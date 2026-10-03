@@ -171,6 +171,13 @@ smtp:
 # OpenTelemetry exporter endpoint (optional, e.g. http://localhost:4317)
 otelEndpoint: ""
 
+# The reverse proxies whose X-Forwarded-For the api believes (TRUST_PROXY), so
+# rate limits key on the client rather than the ingress: a comma-separated list
+# of addresses or CIDR ranges, e.g. the pod network Traefik runs in
+# ("10.42.0.0/16" on k3s). Empty trusts nobody. Never "true": the api refuses
+# it, because it would believe a header anyone can send.
+trustProxy: ""
+
 # Ingress configuration
 ingress:
   enabled: true

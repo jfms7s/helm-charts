@@ -282,3 +282,21 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
           value: 512Mi
+
+  - it: trusts no proxy by default (no TRUST_PROXY)
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUST_PROXY
+          any: true
+
+  - it: passes trustProxy to the api as TRUST_PROXY
+    set:
+      trustProxy: 10.42.0.0/16
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TRUST_PROXY
+            value: "10.42.0.0/16"
