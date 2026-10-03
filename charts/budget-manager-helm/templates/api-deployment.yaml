@@ -72,6 +72,10 @@ spec:
             - name: EMAIL_CONFIGURED
               value: "true"
             {{- end }}
+            {{- if .Values.trustProxy }}
+            - name: TRUST_PROXY
+              value: {{ .Values.trustProxy | quote }}
+            {{- end }}
             {{- if .Values.otelEndpoint }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.otelEndpoint | quote }}

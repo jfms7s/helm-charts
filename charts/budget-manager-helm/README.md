@@ -135,6 +135,7 @@ helm install budget-manager ./budget-manager-helm \
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `registrationEnabled` | Allow new user registration via sign-up form | `true` |
+| `trustProxy` | Proxies whose X-Forwarded-For the api believes (`TRUST_PROXY`): comma-separated addresses or CIDRs, e.g. `10.42.0.0/16` on k3s. Empty trusts nobody; never `true` | `""` |
 | `tz` | Time zone (IANA format) | `UTC` |
 | `ingress.api.host` | API server hostname | `budget-api.example.com` |
 | `ingress.web.host` | Web frontend hostname | `budget.example.com` |
