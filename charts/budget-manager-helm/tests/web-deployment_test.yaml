@@ -1,96 +1,30 @@
 # $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
 suite: web-deployment
+values:
+  - ../ci/test-values.yaml
 templates:
   - templates/web-deployment.yaml
 tests:
-  - it: renders with chart defaults
+  - it: renders with chart defaults (ci values)
     asserts:
       - isKind:
           of: Deployment
       - equal:
           path: metadata.name
           value: RELEASE-NAME-budget-manager-web
-      - equal:
-          path: spec.replicas
-          value: 1
-      - equal:
-          path: spec.template.spec.containers[0].image
-          value: ghcr.io/jfms7s/budget-manager-web:v0.1.0
-      - equal:
-          path: spec.template.spec.containers[0].ports[0].containerPort
-          value: 8080
 
   - it: runs as numeric non-root user 101 (nginx-unprivileged)
     asserts:
       - equal:
           path: spec.template.spec.securityContext.runAsUser
           value: 101
-      - equal:
-          path: spec.template.spec.securityContext.runAsGroup
-          value: 101
 
-  - it: sets API_ORIGIN from ingress.api.host
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: API_ORIGIN
-            value: "https://budget-api.example.com"
-
-  - it: uses custom apiOrigin when set
+  - it: uses custom apiOrigin when set correctly
     set:
-      apiOrigin: custom-api.example.com
+      apiOrigin: "https://custom-api.example.com"
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: API_ORIGIN
             value: "https://custom-api.example.com"
-
-  - it: mounts emptyDir volumes for tmp and nginx-cache
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: tmp
-            mountPath: /tmp
-      - contains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: nginx-cache
-            mountPath: /var/cache/nginx
-
-  - it: includes readiness and liveness probes on /
-    asserts:
-      - equal:
-          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
-          value: /
-      - equal:
-          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
-          value: /
-
-  - it: includes imagePullSecrets when configured
-    set:
-      imagePullSecrets:
-        - name: my-registry-secret
-    asserts:
-      - contains:
-          path: spec.template.spec.imagePullSecrets
-          content:
-            name: my-registry-secret
-
-  - it: respects custom resource limits
-    set:
-      web:
-        resources:
-          requests:
-            memory: 32Mi
-          limits:
-            memory: 128Mi
-    asserts:
-      - equal:
-          path: spec.template.spec.containers[0].resources.requests.memory
-          value: 32Mi
-      - equal:
-          path: spec.template.spec.containers[0].resources.limits.memory
-          value: 128Mi

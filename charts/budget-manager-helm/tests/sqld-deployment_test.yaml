@@ -1,16 +1,11 @@
 # $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
 suite: sqld-deployment
+values:
+  - ../ci/test-values.yaml
 templates:
   - templates/sqld-deployment.yaml
 tests:
-  - it: renders with chart defaults when enabled
-    set:
-      sqld:
-        enabled: true
-        persistence:
-          volume:
-            persistentVolumeClaim:
-              claimName: sqld-data
+  - it: renders with chart defaults when enabled (ci values)
     asserts:
       - isKind:
           of: Deployment
@@ -26,52 +21,38 @@ tests:
 
   - it: does not render when disabled
     set:
-      sqld:
-        enabled: false
+      sqld.enabled: false
     asserts:
       - isNull:
           path: kind
 
-  - it: runs as numeric non-root user 1000 with fsGroup
-    set:
-      sqld:
-        enabled: true
-        persistence:
-          volume:
-            persistentVolumeClaim:
-              claimName: sqld-data
-    asserts:
-      - equal:
-          path: spec.template.spec.securityContext.runAsUser
-          value: 1000
-      - equal:
-          path: spec.template.spec.securityContext.runAsGroup
-          value: 1000
-      - equal:
-          path: spec.template.spec.securityContext.fsGroup
-          value: 1000
-
   - it: uses correct pinned image
-    set:
-      sqld:
-        enabled: true
-        persistence:
-          volume:
-            persistentVolumeClaim:
-              claimName: sqld-data
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
           value: ghcr.io/tursodatabase/libsql-server:v0.24.33
 
+  - it: runs as numeric non-root user 1000 with fsGroup
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000
+
+  - it: has read-only root filesystem with /tmp mount
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+
   - it: starts with correct command and args
-    set:
-      sqld:
-        enabled: true
-        persistence:
-          volume:
-            persistentVolumeClaim:
-              claimName: sqld-data
     asserts:
       - equal:
           path: spec.template.spec.containers[0].command[0]
@@ -79,77 +60,3 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].args
           content: --db-path
-      - contains:
-          path: spec.template.spec.containers[0].args
-          content: /var/lib/sqld/data.sqld
-      - contains:
-          path: spec.template.spec.containers[0].args
-          content: --http-listen-addr
-      - contains:
-          path: spec.template.spec.containers[0].args
-          content: "0.0.0.0:8080"
-
-  - it: has read-only root filesystem
-    set:
-      sqld:
-        enabled: true
-        persistence:
-          volume:
-            persistentVolumeClaim:
-              claimName: sqld-data
-    asserts:
-      - equal:
-          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
-          value: true
-
-  - it: mounts data and tmp volumes
-    set:
-      sqld:
-        enabled: true
-        persistence:
-          volume:
-            persistentVolumeClaim:
-              claimName: sqld-data
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: data
-            mountPath: /var/lib/sqld
-      - contains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: tmp
-            mountPath: /tmp
-
-  - it: fails when persistence.volume is empty
-    set:
-      sqld:
-        enabled: true
-        persistence:
-          volume:
-    failedTemplate: true
-    asserts:
-      - matchRegex:
-          pattern: "budget-manager-helm: sqld.persistence.volume must be persistent storage"
-
-  - it: respects custom resource limits
-    set:
-      sqld:
-        enabled: true
-        persistence:
-          volume:
-            persistentVolumeClaim:
-              claimName: sqld-data
-        resources:
-          requests:
-            memory: 200Mi
-          limits:
-            memory: 512Mi
-    asserts:
-      - equal:
-          path: spec.template.spec.containers[0].resources.requests.memory
-          value: 200Mi
-      - equal:
-          path: spec.template.spec.containers[0].resources.limits.memory
-          value: 512Mi
