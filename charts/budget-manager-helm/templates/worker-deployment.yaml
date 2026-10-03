@@ -1,3 +1,8 @@
+{{- if or (.Values.smtp.url.value) (.Values.smtp.url.valueFrom) -}}
+  {{- if and (or (eq (.Values.smtp.from.value | default "") "") (eq (.Values.smtp.from.value | default "") "CHANGE_ME")) (not .Values.smtp.from.valueFrom) -}}
+    {{- fail "budget-manager-helm: smtp.from must be set when smtp.url is configured" -}}
+  {{- end -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -54,7 +59,7 @@ spec:
               value: "nats://{{ .Release.Name }}-budget-manager-nats:4222"
             {{- if or .Values.webOrigin (and .Values.ingress.web .Values.ingress.web.host) }}
             - name: WEB_ORIGIN
-              value: "https://{{ .Values.webOrigin | default .Values.ingress.web.host }}"
+              value: "{{ .Values.webOrigin | default (printf "https://%s" .Values.ingress.web.host) }}"
             {{- end }}
             - name: ATTACHMENTS_DIR
               value: "/data/attachments"
@@ -83,13 +88,23 @@ spec:
               value: "/tmp/worker-heartbeat"
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
+          startupProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - test -f "$WORKER_HEARTBEAT_FILE" && [ $(( $(date +%s) - $(stat -c %Y "$WORKER_HEARTBEAT_FILE") )) -lt 30 ]
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 5
           livenessProbe:
             exec:
               command:
                 - sh
                 - -c
                 - test -f "$WORKER_HEARTBEAT_FILE" && [ $(( $(date +%s) - $(stat -c %Y "$WORKER_HEARTBEAT_FILE") )) -lt 30 ]
-            initialDelaySeconds: 60
+            initialDelaySeconds: 0
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3

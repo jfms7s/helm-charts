@@ -41,29 +41,29 @@ tests:
           path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
           value: true
 
-  - it: requires database.authToken at CHANGE_ME
+  - it: fails when database.authToken is missing
+    failedTemplate: true
     asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: TURSO_AUTH_TOKEN
-            value: "CHANGE_ME"
+      - matchRegex:
+          pattern: "budget-manager-helm: database.authToken must be set"
 
-  - it: requires sessionCookieSecret at CHANGE_ME
+  - it: fails when sessionCookieSecret is missing
+    failedTemplate: true
     asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: SESSION_COOKIE_SECRET
-            value: "CHANGE_ME"
+      - matchRegex:
+          pattern: "budget-manager-helm: sessionCookieSecret must be set"
 
-  - it: requires appEncryptionKey at CHANGE_ME
+  - it: fails when appEncryptionKey is missing
+    failedTemplate: true
     asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: APP_ENCRYPTION_KEY
-            value: "CHANGE_ME"
+      - matchRegex:
+          pattern: "budget-manager-helm: appEncryptionKey must be set"
+
+  - it: fails when database.url is empty
+    failedTemplate: true
+    asserts:
+      - matchRegex:
+          pattern: "budget-manager-helm: database.url must be set"
 
   - it: uses valueFrom for credentials when set
     set:

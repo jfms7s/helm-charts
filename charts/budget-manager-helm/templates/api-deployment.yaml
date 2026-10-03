@@ -1,3 +1,8 @@
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "database.url" "value" .Values.database.url) }}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "database.authToken" "credential" .Values.database.authToken) }}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "sessionCookieSecret" "credential" .Values.sessionCookieSecret) }}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "appEncryptionKey" "credential" .Values.appEncryptionKey) }}
+{{- include "budget-manager-helm.validateOrigin" (dict "context" $ "originName" "webOrigin" "origin" .Values.webOrigin) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -58,7 +63,7 @@ spec:
               value: "nats://{{ .Release.Name }}-budget-manager-nats:4222"
             {{- if or .Values.webOrigin (and .Values.ingress.web .Values.ingress.web.host) }}
             - name: WEB_ORIGIN
-              value: "https://{{ .Values.webOrigin | default .Values.ingress.web.host }}"
+              value: "{{ .Values.webOrigin | default (printf "https://%s" .Values.ingress.web.host) }}"
             {{- end }}
             - name: ATTACHMENTS_DIR
               value: "/data/attachments"

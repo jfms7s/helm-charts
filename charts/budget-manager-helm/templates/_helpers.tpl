@@ -47,15 +47,32 @@ value: {{ .value | default "CHANGE_ME" | quote }}
 {{- end -}}
 
 {{/*
-Fail the render with a message if a required credential is still at its CHANGE_ME placeholder
-with no valueFrom, e.g.:
-{{- if eq .Values.database.authToken.value "CHANGE_ME" | and (not .Values.database.authToken.valueFrom) }}
-  {{- fail "database.authToken must be set (not CHANGE_ME)" }}
-{{- end }}
+Fail the render if a required credential is not properly set.
+For credentials with {value, valueFrom}: fail if both are empty/CHANGE_ME/missing.
+For simple values: fail if empty/CHANGE_ME.
+Pass: (dict "context" $ "credentialName" "database.authToken" "credential" .Values.database.authToken)
+or:   (dict "context" $ "credentialName" "database.url" "value" .Values.database.url)
 */}}
 {{- define "budget-manager-helm.requiredCredential" -}}
-{{- $value := index .Values .path | default dict -}}
-{{- if and (eq ($value.value | default "CHANGE_ME") "CHANGE_ME") (not $value.valueFrom) -}}
-  {{- fail (printf "%s must be set (not CHANGE_ME)" .path) -}}
+{{- $name := .credentialName -}}
+{{- if .credential -}}
+  {{- $cred := .credential -}}
+  {{- if and (or (eq ($cred.value | default "") "") (eq ($cred.value | default "") "CHANGE_ME")) (not $cred.valueFrom) -}}
+    {{- fail (printf "budget-manager-helm: %s must be set (value or valueFrom)" $name) -}}
+  {{- end -}}
+{{- else if .value -}}
+  {{- if or (eq (.value | default "") "") (eq (.value | default "") "CHANGE_ME") -}}
+    {{- fail (printf "budget-manager-helm: %s must be set, e.g. http://budget-manager-libsql:8080" $name) -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validate that an origin override is a valid URL (^https?://[^/]+$).
+Pass: (dict "context" $ "originName" "webOrigin" "origin" .Values.webOrigin)
+*/}}
+{{- define "budget-manager-helm.validateOrigin" -}}
+{{- if and (.origin) (not (regexMatch "^https?://[^/]+$" .origin)) -}}
+  {{- fail (printf "budget-manager-helm: %s must be a valid origin (e.g. https://example.com, got %q)" .originName .origin) -}}
 {{- end -}}
 {{- end -}}

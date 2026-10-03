@@ -1,3 +1,4 @@
+{{- include "budget-manager-helm.validateOrigin" (dict "context" $ "originName" "apiOrigin" "origin" .Values.apiOrigin) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,7 +43,7 @@ spec:
               containerPort: {{ .Values.web.port }}
           env:
             - name: API_ORIGIN
-              value: "https://{{ .Values.apiOrigin | default .Values.ingress.api.host }}"
+              value: "{{ .Values.apiOrigin | default (printf "https://%s" .Values.ingress.api.host) }}"
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}
           readinessProbe:

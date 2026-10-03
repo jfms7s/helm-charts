@@ -71,7 +71,6 @@ nats:
     repository: nats
     tag: "2.15.0-alpine"
     pullPolicy: IfNotPresent
-  replicas: 1
   resources:
     requests:
       memory: 32Mi
@@ -101,8 +100,8 @@ nats:
 # (e.g. secretKeyRef) to source it from a Secret.
 # valueFrom takes precedence when both are set.
 database:
-  # URL to the libSQL (Turso) server (required, no default)
-  url: "CHANGE_ME"
+  # URL to the libSQL (Turso) server (required; must be set via values or -f option)
+  url: ""
   # Authentication token for the libSQL server
   authToken:
     value: "CHANGE_ME"
@@ -118,11 +117,19 @@ appEncryptionKey:
   value: "CHANGE_ME"
   valueFrom: {}
 
-# Attachments storage volume. Same path mounted in both api and worker.
-# Shared storage (RWX/NFS) recommended for production.
-# Default to emptyDir for single-node dev.
+# Attachments storage volume. REQUIRED: must be a shared volume (RWX/NFS) accessible to both api and worker pods.
+# Using emptyDir (the default) breaks the shared-storage contract and causes data loss when pods restart.
+# Example NFS volume:
+#   volume:
+#     nfs:
+#       server: 192.168.1.10
+#       path: /volume1/k8s/volumes/budget-manager/attachments
+# Example ReadWriteMany PersistentVolumeClaim:
+#   volume:
+#     persistentVolumeClaim:
+#       claimName: budget-manager-attachments
 attachments:
-  volume: {}
+  volume:
 
 # SMTP configuration for email notifications (optional)
 # Both smtpUrl and smtpFrom must be configured together for email to work
