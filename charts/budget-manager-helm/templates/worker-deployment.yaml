@@ -25,6 +25,9 @@ spec:
       {{- end }}
       securityContext:
         runAsNonRoot: true
+        runAsUser: {{ .Values.worker.runAsUser }}
+        runAsGroup: {{ .Values.worker.runAsGroup }}
+        fsGroup: {{ .Values.worker.fsGroup }}
         seccompProfile:
           type: RuntimeDefault
       automountServiceAccountToken: false

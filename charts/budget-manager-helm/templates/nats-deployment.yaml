@@ -21,6 +21,9 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
+        runAsUser: {{ .Values.nats.runAsUser }}
+        runAsGroup: {{ .Values.nats.runAsGroup }}
+        fsGroup: {{ .Values.nats.fsGroup }}
         seccompProfile:
           type: RuntimeDefault
       automountServiceAccountToken: false
@@ -30,7 +33,7 @@ spec:
           imagePullPolicy: {{ .Values.nats.image.pullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
@@ -64,6 +67,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: tmp
+              mountPath: /tmp
       volumes:
         - name: data
           {{- if .Values.nats.persistence.volume }}
@@ -71,3 +76,5 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        - name: tmp
+          emptyDir: {}

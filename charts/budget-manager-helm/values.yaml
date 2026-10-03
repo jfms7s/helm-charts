@@ -21,6 +21,10 @@ api:
       memory: 384Mi
   # Port the API listens on
   port: 3000
+  # Non-root user ID (numeric; the 'node' user in the image maps to uid 1000)
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
 
 # Worker (async tasks, scheduler, outbox relay) configuration.
 # MUST run at exactly 1 replica with Recreate strategy (hardcoded in the template).
@@ -38,6 +42,10 @@ worker:
   logLevel: info
   # Allow webhooks to call private network addresses
   webhookAllowPrivateNetworks: false
+  # Non-root user ID (numeric; the 'node' user in the image maps to uid 1000)
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
 
 # Web UI (frontend) configuration
 web:
@@ -53,12 +61,15 @@ web:
       memory: 64Mi
   # Port the web server listens on
   port: 8080
+  # Non-root user ID (nginx-unprivileged: uid 101)
+  runAsUser: 101
+  runAsGroup: 101
 
 # NATS JetStream message bus (handles webhooks, events, scheduling)
 nats:
   image:
     repository: nats
-    tag: "2-alpine"
+    tag: "2.15.0-alpine"
     pullPolicy: IfNotPresent
   replicas: 1
   resources:
@@ -66,6 +77,10 @@ nats:
       memory: 32Mi
     limits:
       memory: 128Mi
+  # Non-root user ID (numeric)
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
   # Volume source for NATS JetStream file storage. Each value is the full
   # body of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
   # persistentVolumeClaim, etc. Left empty (emptyDir, non-persistent) by
@@ -76,6 +91,8 @@ nats:
   #       nfs:
   #         server: 192.168.1.10
   #         path: /volume1/k8s/volumes/budget-manager/nats
+  # NOTE: On NFS, fsGroup is not applied (NFS ignores it). Ensure NFS
+  # directories are writable by uid 1000 (see README storage section).
   persistence:
     volume: {}
 

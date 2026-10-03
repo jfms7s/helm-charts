@@ -26,6 +26,18 @@ tests:
           path: spec.strategy.type
           value: Recreate
 
+  - it: runs as numeric non-root user 1000 with fsGroup
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000
+
   - it: requires database.authToken at CHANGE_ME
     asserts:
       - contains:

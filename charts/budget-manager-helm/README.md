@@ -280,7 +280,18 @@ attachments:
 
 ### NATS pod logs show "permission denied" errors on NFS
 
-Ensure the NFS volume has proper permissions for the NATS pod to write to it. The NATS container runs as the `nats` user (UID 1000).
+Ensure the NFS volume has proper permissions for the workload to write to it. Containers run as numeric UIDs:
+- **api/worker**: UID 1000 (the `node` user in the image)
+- **nats**: UID 1000
+- **web**: UID 101 (nginx-unprivileged)
+
+**Important**: On NFS, Kubernetes `fsGroup` is not applied (NFS ignores it). Ensure NFS directories are **writable by UID 1000**. For example, on the Synology:
+```bash
+chmod 1770 /volume1/k8s/volumes/budget-manager/nats
+chmod 1770 /volume1/k8s/volumes/budget-manager/attachments
+chown 1000:1000 /volume1/k8s/volumes/budget-manager/nats
+chown 1000:1000 /volume1/k8s/volumes/budget-manager/attachments
+```
 
 ## Security
 

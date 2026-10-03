@@ -20,11 +20,11 @@ tests:
           path: spec.strategy.type
           value: Recreate
 
-  - it: uses correct image
+  - it: uses correct pinned image
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: nats:2-alpine
+          value: nats:2.15.0-alpine
 
   - it: starts with JetStream, data dir, and monitor port
     asserts:
@@ -57,6 +57,24 @@ tests:
             name: monitor
             containerPort: 8222
 
+  - it: runs as numeric non-root user 1000 with fsGroup
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000
+
+  - it: has read-only root filesystem
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+
   - it: mounts data volume at /data
     asserts:
       - contains:
@@ -64,6 +82,14 @@ tests:
           content:
             name: data
             mountPath: /data
+
+  - it: mounts tmp emptyDir at /tmp
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
 
   - it: uses emptyDir by default for data volume
     asserts:

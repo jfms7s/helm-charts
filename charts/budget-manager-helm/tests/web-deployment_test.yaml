@@ -20,6 +20,15 @@ tests:
           path: spec.template.spec.containers[0].ports[0].containerPort
           value: 8080
 
+  - it: runs as numeric non-root user 101 (nginx-unprivileged)
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 101
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 101
+
   - it: sets API_ORIGIN from ingress.api.host
     asserts:
       - contains:
