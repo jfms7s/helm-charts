@@ -36,6 +36,14 @@ deploy:
   ##
   replicas: 1
 
+  ## @param deploy.strategy Deployment update strategy, rendered verbatim (empty = Kubernetes default, RollingUpdate)
+  ## Set `type: Recreate` for single-writer workloads (e.g. SQLite/sqld on a
+  ## shared volume) that must never run two pods at once during a rollout.
+  ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+  ##
+  strategy: {}
+    # type: Recreate
+
   ## @param deploy.resources Resource limits and requests
   ##
   resources: {}
