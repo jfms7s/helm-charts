@@ -100,3 +100,16 @@ credential, a missing database, an unshared attachments volume or a bad origin.
   {{- fail "budget-manager-helm: attachments.volume must be a volume shared by the api and the worker (e.g. nfs: or a ReadWriteMany persistentVolumeClaim)" -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+The database URL the api AND the worker connect to: an explicit database.url,
+else the in-chart sqld. One helper so the two can never disagree (the worker
+once rendered an empty URL while the api derived the sqld one).
+*/}}
+{{- define "budget-manager-helm.databaseUrl" -}}
+{{- if .Values.database.url -}}
+{{- .Values.database.url -}}
+{{- else if .Values.sqld.enabled -}}
+http://{{ .Release.Name }}-budget-manager-sqld:8080
+{{- end -}}
+{{- end -}}

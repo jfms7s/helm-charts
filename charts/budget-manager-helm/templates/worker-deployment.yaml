@@ -46,7 +46,7 @@ spec:
             - name: NODE_ENV
               value: "production"
             - name: TURSO_SYNC_URL
-              value: {{ .Values.database.url | quote }}
+              value: {{ include "budget-manager-helm.databaseUrl" . | quote }}
             - name: TURSO_AUTH_TOKEN
               {{- include "budget-manager-helm.credentialEnv" .Values.database.authToken | nindent 14 }}
             - name: APP_ENCRYPTION_KEY

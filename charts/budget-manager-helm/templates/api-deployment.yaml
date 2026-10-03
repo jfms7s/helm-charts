@@ -48,7 +48,7 @@ spec:
             - name: NODE_ENV
               value: "production"
             - name: TURSO_SYNC_URL
-              value: {{ if .Values.database.url }}{{ .Values.database.url | quote }}{{ else if .Values.sqld.enabled }}"http://{{ .Release.Name }}-budget-manager-sqld:8080"{{ else }}""{{ end }}
+              value: {{ include "budget-manager-helm.databaseUrl" . | quote }}
             - name: TURSO_AUTH_TOKEN
               {{- include "budget-manager-helm.credentialEnv" .Values.database.authToken | nindent 14 }}
             - name: SESSION_COOKIE_SECRET

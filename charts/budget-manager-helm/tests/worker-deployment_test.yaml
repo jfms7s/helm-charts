@@ -92,6 +92,24 @@ tests:
                 name: budget-manager-secrets
                 key: app-encryption-key
 
+  - it: connects to the same in-chart sqld as the api
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_SYNC_URL
+            value: "http://RELEASE-NAME-budget-manager-sqld:8080"
+
+  - it: an explicit database.url wins, as for the api
+    set:
+      database.url: http://external-db:8080
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_SYNC_URL
+            value: "http://external-db:8080"
+
   - it: sets NODE_ENV to production
     asserts:
       - contains:
