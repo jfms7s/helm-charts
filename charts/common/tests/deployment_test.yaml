@@ -97,6 +97,54 @@ tests:
             name: MY_VAR
             value: my-value
 
+  - it: omits strategy when not set, leaving the Kubernetes default (RollingUpdate)
+    asserts:
+      - notExists:
+          path: spec.strategy
+
+  - it: renders Recreate with an explicit null rollingUpdate
+    # The null is what lets client-side apply (kubectl, Argo CD) switch a
+    # live RollingUpdate Deployment in place -- without it the API-defaulted
+    # rollingUpdate survives the patch and the API rejects the update.
+    set:
+      deploy.strategy:
+        type: Recreate
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: Recreate
+            rollingUpdate: null
+
+  - it: drops a user-supplied rollingUpdate when type is Recreate
+    set:
+      deploy.strategy:
+        type: Recreate
+        rollingUpdate:
+          maxSurge: 1
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: Recreate
+            rollingUpdate: null
+
+  - it: renders a RollingUpdate strategy verbatim
+    set:
+      deploy.strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 0
+          maxUnavailable: 1
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: RollingUpdate
+            rollingUpdate:
+              maxSurge: 0
+              maxUnavailable: 1
+
   - it: omits command and args when not set
     asserts:
       - notExists:

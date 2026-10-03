@@ -28,6 +28,7 @@ The following table lists the configurable parameters of the common chart and th
 | `deploy.image.repository` | Container image repository | `""` |
 | `deploy.image.tag` | Container image tag | `""` |
 | `deploy.image.pullPolicy` | Container image pull policy | `IfNotPresent` |
+| `deploy.strategy` | Deployment update strategy, rendered verbatim; `type: Recreate` also renders `rollingUpdate: null` so a live RollingUpdate Deployment can be switched in place | `{}` (Kubernetes default, RollingUpdate) |
 | `service.ports` | Service ports configuration | `{"http": 80}` |
 | `deploy.extraVolumes` | Additional volumes for the pod | `[]` |
 | `deploy.extraVolumeMounts` | Additional volume mounts for the container | `[]` |
