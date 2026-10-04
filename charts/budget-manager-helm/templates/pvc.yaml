@@ -1,0 +1,28 @@
+{{- range $component := list "sqld" "nats" }}
+{{- $persistence := (index $.Values $component).persistence }}
+{{- $claim := $persistence.claim | default dict }}
+{{- if $claim.storageClassName }}
+{{- if not $claim.size }}
+{{- fail (printf "budget-manager-helm: %s.persistence.claim.size is required" $component) }}
+{{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $.Release.Name }}-budget-manager-{{ $component }}-data
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" $component "component" "storage") | nindent 4 }}
+  annotations:
+    # Data outlives the release: never delete on uninstall, prune, or
+    # Application deletion. Removing a claim is a deliberate manual step.
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ $claim.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ $claim.size | quote }}
+{{- end }}
+{{- end }}

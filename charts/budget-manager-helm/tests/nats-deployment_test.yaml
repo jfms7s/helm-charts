@@ -147,3 +147,19 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
           value: 256Mi
+
+  - it: mounts the data volume at a subPath when persistence.subPath is set
+    set:
+      nats:
+        persistence:
+          subPath: data
+          volume:
+            persistentVolumeClaim:
+              claimName: nats-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /data
+            subPath: data

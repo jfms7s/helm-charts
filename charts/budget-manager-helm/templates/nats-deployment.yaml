@@ -67,6 +67,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+              {{- with .Values.nats.persistence.subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
             - name: tmp
               mountPath: /tmp
       volumes:

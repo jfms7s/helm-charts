@@ -29,6 +29,15 @@ sqld:
   # must be writable by uid 1000.
   persistence:
     volume:
+    # Optional: have the chart create a PVC named
+    # <release>-budget-manager-sqld-data. Point `volume` at it with
+    # persistentVolumeClaim.claimName. Kept on uninstall/prune.
+    claim:
+      storageClassName: ""
+      size: ""
+    # Optional subdirectory of the volume to mount (keeps ext4's lost+found
+    # out of the data dir on block-backed PVCs).
+    subPath: ""
 
 # API server configuration
 api:
@@ -117,6 +126,15 @@ nats:
   # directories are writable by uid 1000 (see README storage section).
   persistence:
     volume: {}
+    # Optional: have the chart create a PVC named
+    # <release>-budget-manager-nats-data. Point `volume` at it with
+    # persistentVolumeClaim.claimName. Kept on uninstall/prune.
+    claim:
+      storageClassName: ""
+      size: ""
+    # Optional subdirectory of the volume to mount (keeps ext4's lost+found
+    # out of the data dir on block-backed PVCs).
+    subPath: ""
 
 # Database (Turso / libSQL) credentials. Each is a standard Kubernetes
 # EnvVarSource: set `value` for a plain literal, or `valueFrom`
