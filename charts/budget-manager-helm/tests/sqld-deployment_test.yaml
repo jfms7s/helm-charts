@@ -151,3 +151,28 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
           value: 512Mi
+
+  - it: mounts the data volume at a subPath when persistence.subPath is set
+    set:
+      sqld:
+        enabled: true
+        persistence:
+          subPath: data
+          volume:
+            persistentVolumeClaim:
+              claimName: sqld-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /var/lib/sqld
+            subPath: data
+
+  - it: mounts the data volume without a subPath by default
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /var/lib/sqld

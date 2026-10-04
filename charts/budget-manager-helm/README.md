@@ -144,6 +144,8 @@ helm install budget-manager ./budget-manager-helm \
 | `imagePullSecrets` | Image pull secrets for private registries | `[]` |
 | `attachments.volume` | Volume source for attachments storage | `emptyDir` |
 | `nats.persistence.volume` | Volume source for NATS data | `emptyDir` |
+| `sqld.persistence.claim` / `nats.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-budget-manager-<sqld\|nats>-data` (RWO, kept on uninstall/prune); point `persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
+| `sqld.persistence.subPath` / `nats.persistence.subPath` | Subdirectory of the volume to mount as the data dir (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
 
 ### Resource Tuning
 
@@ -196,6 +198,24 @@ NATS JetStream data is stored at `/data` in the NATS pod. Configuration:
 
 - **Default (emptyDir)**: Data is lost if the pod restarts
 - **Production (NFS/RWX)**: Recommended for persistence across pod restarts
+
+### Block storage (RWO PVCs) for sqld and NATS
+
+sqld and NATS each run as a single `Recreate` Deployment, so both can sit on a ReadWriteOnce
+block volume (e.g. a Synology iSCSI LUN) instead of NFS: set `<component>.persistence.claim` so
+the chart creates the PVC, point `<component>.persistence.volume` at it, and set
+`<component>.persistence.subPath` (e.g. `data`). Attachments can't move to RWO storage: both the
+API and the worker mount them.
+
+```yaml
+sqld:
+  persistence:
+    claim: {storageClassName: synology-iscsi, size: 2Gi}
+    subPath: data
+    volume:
+      persistentVolumeClaim:
+        claimName: budget-manager-budget-manager-sqld-data
+```
 
 ### Database and Backup Strategy
 

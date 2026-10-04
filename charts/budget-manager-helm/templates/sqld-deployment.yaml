@@ -68,6 +68,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/sqld
+              {{- with .Values.sqld.persistence.subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
             - name: tmp
               mountPath: /tmp
       volumes:
