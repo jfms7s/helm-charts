@@ -1,0 +1,26 @@
+{{- range .Values.deploy.persistentVolumeClaims }}
+{{- if not .storageClassName }}
+{{- fail (printf "common: deploy.persistentVolumeClaims[%s].storageClassName is required (the cluster default class is ambiguous; always name one)" .name) }}
+{{- end }}
+{{- if not .size }}
+{{- fail (printf "common: deploy.persistentVolumeClaims[%s].size is required" .name) }}
+{{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .name | quote }}
+  namespace: {{ $.Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" $ | nindent 4 }}
+  annotations:
+    # Data outlives the release: never delete a claim on uninstall, prune, or
+    # Application deletion. Removing a claim is always a deliberate manual step.
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes: {{- toYaml (default (list "ReadWriteOnce") .accessModes) | nindent 4 }}
+  storageClassName: {{ .storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ .size | quote }}
+{{- end }}

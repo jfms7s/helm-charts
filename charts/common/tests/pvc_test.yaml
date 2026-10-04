@@ -1,0 +1,97 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: persistentVolumeClaims
+templates:
+  - templates/pvc.yaml
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders one PVC per entry with explicit class, size and RWO default
+    set:
+      deploy.persistentVolumeClaims:
+        - name: app-data
+          storageClassName: synology-iscsi
+          size: 2Gi
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: app-data
+      - equal:
+          path: metadata.namespace
+          value: NAMESPACE
+      - equal:
+          path: spec.storageClassName
+          value: synology-iscsi
+      - equal:
+          path: spec.resources.requests.storage
+          value: 2Gi
+      - equal:
+          path: spec.accessModes
+          value: [ReadWriteOnce]
+
+  - it: renders one document per claim
+    set:
+      deploy.persistentVolumeClaims:
+        - name: a
+          storageClassName: synology-iscsi
+          size: 1Gi
+        - name: b
+          storageClassName: synology-iscsi
+          size: 3Gi
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: b
+        documentIndex: 1
+
+  - it: protects the claim from helm uninstall and Argo CD prune/delete
+    set:
+      deploy.persistentVolumeClaims:
+        - name: app-data
+          storageClassName: synology-iscsi
+          size: 1Gi
+    asserts:
+      - equal:
+          path: metadata.annotations["helm.sh/resource-policy"]
+          value: keep
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-options"]
+          value: Prune=false,Delete=false
+
+  - it: honours explicit accessModes
+    set:
+      deploy.persistentVolumeClaims:
+        - name: shared
+          storageClassName: nfs-client
+          size: 1Gi
+          accessModes: [ReadWriteMany]
+    asserts:
+      - equal:
+          path: spec.accessModes
+          value: [ReadWriteMany]
+
+  - it: refuses a claim without an explicit storageClassName
+    set:
+      deploy.persistentVolumeClaims:
+        - name: app-data
+          size: 1Gi
+    asserts:
+      - failedTemplate:
+          errorPattern: "persistentVolumeClaims\\[app-data\\].storageClassName is required"
+
+  - it: refuses a claim without a size
+    set:
+      deploy.persistentVolumeClaims:
+        - name: app-data
+          storageClassName: synology-iscsi
+    asserts:
+      - failedTemplate:
+          errorPattern: "persistentVolumeClaims\\[app-data\\].size is required"

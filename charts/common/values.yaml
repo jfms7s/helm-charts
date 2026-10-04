@@ -82,6 +82,13 @@ deploy:
   ##
   volumeMounts: []
 
+  ## @param deploy.persistentVolumeClaims PVCs to create in the release namespace
+  ## Each: {name, storageClassName (required), size (required), accessModes (default [ReadWriteOnce])}.
+  ## Reference one from deploy.volumes as persistentVolumeClaim.claimName: <name>.
+  ## Claims are kept on uninstall/prune (helm.sh/resource-policy: keep + Argo CD Prune=false,Delete=false).
+  ##
+  persistentVolumeClaims: []
+
   ## @param deploy.initContainers Optionally specify a list of initContainers, rendered verbatim
   ## ref: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
   ##

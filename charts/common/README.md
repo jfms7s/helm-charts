@@ -32,6 +32,7 @@ The following table lists the configurable parameters of the common chart and th
 | `service.ports` | Service ports configuration | `{"http": 80}` |
 | `deploy.extraVolumes` | Additional volumes for the pod | `[]` |
 | `deploy.extraVolumeMounts` | Additional volume mounts for the container | `[]` |
+| `deploy.persistentVolumeClaims` | PVCs to create: `{name, storageClassName, size, accessModes}` (class and size required, accessModes defaults to `[ReadWriteOnce]`). Kept on uninstall/prune (`helm.sh/resource-policy: keep`, Argo CD `Prune=false,Delete=false`); reference one from `deploy.volumes` via `persistentVolumeClaim.claimName` | `[]` |
 | `ingress.enabled` | Enable ingress | `false` |
 | `ingress.className` | Ingress class name | `"traefik"` |
 | `ingress.pathType` | Ingress path type | `ImplementationSpecific` |
@@ -81,6 +82,26 @@ ingress:
         - path: /app
           pathType: Prefix
           port: http
+```
+
+### Persistent volume claims
+
+```yaml
+deploy:
+  persistentVolumeClaims:
+    - name: app-data
+      storageClassName: synology-iscsi
+      size: 2Gi
+  strategy:
+    type: Recreate          # RWO block volume: never two pods at once
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: app-data
+  volumeMounts:
+    - name: data
+      mountPath: /data
+      subPath: data         # keeps ext4's lost+found out of the data dir
 ```
 
 ## Deployment
