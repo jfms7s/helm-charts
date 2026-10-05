@@ -176,3 +176,109 @@ tests:
           content:
             name: data
             mountPath: /var/lib/sqld
+
+  - it: keeps a TCP liveness probe and sqld's default checkpointing by default
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.tcpSocket.port
+          value: http
+      - isNull:
+          path: spec.template.spec.containers[0].livenessProbe.exec
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --checkpoint-interval-s
+      - isNull:
+          path: spec.template.spec.containers[0].env
+
+  - it: replaces the TCP liveness probe with a write probe when writeProbe.enabled
+    set:
+      sqld.writeProbe.enabled: true
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].livenessProbe.tcpSocket
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command[0]
+          value: /bin/bash
+      - matchRegex:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command[2]
+          pattern: 'BEGIN IMMEDIATE.*ROLLBACK'
+      - matchRegex:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command[2]
+          pattern: '/dev/tcp/127\.0\.0\.1/8080'
+      - matchRegex:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command[2]
+          pattern: "read -r -d '' -t 10 resp"
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.timeoutSeconds
+          value: 11
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.periodSeconds
+          value: 30
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.failureThreshold
+          value: 3
+      # Readiness stays a TCP check: a stuck write lock is liveness' job.
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.tcpSocket.port
+          value: http
+
+  - it: passes the write probe's timeout to the script and kubelet
+    set:
+      sqld.writeProbe:
+        enabled: true
+        timeoutSeconds: 4
+        periodSeconds: 15
+        failureThreshold: 5
+        initialDelaySeconds: 60
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command[2]
+          pattern: "read -r -d '' -t 4 resp"
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.timeoutSeconds
+          value: 5
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.periodSeconds
+          value: 15
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.failureThreshold
+          value: 5
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.initialDelaySeconds
+          value: 60
+
+  - it: passes checkpointIntervalSeconds as --checkpoint-interval-s
+    set:
+      sqld.checkpointIntervalSeconds: 60
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --db-path
+            - /var/lib/sqld/data.sqld
+            - --http-listen-addr
+            - "0.0.0.0:8080"
+            - --checkpoint-interval-s
+            - "60"
+
+  - it: appends extraArgs and renders extraEnv
+    set:
+      sqld:
+        extraArgs:
+          - --max-log-duration
+          - "3600"
+        extraEnv:
+          - name: RUST_LOG
+            value: info
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args[4]
+          value: --max-log-duration
+      - equal:
+          path: spec.template.spec.containers[0].args[5]
+          value: "3600"
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - name: RUST_LOG
+              value: info

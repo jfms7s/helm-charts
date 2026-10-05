@@ -23,6 +23,30 @@ sqld:
   runAsUser: 1000
   runAsGroup: 1000
   fsGroup: 1000
+  # WAL checkpoint interval in seconds (sqld --checkpoint-interval-s). Empty
+  # keeps sqld's default: SQLite checkpoints after any commit that leaves the
+  # WAL over 1000 pages, and keeps retrying on every later commit while readers
+  # stop the WAL from resetting. Set, sqld turns those off (wal_autocheckpoint
+  # = 0) and runs one TRUNCATE checkpoint per interval instead. Every
+  # checkpoint goes through sqld's write-lock queue, and in libsql-server
+  # 0.24.33 a slow one can leave that lock stuck for good
+  # (tursodatabase/libsql#2286), so fewer checkpoints means fewer chances.
+  checkpointIntervalSeconds: ""
+  # Extra command-line arguments and environment variables (lists) for sqld.
+  extraArgs: []
+  extraEnv: []
+  # Liveness probe that writes: BEGIN IMMEDIATE; ROLLBACK against sqld's HTTP
+  # API. Disabled, the liveness probe is a TCP check, which keeps passing while
+  # writes are stuck. Needs /bin/bash in the image (the official one has it).
+  writeProbe:
+    enabled: false
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    # Seconds the probe waits for sqld's answer (kubelet's timeout is one more).
+    timeoutSeconds: 10
+    # Consecutive failures before kubelet restarts sqld: a stuck write lock is
+    # cleared within about failureThreshold x periodSeconds.
+    failureThreshold: 3
   # Volume source for sqld database file (REQUIRED). Each value is the full
   # body of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
   # persistentVolumeClaim, etc. On NFS, fsGroup is not applied; the directory
