@@ -41,6 +41,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+              {{- with .Values.nats.persistence.subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
       restartPolicy: Always
       volumes:
         - name: data

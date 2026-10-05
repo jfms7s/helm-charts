@@ -25,6 +25,15 @@ nats:
   #         path: /volumes/ticket-scanner/nats
   persistence:
     volume: {}
+    # Optional: have the chart create a PVC named
+    # <release>-ticket-scanner-nats-data. Point `volume` at it with
+    # persistentVolumeClaim.claimName. Kept on uninstall/prune.
+    claim:
+      storageClassName: ""
+      size: ""
+    # Optional subdirectory of the volume to mount as /data (keeps ext4's
+    # lost+found out of it, and lets the copy chown it for the non-root user).
+    subPath: ""
 
 # Turso (libSQL) database credentials, shared by the scraper (writer) and
 # web-ui-api (reader). Each is a standard Kubernetes EnvVarSource: set

@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: message-bus
             app.kubernetes.io/part-of: ticket-scanner
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: ticket-live-event-scanner-helm-0.3.0
+            helm.sh/chart: ticket-live-event-scanner-helm-0.4.0
       - equal:
           path: spec.selector.matchLabels
           value:
@@ -88,3 +88,30 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].image
           value: my-registry/nats:2.10-alpine
+
+  - it: mounts the data volume at a subPath when persistence.subPath is set
+    set:
+      nats:
+        persistence:
+          subPath: data
+          volume:
+            persistentVolumeClaim:
+              claimName: nats-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /data
+            subPath: data
+      - equal:
+          path: spec.template.spec.volumes[0].persistentVolumeClaim.claimName
+          value: nats-data
+
+  - it: mounts the data volume without a subPath by default
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts
+          value:
+            - name: data
+              mountPath: /data
