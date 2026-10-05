@@ -34,6 +34,8 @@ below.
 | `nats.image.*` | NATS image | `nats:2-alpine` |
 | `nats.resources` | NATS container resources | `requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: 500m, memory: 512Mi}` |
 | `nats.persistence.volume` | Volume source (excl. `name`) for NATS JetStream file storage | `{}` (emptyDir) |
+| `nats.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-ticket-scanner-nats-data` (RWO, kept on uninstall/prune); point `nats.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
+| `nats.persistence.subPath` | Subdirectory of the volume to mount as `/data` (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
 | `turso.databaseUrl` / `turso.authToken` | Turso credentials shared by the scraper and web-ui-api, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `telegram.botToken` / `telegram.chatId` | Telegram bot credentials for telegram-notifier, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `scraper.image.*` | Scraper image | `ghcr.io/jfms7s/ticket-live-event-scanner-scraper:latest` |
