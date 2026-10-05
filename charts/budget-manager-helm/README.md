@@ -146,6 +146,10 @@ helm install budget-manager ./budget-manager-helm \
 | `nats.persistence.volume` | Volume source for NATS data | `emptyDir` |
 | `sqld.persistence.claim` / `nats.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-budget-manager-<sqld\|nats>-data` (RWO, kept on uninstall/prune); point `persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
 | `sqld.persistence.subPath` / `nats.persistence.subPath` | Subdirectory of the volume to mount as the data dir (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
+| `sqld.checkpointIntervalSeconds` | WAL checkpoint interval (`--checkpoint-interval-s`). Set, sqld turns off per-commit auto-checkpoints and runs one `TRUNCATE` checkpoint per interval (see [sqld's write lock](#sqlds-write-lock)) | `""` (sqld default) |
+| `sqld.writeProbe.enabled` | Liveness probe that writes (`BEGIN IMMEDIATE; ROLLBACK` over `/v2/pipeline`, bash `/dev/tcp`) instead of a TCP check | `false` |
+| `sqld.writeProbe.{timeoutSeconds,periodSeconds,failureThreshold,initialDelaySeconds}` | Write probe timing: the script waits `timeoutSeconds` for sqld's answer (kubelet's timeout is one more) | `10`, `30`, `3`, `30` |
+| `sqld.extraArgs` / `sqld.extraEnv` | Extra sqld command-line arguments / environment variables | `[]` |
 
 ### Resource Tuning
 
@@ -215,6 +219,23 @@ sqld:
     volume:
       persistentVolumeClaim:
         claimName: budget-manager-budget-manager-sqld-data
+```
+
+### sqld's write lock
+
+libsql-server 0.24.33 serialises writers through its own write-lock queue, and a checkpoint or a
+write that stalls for longer than its 5 s transaction timeout can leave that lock stuck for good
+([tursodatabase/libsql#2286](https://github.com/tursodatabase/libsql/issues/2286)). When that
+happens, reads keep working, every write hangs, sqld busy-spins its CPUs, and only a restart clears
+it. Two settings limit the damage:
+
+```yaml
+sqld:
+  # One checkpoint per minute instead of one per commit once the WAL is past 1000 pages.
+  checkpointIntervalSeconds: 60
+  # Restart sqld when a write has not gone through for ~3 probes (about 90 s).
+  writeProbe:
+    enabled: true
 ```
 
 ### Database and Backup Strategy

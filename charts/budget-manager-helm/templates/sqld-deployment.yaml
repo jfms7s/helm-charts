@@ -48,6 +48,19 @@ spec:
             - /var/lib/sqld/data.sqld
             - --http-listen-addr
             - "0.0.0.0:8080"
+            {{- with .Values.sqld.checkpointIntervalSeconds }}
+            # Time-based checkpoints only: sqld then sets wal_autocheckpoint=0, so
+            # commits stop checkpointing (see values.yaml).
+            - --checkpoint-interval-s
+            - {{ . | quote }}
+            {{- end }}
+            {{- with .Values.sqld.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.sqld.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: 8080
@@ -60,11 +73,37 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 2
           livenessProbe:
+            {{- if .Values.sqld.writeProbe.enabled }}
+            # Write probe: BEGIN IMMEDIATE; ROLLBACK through sqld's own HTTP API.
+            # A TCP check passes while sqld's write lock is wedged (reads keep
+            # working), so only a write tells. The image has bash but no curl,
+            # hence /dev/tcp. One pipeline request carries both statements, so
+            # sqld finishes the ROLLBACK even if the probe gives up first.
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  body='{"requests":[{"type":"execute","stmt":{"sql":"BEGIN IMMEDIATE"}},{"type":"execute","stmt":{"sql":"ROLLBACK"}},{"type":"close"}]}'
+                  exec 3<>/dev/tcp/127.0.0.1/8080 || exit 1
+                  printf 'POST /v2/pipeline HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s' "${#body}" "$body" >&3
+                  # Read to EOF (Connection: close); a status over 128 is the timeout.
+                  IFS= read -r -d '' -t {{ .Values.sqld.writeProbe.timeoutSeconds }} resp <&3
+                  (( $? > 128 )) && { echo "sqld write probe: no answer within {{ .Values.sqld.writeProbe.timeoutSeconds }}s"; exit 1; }
+                  [[ $resp == "HTTP/1.1 200"* && $resp != *'"type":"error"'* && $resp == *'"type":"close"'* ]] || { echo "sqld write probe failed: ${resp:0:300}"; exit 1; }
+            initialDelaySeconds: {{ .Values.sqld.writeProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.sqld.writeProbe.periodSeconds }}
+            # One second over the script's own read timeout, so the script
+            # decides and kubelet's timeout is only the backstop.
+            timeoutSeconds: {{ add1 .Values.sqld.writeProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.sqld.writeProbe.failureThreshold }}
+            {{- else }}
             tcpSocket:
               port: http
             initialDelaySeconds: 30
             periodSeconds: 30
             timeoutSeconds: 2
+            {{- end }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/sqld
