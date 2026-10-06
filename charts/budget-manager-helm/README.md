@@ -11,6 +11,7 @@ This chart deploys a complete Budget Manager stack on Kubernetes, including:
 - **Worker**: Async task processor, scheduler, and event bus relay (Deployment)
 - **Database (sqld)**: LibSQL server (Deployment + Service, enabled by default, strategy: Recreate)
 - **NATS JetStream**: In-cluster message bus for webhooks and events (Deployment + Service)
+- **Frankfurter** (optional): exchange-rate API for the worker's hourly rate feed (Deployment + Service + PVC, disabled by default, strategy: Recreate)
 
 The application stores user attachments in a shared volume. By default, the chart deploys an in-cluster LibSQL database; you can optionally disable it and point to an external Turso database instead.
 
@@ -18,7 +19,7 @@ The application stores user attachments in a shared volume. By default, the char
 
 1. Kubernetes 1.24+
 2. Helm 3.0+
-3. For production: shared (RWX) storage (NFS recommended) for attachments, NATS data, and sqld database file (if sqld.enabled: true)
+3. For production: RWX storage (NFS) for attachments; block storage (iSCSI, RWO) for sqld, NATS and Frankfurter (if enabled)
 4. Optional: external Turso database URL and token (if sqld.enabled: false)
 
 ## Installation
@@ -144,12 +145,17 @@ helm install budget-manager ./budget-manager-helm \
 | `imagePullSecrets` | Image pull secrets for private registries | `[]` |
 | `attachments.volume` | Volume source for attachments storage | `emptyDir` |
 | `nats.persistence.volume` | Volume source for NATS data | `emptyDir` |
-| `sqld.persistence.claim` / `nats.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-budget-manager-<sqld\|nats>-data` (RWO, kept on uninstall/prune); point `persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
-| `sqld.persistence.subPath` / `nats.persistence.subPath` | Subdirectory of the volume to mount as the data dir (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
+| `sqld.persistence.claim` / `nats.persistence.claim` / `frankfurter.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-budget-manager-<sqld\|nats\|frankfurter>-data` (RWO, kept on uninstall/prune); point `persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
+| `sqld.persistence.subPath` / `nats.persistence.subPath` / `frankfurter.persistence.subPath` | Subdirectory of the volume to mount as the data dir (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
 | `sqld.checkpointIntervalSeconds` | WAL checkpoint interval (`--checkpoint-interval-s`). Set, sqld turns off per-commit auto-checkpoints and runs one `TRUNCATE` checkpoint per interval (see [sqld's write lock](#sqlds-write-lock)) | `""` (sqld default) |
 | `sqld.writeProbe.enabled` | Liveness probe that writes (`BEGIN IMMEDIATE; ROLLBACK` over `/v2/pipeline`, bash `/dev/tcp`) instead of a TCP check | `false` |
 | `sqld.writeProbe.{timeoutSeconds,periodSeconds,failureThreshold,initialDelaySeconds}` | Write probe timing: the script waits `timeoutSeconds` for sqld's answer (kubelet's timeout is one more) | `10`, `30`, `3`, `30` |
 | `sqld.extraArgs` / `sqld.extraEnv` | Extra sqld command-line arguments / environment variables | `[]` |
+| `frankfurter.enabled` | Deploy the self-hosted [Frankfurter](https://github.com/lineofflight/frankfurter) exchange-rate API (Deployment + Service) and give the worker `FRANKFURTER_URL`, which turns on its hourly `exchange-rate-fetch` job. Needs outbound internet to the central banks it downloads from | `false` |
+| `frankfurter.image.{repository,tag,pullPolicy}` | Frankfurter image (Docker Hub only; mirror it and set `imagePullSecrets` if the cluster can't reach Docker Hub) | `docker.io/lineofflight/frankfurter`, `v2.6.1`, `IfNotPresent` |
+| `frankfurter.workerProcesses` | Puma web worker processes (`WORKER_PROCESSES`). `0` = Puma single mode, one process; the image default is 4 | `0` |
+| `frankfurter.persistence.{volume,claim,subPath}` | Volume source (REQUIRED when enabled), optional chart-created PVC, and subPath for Frankfurter's SQLite database, mounted at `/app/data`. Use block storage (iSCSI), never NFS. Size the claim at 5Gi or more: a partial backfill (9 of 104 providers) was already 170 MB | unset |
+| `frankfurter.extraEnv` | Extra environment variables for Frankfurter | `[]` |
 
 ### Resource Tuning
 
@@ -183,6 +189,15 @@ nats:
       memory: 32Mi
     limits:
       memory: 128Mi
+
+# Only when frankfurter.enabled: measured 2026-10-06 (v2.6.1) at ~470-500 MB
+# container usage during its initial backfill.
+frankfurter:
+  resources:
+    requests:
+      memory: 384Mi
+    limits:
+      memory: 768Mi
 ```
 
 Adjust these based on your workload and cluster capacity. **Note: CPU limits are not set** to prevent throttling issues on resource-constrained nodes.
@@ -203,9 +218,9 @@ NATS JetStream data is stored at `/data` in the NATS pod. Configuration:
 - **Default (emptyDir)**: Data is lost if the pod restarts
 - **Production (NFS/RWX)**: Recommended for persistence across pod restarts
 
-### Block storage (RWO PVCs) for sqld and NATS
+### Block storage (RWO PVCs) for sqld, NATS and Frankfurter
 
-sqld and NATS each run as a single `Recreate` Deployment, so both can sit on a ReadWriteOnce
+sqld, NATS and Frankfurter (when enabled) each run as a single `Recreate` Deployment, so all can sit on a ReadWriteOnce
 block volume (e.g. a Synology iSCSI LUN) instead of NFS: set `<component>.persistence.claim` so
 the chart creates the PVC, point `<component>.persistence.volume` at it, and set
 `<component>.persistence.subPath` (e.g. `data`). Attachments can't move to RWO storage: both the
@@ -219,6 +234,16 @@ sqld:
     volume:
       persistentVolumeClaim:
         claimName: budget-manager-budget-manager-sqld-data
+
+# Frankfurter keeps a SQLite database (/app/data), so it needs block storage too.
+frankfurter:
+  enabled: true
+  persistence:
+    claim: {storageClassName: synology-iscsi, size: 5Gi}
+    subPath: data
+    volume:
+      persistentVolumeClaim:
+        claimName: budget-manager-budget-manager-frankfurter-data
 ```
 
 ### sqld's write lock
@@ -247,6 +272,8 @@ sqld:
 3. **NATS data**: Stored on NFS at `/volume1/k8s/volumes/budget-manager/nats`
 
 Backup all three directories as a single unit, and perform backups regularly using your NFS storage's snapshot or backup solution.
+
+Frankfurter's data (when enabled) needs no backup: it re-downloads everything from the central banks.
 
 ## Usage
 

@@ -57,3 +57,16 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "nats.persistence.claim.size is required"
+
+  - it: renders the frankfurter claim when configured
+    set:
+      frankfurter.persistence.claim: {storageClassName: synology-iscsi, size: 2Gi}
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-budget-manager-frankfurter-data
+      - equal:
+          path: spec.resources.requests.storage
+          value: 2Gi

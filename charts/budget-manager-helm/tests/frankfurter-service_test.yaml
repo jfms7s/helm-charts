@@ -1,0 +1,41 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: frankfurter-service
+templates:
+  - templates/frankfurter-service.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: renders a ClusterIP service when enabled
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-budget-manager-frankfurter
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 8080
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+      - equal:
+          path: spec.ports[0].name
+          value: http
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: frankfurter
+
+  - it: does not render by default
+    asserts:
+      - isNull:
+          path: kind

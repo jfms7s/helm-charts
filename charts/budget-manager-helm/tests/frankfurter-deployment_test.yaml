@@ -1,0 +1,257 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: frankfurter-deployment
+templates:
+  - templates/frankfurter-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: renders when enabled
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-budget-manager-frankfurter
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: frankfurter
+
+  - it: does not render by default
+    asserts:
+      - isNull:
+          path: kind
+
+  - it: runs as numeric non-root user 1000 with fsGroup
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.runAsGroup
+          value: 1000
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 1000
+
+  - it: uses the pinned image
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/lineofflight/frankfurter:v2.6.1
+
+  - it: has a read-only root filesystem, drops all capabilities and blocks privilege escalation
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          value: [ALL]
+
+  - it: sets the database, worker processes and port
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            value: "sqlite:///app/data/frankfurter.sqlite3"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WORKER_PROCESSES
+            value: "0"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PORT
+            value: "8080"
+
+  - it: mounts a writable tmp volume
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+
+  - it: mounts the data volume at a subPath when persistence.subPath is set
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          subPath: data
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /app/data
+            subPath: data
+
+  - it: mounts the data volume without a subPath by default
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /app/data
+
+  - it: probes GET / on the http port
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+          value:
+            path: /
+            port: http
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+          value:
+            path: /
+            port: http
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet
+          value:
+            path: /
+            port: http
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.failureThreshold
+          value: 30
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.periodSeconds
+          value: 10
+
+  - it: fails when enabled with no persistence volume
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume: null
+    asserts:
+      - failedTemplate:
+          errorPattern: "frankfurter.persistence.volume must be persistent storage"
+
+  - it: renders imagePullSecrets when set
+    set:
+      imagePullSecrets:
+        - name: my-registry-secret
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: my-registry-secret
+
+  - it: appends extraEnv
+    set:
+      frankfurter:
+        enabled: true
+        extraEnv:
+          - name: LOG_LEVEL
+            value: debug
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LOG_LEVEL
+            value: debug
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PORT
+            value: "8080"
+
+  - it: uses the default memory request and limit
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 384Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 768Mi

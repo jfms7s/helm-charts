@@ -1,4 +1,4 @@
-{{- range $component := list "sqld" "nats" }}
+{{- range $component := list "sqld" "nats" "frankfurter" }}
 {{- $persistence := (index $.Values $component).persistence }}
 {{- $claim := $persistence.claim | default dict }}
 {{- if $claim.storageClassName }}

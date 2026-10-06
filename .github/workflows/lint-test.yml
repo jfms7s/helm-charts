@@ -32,6 +32,7 @@ jobs:
           helm lint charts/patchmon-helm
           helm lint charts/ticket-live-event-scanner-helm
           helm lint -f charts/budget-manager-helm/ci/test-values.yaml charts/budget-manager-helm
+          helm lint -f charts/budget-manager-helm/ci/test-values.yaml -f charts/budget-manager-helm/ci/frankfurter-values.yaml charts/budget-manager-helm
 
       - name: Template Helm charts
         run: |
@@ -41,6 +42,7 @@ jobs:
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml
           helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml
+          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml --values charts/budget-manager-helm/ci/frankfurter-values.yaml
 
       - name: Install kubeconform
         run: |
@@ -58,6 +60,7 @@ jobs:
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml | kubeconform -summary
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml | kubeconform -summary
           helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml | kubeconform -summary
+          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml --values charts/budget-manager-helm/ci/frankfurter-values.yaml | kubeconform -summary
 
       - name: Run helm-unittest
         run: |
