@@ -57,6 +57,8 @@ sqld:
     # <release>-budget-manager-sqld-data. Point `volume` at it with
     # persistentVolumeClaim.claimName. Kept on uninstall/prune.
     claim:
+      # Optional PVC name (default <release>-budget-manager-<component>-data).
+      name: ""
       storageClassName: ""
       size: ""
     # Optional subdirectory of the volume to mount (keeps ext4's lost+found
@@ -201,6 +203,8 @@ nats:
     # <release>-budget-manager-nats-data. Point `volume` at it with
     # persistentVolumeClaim.claimName. Kept on uninstall/prune.
     claim:
+      # Optional PVC name (default <release>-budget-manager-<component>-data).
+      name: ""
       storageClassName: ""
       size: ""
     # Optional subdirectory of the volume to mount (keeps ext4's lost+found
