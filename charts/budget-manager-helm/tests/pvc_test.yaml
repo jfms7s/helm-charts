@@ -70,3 +70,22 @@ tests:
       - equal:
           path: spec.resources.requests.storage
           value: 2Gi
+
+  - it: names the claim from claim.name when set (moving to another storage class)
+    set:
+      frankfurter.persistence.claim:
+        name: frankfurter-local
+        storageClassName: local-path
+        size: 5Gi
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: frankfurter-local
+      - equal:
+          path: spec.storageClassName
+          value: local-path
+      - equal:
+          path: metadata.annotations["helm.sh/resource-policy"]
+          value: keep

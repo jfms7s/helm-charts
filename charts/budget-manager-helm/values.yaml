@@ -92,13 +92,23 @@ frankfurter:
   # Volume source for Frankfurter's SQLite database (REQUIRED when enabled),
   # mounted at /app/data (DATABASE_URL is set to sqlite:///app/data/frankfurter.sqlite3).
   # Same shape as sqld.persistence. Size the claim at 5Gi or more: a partial
-  # backfill (9 of 104 providers) was already 170 MB.
+  # backfill (9 of 104 providers) was already 170 MB. claim.name overrides the
+  # chart-created PVC's name (default <release>-budget-manager-frankfurter-data),
+  # e.g. to move to another storage class: a claim's class can't be changed in
+  # place, and the old claim is kept (resource-policy keep).
   persistence:
     volume:
     claim:
+      name: ""
       storageClassName: ""
       size: ""
     subPath: ""
+  # Pod placement, e.g. a dedicated node pool (nodeSelector + tolerations). With
+  # node-local storage (local-path) the pod stays on the node its claim was
+  # first bound on.
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
 # API server configuration
 api:

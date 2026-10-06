@@ -9,7 +9,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ $.Release.Name }}-budget-manager-{{ $component }}-data
+  name: {{ $claim.name | default (printf "%s-budget-manager-%s-data" $.Release.Name $component) }}
   labels:
     {{- include "budget-manager-helm.labels" (dict "context" $ "name" $component "component" "storage") | nindent 4 }}
   annotations:

@@ -145,7 +145,7 @@ helm install budget-manager ./budget-manager-helm \
 | `imagePullSecrets` | Image pull secrets for private registries | `[]` |
 | `attachments.volume` | Volume source for attachments storage | `emptyDir` |
 | `nats.persistence.volume` | Volume source for NATS data | `emptyDir` |
-| `sqld.persistence.claim` / `nats.persistence.claim` / `frankfurter.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-budget-manager-<sqld\|nats\|frankfurter>-data` (RWO, kept on uninstall/prune); point `persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
+| `sqld.persistence.claim` / `nats.persistence.claim` / `frankfurter.persistence.claim` | `{name, storageClassName, size}`: when the class is set, render a PVC named `name`, default `<release>-budget-manager-<sqld\|nats\|frankfurter>-data` (RWO, kept on uninstall/prune); point `persistence.volume` at it via `persistentVolumeClaim.claimName`. A claim's class can't change in place: to move storage, set a new `name` (the old claim is kept) | unset |
 | `sqld.persistence.subPath` / `nats.persistence.subPath` / `frankfurter.persistence.subPath` | Subdirectory of the volume to mount as the data dir (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
 | `sqld.checkpointIntervalSeconds` | WAL checkpoint interval (`--checkpoint-interval-s`). Set, sqld turns off per-commit auto-checkpoints and runs one `TRUNCATE` checkpoint per interval (see [sqld's write lock](#sqlds-write-lock)) | `""` (sqld default) |
 | `sqld.writeProbe.enabled` | Liveness probe that writes (`BEGIN IMMEDIATE; ROLLBACK` over `/v2/pipeline`, bash `/dev/tcp`) instead of a TCP check | `false` |
@@ -156,6 +156,7 @@ helm install budget-manager ./budget-manager-helm \
 | `frankfurter.workerProcesses` | Puma web worker processes (`WORKER_PROCESSES`). `0` = Puma single mode, one process; the image default is 4 | `0` |
 | `frankfurter.persistence.{volume,claim,subPath}` | Volume source (REQUIRED when enabled), optional chart-created PVC, and subPath for Frankfurter's SQLite database, mounted at `/app/data`. Use block storage (iSCSI), never NFS. Size the claim at 5Gi or more: a partial backfill (9 of 104 providers) was already 170 MB | unset |
 | `frankfurter.extraEnv` | Extra environment variables for Frankfurter | `[]` |
+| `frankfurter.nodeSelector` / `frankfurter.tolerations` / `frankfurter.affinity` | Pod placement for Frankfurter, e.g. a dedicated node pool. With node-local storage (local-path) the pod stays on the node where its claim was first bound | `{}` / `[]` / `{}` |
 
 ### Resource Tuning
 
