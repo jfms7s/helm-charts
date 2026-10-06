@@ -37,6 +37,7 @@ Application-specific chart for deploying [Budget Manager](https://github.com/jfm
 - Web UI frontend deployment + Service + Ingress
 - Async worker deployment (scheduler, event relay)
 - NATS JetStream message bus deployment + Service
+- Optional Frankfurter exchange-rate API (Deployment + Service + PVC, off by default; the worker gets `FRANKFURTER_URL` when enabled)
 - Libsql (Turso) database integration
 - File attachments shared storage
 - Security hardening: non-root containers, read-only root filesystem, dropped capabilities

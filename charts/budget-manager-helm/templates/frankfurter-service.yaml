@@ -1,0 +1,17 @@
+{{- if .Values.frankfurter.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-budget-manager-frankfurter
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" "frankfurter" "component" "exchange-rates") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "budget-manager-helm.selectorLabels" (dict "context" $ "name" "frankfurter") | nindent 4 }}
+{{- end }}

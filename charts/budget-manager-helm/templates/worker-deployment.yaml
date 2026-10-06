@@ -78,6 +78,11 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.otelEndpoint | quote }}
             {{- end }}
+            {{- if .Values.frankfurter.enabled }}
+            # exchange-rate-fetch job (budget-manager >= the release with exchange-rate-feed).
+            - name: FRANKFURTER_URL
+              value: "http://{{ .Release.Name }}-budget-manager-frankfurter:8080"
+            {{- end }}
             - name: TZ
               value: {{ .Values.tz | quote }}
             - name: WORKER_HEARTBEAT_FILE

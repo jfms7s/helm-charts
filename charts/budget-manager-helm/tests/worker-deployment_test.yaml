@@ -234,3 +234,26 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
           value: 512Mi
+
+  - it: sets FRANKFURTER_URL to the in-chart service when frankfurter is enabled
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FRANKFURTER_URL
+            value: "http://RELEASE-NAME-budget-manager-frankfurter:8080"
+
+  - it: leaves FRANKFURTER_URL unset by default
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FRANKFURTER_URL
+            value: "http://RELEASE-NAME-budget-manager-frankfurter:8080"
