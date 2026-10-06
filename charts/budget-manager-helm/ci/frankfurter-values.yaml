@@ -1,0 +1,12 @@
+# Layered on top of test-values.yaml (helm lint/template/kubeconform in CI): renders the
+# optional Frankfurter Deployment + Service + PVC and the worker's FRANKFURTER_URL, which
+# test-values.yaml leaves off so that default-off stays covered.
+frankfurter:
+  enabled: true
+  persistence:
+    claim:
+      storageClassName: test-block
+      size: 5Gi
+    volume:
+      persistentVolumeClaim:
+        claimName: budget-manager-frankfurter-data

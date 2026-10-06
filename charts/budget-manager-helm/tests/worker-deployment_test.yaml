@@ -254,6 +254,6 @@ tests:
     asserts:
       - notContains:
           path: spec.template.spec.containers[0].env
+          any: true
           content:
             name: FRANKFURTER_URL
-            value: "http://RELEASE-NAME-budget-manager-frankfurter:8080"

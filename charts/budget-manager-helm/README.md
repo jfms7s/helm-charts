@@ -19,7 +19,7 @@ The application stores user attachments in a shared volume. By default, the char
 
 1. Kubernetes 1.24+
 2. Helm 3.0+
-3. For production: shared (RWX) storage (NFS recommended) for attachments, NATS data, and sqld database file (if sqld.enabled: true)
+3. For production: RWX storage (NFS) for attachments; block storage (iSCSI, RWO) for sqld, NATS and Frankfurter (if enabled)
 4. Optional: external Turso database URL and token (if sqld.enabled: false)
 
 ## Installation
@@ -153,8 +153,8 @@ helm install budget-manager ./budget-manager-helm \
 | `sqld.extraArgs` / `sqld.extraEnv` | Extra sqld command-line arguments / environment variables | `[]` |
 | `frankfurter.enabled` | Deploy the self-hosted [Frankfurter](https://github.com/lineofflight/frankfurter) exchange-rate API (Deployment + Service) and give the worker `FRANKFURTER_URL`, which turns on its hourly `exchange-rate-fetch` job. Needs outbound internet to the central banks it downloads from | `false` |
 | `frankfurter.image.{repository,tag,pullPolicy}` | Frankfurter image (Docker Hub only; mirror it and set `imagePullSecrets` if the cluster can't reach Docker Hub) | `docker.io/lineofflight/frankfurter`, `v2.6.1`, `IfNotPresent` |
-| `frankfurter.workerProcesses` | Puma web worker processes (`WORKER_PROCESSES`; the image default is 4) | `1` |
-| `frankfurter.persistence.{volume,claim,subPath}` | Volume source (REQUIRED when enabled), optional chart-created PVC, and subPath for Frankfurter's SQLite database, mounted at `/app/data`. Use block storage (iSCSI), never NFS | unset |
+| `frankfurter.workerProcesses` | Puma web worker processes (`WORKER_PROCESSES`). `0` = Puma single mode, one process; the image default is 4 | `0` |
+| `frankfurter.persistence.{volume,claim,subPath}` | Volume source (REQUIRED when enabled), optional chart-created PVC, and subPath for Frankfurter's SQLite database, mounted at `/app/data`. Use block storage (iSCSI), never NFS. Size the claim at 5Gi or more: a partial backfill (9 of 104 providers) was already 170 MB | unset |
 | `frankfurter.extraEnv` | Extra environment variables for Frankfurter | `[]` |
 
 ### Resource Tuning
@@ -190,8 +190,8 @@ nats:
     limits:
       memory: 128Mi
 
-# Only when frankfurter.enabled: measured 2026-10-06 (v2.6.1) at ~375-450 MB RSS
-# during its initial backfill.
+# Only when frankfurter.enabled: measured 2026-10-06 (v2.6.1) at ~470-500 MB
+# container usage during its initial backfill.
 frankfurter:
   resources:
     requests:
@@ -239,7 +239,7 @@ sqld:
 frankfurter:
   enabled: true
   persistence:
-    claim: {storageClassName: synology-iscsi, size: 2Gi}
+    claim: {storageClassName: synology-iscsi, size: 5Gi}
     subPath: data
     volume:
       persistentVolumeClaim:
@@ -272,6 +272,8 @@ sqld:
 3. **NATS data**: Stored on NFS at `/volume1/k8s/volumes/budget-manager/nats`
 
 Backup all three directories as a single unit, and perform backups regularly using your NFS storage's snapshot or backup solution.
+
+Frankfurter's data (when enabled) needs no backup: it re-downloads everything from the central banks.
 
 ## Usage
 

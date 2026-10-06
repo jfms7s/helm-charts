@@ -74,10 +74,11 @@ frankfurter:
     repository: docker.io/lineofflight/frankfurter
     tag: "v2.6.1"
     pullPolicy: IfNotPresent
-  # Puma web worker processes (image default 4). One keeps memory down on
-  # small nodes; the API serves one hourly caller.
-  workerProcesses: 1
-  # Measured 2026-10-06 (v2.6.1): ~375-450 MB RSS during the initial backfill.
+  # Puma web worker processes (WORKER_PROCESSES). 0 = Puma single mode, one
+  # process; the image default is 4. Keeps memory down on small nodes; the API
+  # serves one hourly caller.
+  workerProcesses: 0
+  # Measured 2026-10-06 (v2.6.1): ~470-500 MB container usage during the initial backfill.
   resources:
     requests:
       memory: 384Mi
@@ -90,7 +91,8 @@ frankfurter:
   extraEnv: []
   # Volume source for Frankfurter's SQLite database (REQUIRED when enabled),
   # mounted at /app/data (DATABASE_URL is set to sqlite:///app/data/frankfurter.sqlite3).
-  # Same shape as sqld.persistence.
+  # Same shape as sqld.persistence. Size the claim at 5Gi or more: a partial
+  # backfill (9 of 104 providers) was already 170 MB.
   persistence:
     volume:
     claim:

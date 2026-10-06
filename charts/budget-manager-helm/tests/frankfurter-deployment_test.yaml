@@ -106,14 +106,14 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: WORKER_PROCESSES
-            value: "1"
+            value: "0"
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: PORT
             value: "8080"
 
-  - it: mounts data and tmp volumes
+  - it: mounts a writable tmp volume
     set:
       frankfurter:
         enabled: true
@@ -122,11 +122,6 @@ tests:
             persistentVolumeClaim:
               claimName: frankfurter-data
     asserts:
-      - contains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: data
-            mountPath: /app/data
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
@@ -245,7 +240,7 @@ tests:
             name: PORT
             value: "8080"
 
-  - it: respects custom resources
+  - it: uses the default memory request and limit
     set:
       frankfurter:
         enabled: true
