@@ -130,6 +130,25 @@ entries:
   budget-manager-helm:
   - apiVersion: v2
     appVersion: 0.1.0
+    created: "2026-10-10T13:43:12.719869105Z"
+    description: A Helm chart for deploying Budget Manager on Kubernetes
+    digest: 9138f5940d39565cb2be3b058f2c201da7565c3e2f600d0eec5d3d30bf7047c4
+    keywords:
+    - budget-manager
+    - personal-finance
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: budget-manager-helm
+    sources:
+    - https://github.com/jfms7s/budget-manager
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/budget-manager-helm-0.5.0/budget-manager-helm-0.5.0.tgz
+    version: 0.5.0
+  - apiVersion: v2
+    appVersion: 0.1.0
     created: "2026-10-06T14:22:26.162708834Z"
     description: A Helm chart for deploying Budget Manager on Kubernetes
     digest: eb5d23ade6c34c1d14280a68b2c56b0f9e9e912476a740de4c818dec5709421f
@@ -533,4 +552,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.1.0/ticket-live-event-scanner-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-06T14:22:26.162787847Z"
+generated: "2026-10-10T13:43:12.719888494Z"
