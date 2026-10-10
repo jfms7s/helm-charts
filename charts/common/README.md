@@ -29,9 +29,9 @@ The following table lists the configurable parameters of the common chart and th
 | `deploy.image.tag` | Container image tag | `""` |
 | `deploy.image.pullPolicy` | Container image pull policy | `IfNotPresent` |
 | `deploy.strategy` | Deployment update strategy, rendered verbatim; `type: Recreate` also renders `rollingUpdate: null` so a live RollingUpdate Deployment can be switched in place | `{}` (Kubernetes default, RollingUpdate) |
-| `deploy.nodeSelector` | Node labels the pod must match, rendered verbatim | `{}` |
-| `deploy.affinity` | Pod/node affinity, rendered verbatim | `{}` |
-| `deploy.tolerations` | Tolerations for tainted nodes, rendered verbatim | `[]` |
+| `deploy.nodeSelector` | Node labels the pod must match, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `{}` |
+| `deploy.affinity` | Pod/node affinity, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `{}` |
+| `deploy.tolerations` | Tolerations for tainted nodes, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `[]` |
 | `service.ports` | Service ports configuration | `{"http": 80}` |
 | `deploy.extraVolumes` | Additional volumes for the pod | `[]` |
 | `deploy.extraVolumeMounts` | Additional volume mounts for the container | `[]` |
