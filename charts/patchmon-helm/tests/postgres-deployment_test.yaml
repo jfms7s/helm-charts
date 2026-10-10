@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: database
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.3.0
+            helm.sh/chart: patchmon-helm-0.4.0
       - equal:
           path: spec.strategy.type
           value: Recreate
@@ -107,3 +107,27 @@ tests:
               secretKeyRef:
                 name: my-external-secret
                 key: MY_KEY
+
+  - it: mounts the postgres data volume at a subPath when persistence.subPath is set
+    set:
+      postgres:
+        persistence:
+          subPath: data
+          volume:
+            persistentVolumeClaim:
+              claimName: pg-data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: postgres-data
+            mountPath: /var/lib/postgresql/data
+            subPath: data
+
+  - it: mounts the postgres data volume without a subPath by default
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: postgres-data
+            mountPath: /var/lib/postgresql/data

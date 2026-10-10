@@ -1,0 +1,55 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: pvc
+templates:
+  - templates/pvc.yaml
+tests:
+  - it: renders no claims by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the postgres claim with class, size and keep annotations
+    set:
+      postgres.persistence.claim: {storageClassName: synology-iscsi, size: 2Gi}
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-patchmon-postgres-data
+      - equal:
+          path: spec.storageClassName
+          value: synology-iscsi
+      - equal:
+          path: spec.resources.requests.storage
+          value: 2Gi
+      - equal:
+          path: spec.accessModes
+          value: [ReadWriteOnce]
+      - equal:
+          path: metadata.annotations["helm.sh/resource-policy"]
+          value: keep
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-options"]
+          value: Prune=false,Delete=false
+
+  - it: renders both claims when both are configured
+    set:
+      postgres.persistence.claim: {storageClassName: synology-iscsi, size: 2Gi}
+      redis.persistence.claim: {storageClassName: synology-iscsi, size: 1Gi}
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-patchmon-redis-data
+        documentIndex: 1
+
+  - it: refuses a claim with a class but no size
+    set:
+      redis.persistence.claim: {storageClassName: synology-iscsi}
+    asserts:
+      - failedTemplate:
+          errorPattern: "redis.persistence.claim.size is required"

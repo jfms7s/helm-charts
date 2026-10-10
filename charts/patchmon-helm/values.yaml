@@ -62,6 +62,14 @@ postgres:
   #         path: /volumes/patchmon/postgres
   persistence:
     volume: {}
+    # Optional: have the chart create a PVC named <release>-patchmon-postgres-data.
+    # Point `volume` at it with persistentVolumeClaim.claimName. Kept on uninstall/prune.
+    claim:
+      storageClassName: ""
+      size: ""
+    # Optional subdirectory of the volume to mount as the data dir (keeps ext4's lost+found
+    # out of PGDATA on block-backed PVCs).
+    subPath: ""
 
 redis:
   image:
@@ -78,6 +86,14 @@ redis:
   # postgres.persistence.volume above; defaults to emptyDir when unset.
   persistence:
     volume: {}
+    # Optional: have the chart create a PVC named <release>-patchmon-redis-data.
+    # Point `volume` at it with persistentVolumeClaim.claimName. Kept on uninstall/prune.
+    claim:
+      storageClassName: ""
+      size: ""
+    # Optional subdirectory of the volume to mount as the data dir (keeps ext4's lost+found
+    # out of Redis's dir on block-backed PVCs).
+    subPath: ""
 
 # guacd backs PatchMon's in-browser RDP (Windows host) feature. Runs
 # read-only/hardened per upstream's docker-compose.yml (no writable root

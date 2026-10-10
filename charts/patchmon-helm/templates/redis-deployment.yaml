@@ -50,6 +50,9 @@ spec:
           volumeMounts:
             - mountPath: /data
               name: redis-data
+              {{- with .Values.redis.persistence.subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
       restartPolicy: Always
       volumes:
         - name: redis-data
