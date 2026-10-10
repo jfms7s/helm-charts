@@ -263,6 +263,15 @@ entries:
     version: 0.1.0
   common:
   - apiVersion: v2
+    created: "2026-10-10T20:14:48.157281921Z"
+    description: A Helm chart for Kubernetes
+    digest: d94d698e153e3a0e64caa2421944892cb3edaa4e3fe7db61fac1d8e0274fbf35
+    name: common
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/common-0.7.0/common-0.7.0.tgz
+    version: 0.7.0
+  - apiVersion: v2
     created: "2026-10-04T15:32:23.099492047Z"
     description: A Helm chart for Kubernetes
     digest: e2611d9eef4ae27ca46fd71ee43d001017915fefa9f04dceee700c2bc2c25410
@@ -571,4 +580,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.1.0/ticket-live-event-scanner-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-10T18:12:58.021043494Z"
+generated: "2026-10-10T20:14:48.157395079Z"
