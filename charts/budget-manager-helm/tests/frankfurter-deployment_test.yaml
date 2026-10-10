@@ -255,3 +255,58 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
           value: 768Mi
+
+  - it: sets no placement by default
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+    asserts:
+      - notExists:
+          path: spec.template.spec.nodeSelector
+      - notExists:
+          path: spec.template.spec.tolerations
+      - notExists:
+          path: spec.template.spec.affinity
+
+  - it: places the pod with nodeSelector, tolerations and affinity
+    set:
+      frankfurter:
+        enabled: true
+        persistence:
+          volume:
+            persistentVolumeClaim:
+              claimName: frankfurter-data
+        nodeSelector:
+          workload: observability
+        tolerations:
+          - key: dedicated
+            operator: Equal
+            value: observability
+            effect: NoSchedule
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: kubernetes.io/arch
+                      operator: In
+                      values: [amd64]
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            workload: observability
+      - equal:
+          path: spec.template.spec.tolerations
+          value:
+            - key: dedicated
+              operator: Equal
+              value: observability
+              effect: NoSchedule
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: kubernetes.io/arch
