@@ -54,6 +54,9 @@ spec:
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: postgres-data
+              {{- with .Values.postgres.persistence.subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
       restartPolicy: Always
       volumes:
         - name: postgres-data
