@@ -38,6 +38,15 @@ spec:
       serviceAccountName: {{ .Values.deploy.serviceAccount.name }}
 {{- end }}
       securityContext: {{- .Values.deploy.podSecurityContext | toYaml | nindent 8 }}
+{{- with .Values.deploy.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.deploy.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+{{- end }}
+{{- with .Values.deploy.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+{{- end }}
 {{- if .Values.deploy.initContainers }}
       initContainers: {{- .Values.deploy.initContainers | toYaml | nindent 8 }}
 {{- end }}
