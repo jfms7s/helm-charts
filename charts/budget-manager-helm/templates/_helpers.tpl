@@ -113,3 +113,56 @@ once rendered an empty URL while the api derived the sqld one).
 http://{{ .Release.Name }}-budget-manager-sqld:8080
 {{- end -}}
 {{- end -}}
+
+{{/*
+bank-sync's render-time guards (bankSync.enabled only): every value it can't
+start without, checked here so a misconfigured release fails at render rather
+than as a crash-looping pod.
+*/}}
+{{- define "budget-manager-helm.bankSyncValidate" -}}
+{{- $ := . -}}
+{{- $bs := $.Values.bankSync -}}
+{{- if not $bs.host -}}
+  {{- fail "budget-manager-helm: bankSync.host must be set (the admin page's ingress host; BANK_SYNC_PUBLIC_URL is https://<host>)" -}}
+{{- end -}}
+{{- if not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$" $bs.host) -}}
+  {{- fail (printf "budget-manager-helm: bankSync.host must be a bare lower-case hostname, no scheme, port or path (got %q)" $bs.host) -}}
+{{- end -}}
+{{- if or (not $bs.persistence.volume) (hasKey $bs.persistence.volume "emptyDir") -}}
+  {{- fail "budget-manager-helm: bankSync.persistence.volume must be persistent storage, not emptyDir (its SQLite database lives there)" -}}
+{{- end -}}
+{{- if or (not $bs.privateKeySecret.name) (not $bs.privateKeySecret.key) -}}
+  {{- fail "budget-manager-helm: bankSync.privateKeySecret.name and .key must be set (the Secret holding the Enable Banking private key)" -}}
+{{- end -}}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "bankSync.ebAppId" "credential" $bs.ebAppId) }}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "bankSync.bmToken" "credential" $bs.bmToken) }}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "bankSync.adminPasswordHash" "credential" $bs.adminPasswordHash) }}
+{{- include "budget-manager-helm.requiredCredential" (dict "context" $ "credentialName" "bankSync.sessionSecret" "credential" $bs.sessionSecret) }}
+{{- if and (not $bs.sessionSecret.valueFrom) (lt (len ($bs.sessionSecret.value | default "")) 32) -}}
+  {{- fail "budget-manager-helm: bankSync.sessionSecret must be at least 32 characters" -}}
+{{- end -}}
+{{- $interval := int $bs.intervalHours -}}
+{{- if or (lt $interval 6) (gt $interval 168) -}}
+  {{- fail (printf "budget-manager-helm: bankSync.intervalHours must be 6-168 (got %v)" $bs.intervalHours) -}}
+{{- end -}}
+{{- $trust := toString ($bs.trustProxy | default "") -}}
+{{- if $trust -}}
+  {{- /* Each entry an IPv4/IPv6 address, optionally with a /prefix in range (0-32 or 0-128), as bank-sync's own parser requires. */ -}}
+  {{- $ipv4 := "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$" -}}
+  {{- $ipv6 := "^[0-9A-Fa-f]*:[0-9A-Fa-f:.]*$" -}}
+  {{- range $entry := splitList "," $trust -}}
+    {{- $parts := splitList "/" (trim $entry) -}}
+    {{- $addr := first $parts -}}
+    {{- $max := -1 -}}
+    {{- if regexMatch $ipv4 $addr }}{{ $max = 32 }}{{ else if regexMatch $ipv6 $addr }}{{ $max = 128 }}{{ end -}}
+    {{- $ok := and (ge $max 0) (le (len $parts) 2) -}}
+    {{- if and $ok (eq (len $parts) 2) -}}
+      {{- $prefix := last $parts -}}
+      {{- $ok = and (regexMatch "^[0-9]{1,3}$" $prefix) (le (atoi $prefix) $max) -}}
+    {{- end -}}
+    {{- if not $ok -}}
+      {{- fail (printf "budget-manager-helm: bankSync.trustProxy must be a comma-separated list of IP addresses or CIDR ranges, never \"true\" or a hop count (got %q)" $trust) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}

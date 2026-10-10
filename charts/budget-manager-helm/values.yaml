@@ -112,6 +112,87 @@ frankfurter:
   tolerations: []
   affinity: {}
 
+# bank-sync (apps/bank-sync): Enable Banking client that pushes booked bank
+# transactions into this release's api through POST /imports (BANK_SYNC_BM_URL
+# is the api Service). One instance per tenant: one PAT, one admin password.
+# Its state is a SQLite file: put it on block storage (iSCSI), never NFS.
+# Exactly 1 replica, Recreate (hardcoded): startup clears the run lease.
+bankSync:
+  enabled: false
+  image:
+    repository: ghcr.io/jfms7s/budget-manager-bank-sync
+    tag: "v0.1.0"
+    pullPolicy: IfNotPresent
+  # Ingress host of the admin page (REQUIRED when enabled). BANK_SYNC_PUBLIC_URL
+  # is https://<host>, no path; the Enable Banking app's redirect URL must be
+  # exactly https://<host>/callback. Only port 80 (the admin page) is routed;
+  # the metrics port never is.
+  host: ""
+  # TLS for the bank-sync Ingress; empty uses ingress.tls (whose hosts must
+  # then include bankSync.host) or the cluster's default certificate.
+  tls: []
+  # Enable Banking country whose banks are offered (BANK_SYNC_EB_COUNTRY).
+  country: PT
+  # Hours between scheduled runs (BANK_SYNC_INTERVAL_HOURS), 6-168.
+  intervalHours: 6
+  # Proxies whose X-Forwarded-For bank-sync believes (BANK_SYNC_TRUST_PROXY),
+  # so the login limiter keys on the client, not the ingress: comma-separated
+  # addresses or CIDR ranges, e.g. the pod network Traefik runs in
+  # ("10.42.0.0/16" on k3s). Empty trusts nobody. Never "true" or a hop count:
+  # the chart and bank-sync both refuse them.
+  trustProxy: ""
+  logLevel: info
+  # Credentials (REQUIRED when enabled). Each is a standard Kubernetes
+  # EnvVarSource like database.*: `value` for a literal, or `valueFrom`
+  # (e.g. secretKeyRef); valueFrom wins when both are set.
+  # Enable Banking application id (BANK_SYNC_EB_APP_ID).
+  ebAppId:
+    value: ""
+    valueFrom: {}
+  # budget-manager personal access token (BANK_SYNC_BM_TOKEN), scopes exactly
+  # imports:write imports:read accounts:read.
+  bmToken:
+    value: ""
+    valueFrom: {}
+  # argon2id hash of the admin password (BANK_SYNC_ADMIN_PASSWORD_HASH), from
+  # `pnpm --filter @budget-manager/bank-sync hash-password`.
+  adminPasswordHash:
+    value: ""
+    valueFrom: {}
+  # Session cookie signing secret (BANK_SYNC_SESSION_SECRET), 32+ characters.
+  sessionSecret:
+    value: ""
+    valueFrom: {}
+  # Secret holding the Enable Banking application's PEM private key (REQUIRED
+  # when enabled). Only that key is mounted, read-only (0400), at
+  # /run/secrets/eb/private.key (BANK_SYNC_EB_PRIVATE_KEY_FILE).
+  privateKeySecret:
+    name: ""
+    key: eb-private-key
+  resources:
+    requests:
+      memory: 96Mi
+    limits:
+      memory: 256Mi
+  # The image's own user (USER 1000).
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  extraEnv: []
+  # Volume source for the SQLite database (REQUIRED when enabled), mounted at
+  # /app/.data (BANK_SYNC_DB_PATH=/app/.data/bank-sync.db). Same shape as
+  # sqld.persistence; claim.name defaults to <release>-budget-manager-bank-sync-data.
+  persistence:
+    volume:
+    claim:
+      name: ""
+      storageClassName: ""
+      size: ""
+    subPath: ""
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
 # API server configuration
 api:
   image:
