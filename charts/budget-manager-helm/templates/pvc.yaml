@@ -1,7 +1,10 @@
-{{- range $component := list "sqld" "nats" "frankfurter" }}
+{{- range $component := list "sqld" "nats" "frankfurter" "bankSync" }}
 {{- $persistence := (index $.Values $component).persistence }}
+{{- /* Resource names and labels: bankSync -> bank-sync. */}}
+{{- $slug := kebabcase $component }}
 {{- $claim := $persistence.claim | default dict }}
-{{- if $claim.storageClassName }}
+{{- /* bank-sync's claim only renders with bank-sync itself (off means no bank-sync resources at all). */}}
+{{- if and $claim.storageClassName (or (ne $component "bankSync") $.Values.bankSync.enabled) }}
 {{- if not $claim.size }}
 {{- fail (printf "budget-manager-helm: %s.persistence.claim.size is required" $component) }}
 {{- end }}
@@ -9,9 +12,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ $claim.name | default (printf "%s-budget-manager-%s-data" $.Release.Name $component) }}
+  name: {{ $claim.name | default (printf "%s-budget-manager-%s-data" $.Release.Name $slug) }}
   labels:
-    {{- include "budget-manager-helm.labels" (dict "context" $ "name" $component "component" "storage") | nindent 4 }}
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" $slug "component" "storage") | nindent 4 }}
   annotations:
     # Data outlives the release: never delete on uninstall, prune, or
     # Application deletion. Removing a claim is a deliberate manual step.

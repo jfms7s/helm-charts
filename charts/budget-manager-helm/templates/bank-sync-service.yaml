@@ -1,0 +1,22 @@
+{{- if .Values.bankSync.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-budget-manager-bank-sync
+  labels:
+    {{- include "budget-manager-helm.labels" (dict "context" $ "name" "bank-sync" "component" "bank-sync") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+    # In-cluster Prometheus scraping only; bank-sync-ingress.yaml never routes it.
+    - port: 9464
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "budget-manager-helm.selectorLabels" (dict "context" $ "name" "bank-sync") | nindent 4 }}
+{{- end }}

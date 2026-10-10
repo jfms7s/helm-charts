@@ -12,6 +12,7 @@ This chart deploys a complete Budget Manager stack on Kubernetes, including:
 - **Database (sqld)**: LibSQL server (Deployment + Service, enabled by default, strategy: Recreate)
 - **NATS JetStream**: In-cluster message bus for webhooks and events (Deployment + Service)
 - **Frankfurter** (optional): exchange-rate API for the worker's hourly rate feed (Deployment + Service + PVC, disabled by default, strategy: Recreate)
+- **bank-sync** (optional): [Enable Banking](https://enablebanking.com) client that pushes booked bank transactions into the api through `POST /imports` (Deployment + Service + Ingress + PVC, disabled by default, strategy: Recreate). See [Bank sync](#bank-sync)
 
 The application stores user attachments in a shared volume. By default, the chart deploys an in-cluster LibSQL database; you can optionally disable it and point to an external Turso database instead.
 
@@ -19,7 +20,7 @@ The application stores user attachments in a shared volume. By default, the char
 
 1. Kubernetes 1.24+
 2. Helm 3.0+
-3. For production: RWX storage (NFS) for attachments; block storage (iSCSI, RWO) for sqld, NATS and Frankfurter (if enabled)
+3. For production: RWX storage (NFS) for attachments; block storage (iSCSI, RWO) for sqld, NATS, Frankfurter and bank-sync (if enabled)
 4. Optional: external Turso database URL and token (if sqld.enabled: false)
 
 ## Installation
@@ -145,8 +146,8 @@ helm install budget-manager ./budget-manager-helm \
 | `imagePullSecrets` | Image pull secrets for private registries | `[]` |
 | `attachments.volume` | Volume source for attachments storage | `emptyDir` |
 | `nats.persistence.volume` | Volume source for NATS data | `emptyDir` |
-| `sqld.persistence.claim` / `nats.persistence.claim` / `frankfurter.persistence.claim` | `{name, storageClassName, size}`: when the class is set, render a PVC named `name`, default `<release>-budget-manager-<sqld\|nats\|frankfurter>-data` (RWO, kept on uninstall/prune); point `persistence.volume` at it via `persistentVolumeClaim.claimName`. A claim's class can't change in place: to move storage, set a new `name` (the old claim is kept) | unset |
-| `sqld.persistence.subPath` / `nats.persistence.subPath` / `frankfurter.persistence.subPath` | Subdirectory of the volume to mount as the data dir (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
+| `sqld.persistence.claim` / `nats.persistence.claim` / `frankfurter.persistence.claim` / `bankSync.persistence.claim` | `{name, storageClassName, size}`: when the class is set, render a PVC named `name`, default `<release>-budget-manager-<sqld\|nats\|frankfurter\|bank-sync>-data` (RWO, kept on uninstall/prune); point `persistence.volume` at it via `persistentVolumeClaim.claimName`. A claim's class can't change in place: to move storage, set a new `name` (the old claim is kept) | unset |
+| `sqld.persistence.subPath` / `nats.persistence.subPath` / `frankfurter.persistence.subPath` / `bankSync.persistence.subPath` | Subdirectory of the volume to mount as the data dir (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
 | `sqld.checkpointIntervalSeconds` | WAL checkpoint interval (`--checkpoint-interval-s`). Set, sqld turns off per-commit auto-checkpoints and runs one `TRUNCATE` checkpoint per interval (see [sqld's write lock](#sqlds-write-lock)) | `""` (sqld default) |
 | `sqld.writeProbe.enabled` | Liveness probe that writes (`BEGIN IMMEDIATE; ROLLBACK` over `/v2/pipeline`, bash `/dev/tcp`) instead of a TCP check | `false` |
 | `sqld.writeProbe.{timeoutSeconds,periodSeconds,failureThreshold,initialDelaySeconds}` | Write probe timing: the script waits `timeoutSeconds` for sqld's answer (kubelet's timeout is one more) | `10`, `30`, `3`, `30` |
@@ -157,6 +158,16 @@ helm install budget-manager ./budget-manager-helm \
 | `frankfurter.persistence.{volume,claim,subPath}` | Volume source (REQUIRED when enabled), optional chart-created PVC, and subPath for Frankfurter's SQLite database, mounted at `/app/data`. Use block storage (iSCSI), never NFS. Size the claim at 5Gi or more: a partial backfill (9 of 104 providers) was already 170 MB | unset |
 | `frankfurter.extraEnv` | Extra environment variables for Frankfurter | `[]` |
 | `frankfurter.nodeSelector` / `frankfurter.tolerations` / `frankfurter.affinity` | Pod placement for Frankfurter, e.g. a dedicated node pool. With node-local storage (local-path) the pod stays on the node where its claim was first bound | `{}` / `[]` / `{}` |
+| `bankSync.enabled` | Deploy bank-sync (Deployment + Service + Ingress). See [Bank sync](#bank-sync) | `false` |
+| `bankSync.image.{repository,tag,pullPolicy}` | bank-sync image (private ghcr, like the other budget-manager images) | `ghcr.io/jfms7s/budget-manager-bank-sync`, `v0.1.0`, `IfNotPresent` |
+| `bankSync.host` | Admin page host (REQUIRED when enabled; bare hostname). `BANK_SYNC_PUBLIC_URL` is `https://<host>`, and the Enable Banking app's redirect URL must be exactly `https://<host>/callback`. Routed with `ingress.className` and `ingress.annotations` | `""` |
+| `bankSync.tls` | TLS for the bank-sync Ingress; empty uses `ingress.tls` (whose hosts must then include `bankSync.host`) or the cluster's default certificate | `[]` |
+| `bankSync.{ebAppId,bmToken,adminPasswordHash,sessionSecret}` | `value` or `valueFrom` (REQUIRED when enabled): `BANK_SYNC_EB_APP_ID`, `BANK_SYNC_BM_TOKEN` (PAT with exactly `imports:write imports:read accounts:read`), `BANK_SYNC_ADMIN_PASSWORD_HASH` (argon2id, from bank-sync's `hash-password`), `BANK_SYNC_SESSION_SECRET` (32+ characters) | unset |
+| `bankSync.privateKeySecret.{name,key}` | Secret and key holding the Enable Banking application's PEM private key (name REQUIRED when enabled). Only that key is mounted, read-only, mode 0400, at `/run/secrets/eb/private.key` | `""`, `eb-private-key` |
+| `bankSync.trustProxy` | Proxies whose X-Forwarded-For bank-sync believes (`BANK_SYNC_TRUST_PROXY`), so its login limiter sees client addresses: comma-separated addresses or CIDRs, e.g. `10.42.0.0/16` on k3s. Empty trusts nobody; `true` and hop counts fail the render | `""` |
+| `bankSync.country` / `bankSync.intervalHours` / `bankSync.logLevel` | `BANK_SYNC_EB_COUNTRY`, `BANK_SYNC_INTERVAL_HOURS` (6-168, checked at render), `LOG_LEVEL` | `PT`, `6`, `info` |
+| `bankSync.persistence.{volume,claim,subPath}` | Volume source (REQUIRED when enabled), optional chart-created PVC, and subPath for bank-sync's SQLite file, mounted at `/app/.data`. Use block storage (iSCSI), never NFS | unset |
+| `bankSync.extraEnv` / `bankSync.nodeSelector` / `bankSync.tolerations` / `bankSync.affinity` | Extra environment variables and pod placement for bank-sync | `[]` / `{}` / `[]` / `{}` |
 
 ### Resource Tuning
 
@@ -199,6 +210,14 @@ frankfurter:
       memory: 384Mi
     limits:
       memory: 768Mi
+
+# Only when bankSync.enabled.
+bankSync:
+  resources:
+    requests:
+      memory: 96Mi
+    limits:
+      memory: 256Mi
 ```
 
 Adjust these based on your workload and cluster capacity. **Note: CPU limits are not set** to prevent throttling issues on resource-constrained nodes.
@@ -219,9 +238,9 @@ NATS JetStream data is stored at `/data` in the NATS pod. Configuration:
 - **Default (emptyDir)**: Data is lost if the pod restarts
 - **Production (NFS/RWX)**: Recommended for persistence across pod restarts
 
-### Block storage (RWO PVCs) for sqld, NATS and Frankfurter
+### Block storage (RWO PVCs) for sqld, NATS, Frankfurter and bank-sync
 
-sqld, NATS and Frankfurter (when enabled) each run as a single `Recreate` Deployment, so all can sit on a ReadWriteOnce
+sqld, NATS, Frankfurter and bank-sync (when enabled) each run as a single `Recreate` Deployment, so all can sit on a ReadWriteOnce
 block volume (e.g. a Synology iSCSI LUN) instead of NFS: set `<component>.persistence.claim` so
 the chart creates the PVC, point `<component>.persistence.volume` at it, and set
 `<component>.persistence.subPath` (e.g. `data`). Attachments can't move to RWO storage: both the
@@ -245,7 +264,68 @@ frankfurter:
     volume:
       persistentVolumeClaim:
         claimName: budget-manager-budget-manager-frankfurter-data
+
+# bank-sync keeps a SQLite database (/app/.data), so it needs block storage too.
+bankSync:
+  persistence:
+    claim: {storageClassName: synology-iscsi, size: 1Gi}
+    subPath: data
+    volume:
+      persistentVolumeClaim:
+        claimName: budget-manager-budget-manager-bank-sync-data
 ```
+
+## Bank sync
+
+[bank-sync](https://github.com/jfms7s/budget-manager/tree/main/apps/bank-sync) links bank accounts through
+Enable Banking and, every `bankSync.intervalHours`, pushes their booked transactions into this release's api
+(`BANK_SYNC_BM_URL` is `http://<release>-budget-manager-api:80`, in-cluster). Its README covers registering the
+Enable Banking application, the PAT and hashing the admin password. One instance per tenant.
+
+```yaml
+bankSync:
+  enabled: true
+  host: bank-sync.example.com          # redirect URL: https://bank-sync.example.com/callback
+  trustProxy: "10.42.0.0/16"           # the ingress's pod network
+  image:
+    tag: "vX.Y.Z"                       # a budget-manager release that ships bank-sync
+  ebAppId:
+    valueFrom: {secretKeyRef: {name: budget-manager-bank-sync-secrets, key: eb-app-id}}
+  bmToken:
+    valueFrom: {secretKeyRef: {name: budget-manager-bank-sync-secrets, key: bm-token}}
+  adminPasswordHash:
+    valueFrom: {secretKeyRef: {name: budget-manager-bank-sync-secrets, key: admin-password-hash}}
+  sessionSecret:
+    valueFrom: {secretKeyRef: {name: budget-manager-bank-sync-secrets, key: session-secret}}
+  privateKeySecret:
+    name: budget-manager-bank-sync-secrets
+    key: eb-private-key
+  persistence:
+    claim: {storageClassName: synology-iscsi, size: 1Gi}
+    subPath: data
+    volume:
+      persistentVolumeClaim:
+        claimName: budget-manager-budget-manager-bank-sync-data
+```
+
+```bash
+kubectl create secret generic budget-manager-bank-sync-secrets -n budget-manager \
+  --from-literal=eb-app-id=<application id> \
+  --from-literal=bm-token=<PAT> \
+  --from-literal=admin-password-hash='<argon2id hash>' \
+  --from-literal=session-secret=$(openssl rand -hex 32) \
+  --from-file=eb-private-key=<path to the application's private key>
+```
+
+- **Exactly one replica, `Recreate`** (hardcoded): bank-sync keeps SQLite and in-memory admin sessions, and its
+  startup clears any run lease a previous pod left. `terminationGracePeriodSeconds` is 30: on SIGTERM it waits up
+  to 25 s for an in-flight run.
+- **Only the admin page is routed.** The Service exposes port 80 (the admin page) and 9464 (`/metrics`, for
+  in-cluster Prometheus); the Ingress routes `/` on `bankSync.host` to port 80 only. Never route 9464.
+- **POSTs only work through the public URL** (bank-sync refuses a foreign `Origin`), so log in at
+  `https://<host>`, not through a port-forward.
+- Missing values fail the render: the host, the volume (or an `emptyDir` one), the private key Secret, any of the four credentials, a
+  literal session secret under 32 characters, an interval outside 6-168, or a `trustProxy` entry that isn't an IP address or CIDR range (`true`, a hop count).
 
 ### sqld's write lock
 
@@ -377,6 +457,7 @@ chown 1000:1000 /volume1/k8s/volumes/budget-manager/attachments
 - **Web**: Can be scaled by increasing `web.replicas`
 - **Worker**: **Hardcoded to 1 replica** (runs the event bus relay and scheduler; multiple replicas would duplicate messages)
 - **NATS**: **Hardcoded to 1 replica** (single broker model; HA would require additional configuration not included in this chart)
+- **Frankfurter** / **bank-sync**: **Hardcoded to 1 replica** (one process per SQLite file)
 
 ## License
 
