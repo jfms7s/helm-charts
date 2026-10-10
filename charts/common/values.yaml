@@ -75,6 +75,22 @@ deploy:
     name: ""
     annotations: {}
 
+  ## @param deploy.nodeSelector Node labels the pod must match, rendered verbatim (empty = none)
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+  ##
+  nodeSelector: {}
+    # kubernetes.io/arch: amd64
+
+  ## @param deploy.affinity Pod affinity/anti-affinity and node affinity, rendered verbatim (empty = none)
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  ##
+  affinity: {}
+
+  ## @param deploy.tolerations Tolerations for tainted nodes, rendered verbatim (empty = none)
+  ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+  ##
+  tolerations: []
+
   ## @param deploy.volumes Optionally specify extra list of additional volumes
   ##
   volumes: []
