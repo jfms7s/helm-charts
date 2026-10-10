@@ -434,6 +434,27 @@ entries:
   patchmon-helm:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-10-10T23:32:55.646794406Z"
+    description: A Helm chart for PatchMon, a Linux patch management platform
+    digest: 9daecd1e1a9109e7ffcfbdbbdd4ae7b3258057908b2a2d7c06dba01d4e2b17ee
+    home: https://patchmon.net/
+    keywords:
+    - patchmon
+    - patch-management
+    - monitoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: patchmon-helm
+    sources:
+    - https://github.com/PatchMon/PatchMon
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.4.0/patchmon-helm-0.4.0.tgz
+    version: 0.4.0
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-08-16T21:22:43.38065408Z"
     description: A Helm chart for PatchMon, a Linux patch management platform
     digest: e840d71035d563290f91c27e3b3647a5bdae577eef487dfcdfd1164bc2028214
@@ -580,4 +601,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.1.0/ticket-live-event-scanner-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-10T20:14:48.157395079Z"
+generated: "2026-10-10T23:32:55.646834189Z"
