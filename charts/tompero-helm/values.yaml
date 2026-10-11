@@ -1,0 +1,84 @@
+image:
+  repository: ghcr.io/jfms7s/tompero
+  tag: v0.1.0
+  pullPolicy: IfNotPresent
+# The repository is private for now: name a docker-registry Secret that can
+# pull from ghcr.io/jfms7s, e.g. [{name: ghcr-pull}].
+imagePullSecrets: []
+
+server:
+  # Set to true when the app is served over HTTPS (e.g. behind an Ingress
+  # with TLS) so the session cookie gets the Secure flag (SECURE_COOKIES).
+  secureCookies: false
+  # Log filter, RUST_LOG syntax (LOG_LEVEL), e.g. "info" or "debug,sqlx=warn".
+  logLevel: "info,sqlx=warn"
+  # Postgres connection string (DATABASE_URL), as a standard Kubernetes
+  # EnvVarSource. Leave both empty to use the built-in SQLite database in the
+  # data volume (the default, enough for a household). To use Postgres, set
+  # `value` (postgres://user:pass@host:5432/db) or, better, `valueFrom` with a
+  # `secretKeyRef` to a Secret you manage. Argo CD does not support Helm's
+  # `lookup` function, so the chart never generates credentials; keep a plain
+  # `value` in a values-secrets file out of version control. `valueFrom` takes
+  # precedence when both are set.
+  databaseUrl:
+    value: ""
+    valueFrom: {}
+  # Extra environment variables appended to the server container. Each entry
+  # is {name, value}.
+  extraEnv: []
+  # Volume source for /data: the SQLite database and uploaded images. Each
+  # value is the full body of a Kubernetes volume source (excluding `name`)
+  # -- nfs, hostPath, persistentVolumeClaim, etc. Left empty (emptyDir,
+  # non-persistent) by default since the right backend is
+  # environment-specific; set explicitly by the caller, e.g.:
+  #   persistence:
+  #     volume:
+  #       nfs:
+  #         server: 192.168.1.10
+  #         path: /volumes/tompero/data
+  # The container runs as uid 65532 (distroless nonroot), so the volume must
+  # be writable by it: set podSecurityContext.fsGroup: 65532 for volumes that
+  # honour fsGroup, or chown the export for NFS.
+  persistence:
+    volume: {}
+    # Optional: have the chart create a PVC named <release>-tompero-server-data.
+    # Point `volume` at it with persistentVolumeClaim.claimName. Kept on uninstall/prune.
+    claim:
+      storageClassName: ""
+      size: ""
+    # Optional subdirectory of the volume to mount as /data (keeps ext4's
+    # lost+found out of the data dir on block-backed PVCs).
+    subPath: ""
+
+resources: {}
+  # limits:
+  #   cpu: 500m
+  #   memory: 256Mi
+  # requests:
+  #   cpu: 50m
+  #   memory: 64Mi
+
+securityContext: {}
+  # The image already runs as uid 65532 and only writes to /data, so this
+  # hardening works as-is:
+  # runAsNonRoot: true
+  # readOnlyRootFilesystem: true
+  # allowPrivilegeEscalation: false
+  # capabilities:
+  #   drop: [ALL]
+
+podSecurityContext: {}
+  # fsGroup: 65532
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: tompero.example.local
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 8080
+  tls: []

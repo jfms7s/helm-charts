@@ -30,6 +30,7 @@ jobs:
           helm lint charts/affine-helm
           helm lint charts/data-lab-helm
           helm lint charts/patchmon-helm
+          helm lint charts/tompero-helm
           helm lint charts/ticket-live-event-scanner-helm
           helm lint -f charts/budget-manager-helm/ci/test-values.yaml charts/budget-manager-helm
           helm lint -f charts/budget-manager-helm/ci/test-values.yaml -f charts/budget-manager-helm/ci/frankfurter-values.yaml charts/budget-manager-helm
@@ -41,6 +42,7 @@ jobs:
           helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml
+          helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml
           helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml
           helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml --values charts/budget-manager-helm/ci/frankfurter-values.yaml
@@ -60,6 +62,7 @@ jobs:
           helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml | kubeconform -summary
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml | kubeconform -summary
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml | kubeconform -summary
+          helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml | kubeconform -summary
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml | kubeconform -summary
           helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml | kubeconform -summary
           helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml --values charts/budget-manager-helm/ci/frankfurter-values.yaml | kubeconform -summary
@@ -71,5 +74,6 @@ jobs:
           helm unittest charts/affine-helm --file 'tests/**/*.yaml'
           helm unittest charts/data-lab-helm --file 'tests/**/*.yaml'
           helm unittest charts/patchmon-helm --file 'tests/**/*.yaml'
+          helm unittest charts/tompero-helm --file 'tests/**/*.yaml'
           helm unittest charts/ticket-live-event-scanner-helm --file 'tests/**/*.yaml'
           helm unittest charts/budget-manager-helm --file 'tests/**/*.yaml'

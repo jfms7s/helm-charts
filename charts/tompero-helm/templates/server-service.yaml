@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-tompero-server
+  labels:
+    {{- include "tompero-helm.labels" (dict "context" $ "name" "server" "component" "server") | nindent 4 }}
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    {{- include "tompero-helm.selectorLabels" (dict "context" $ "name" "server") | nindent 4 }}

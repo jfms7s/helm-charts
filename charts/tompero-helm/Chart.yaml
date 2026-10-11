@@ -1,0 +1,16 @@
+apiVersion: v2
+name: tompero-helm
+description: A Helm chart for Chez Tomperô, a self-hosted recipe manager and meal planner
+type: application
+version: 0.1.0
+appVersion: "v0.1.0"
+keywords:
+  - tompero
+  - recipes
+  - meal-planner
+sources:
+  - https://github.com/jfms7s/tompero
+  - https://github.com/jfms7s/helm-charts
+maintainers:
+  - name: jfms7s
+    url: https://github.com/jfms7s

@@ -16,6 +16,9 @@ Deploys [Budget Manager](https://github.com/jfms7s/budget-manager), a personal f
 ### patchmon-helm
 Deploys [PatchMon](https://patchmon.net/), a self-hosted Linux patch management platform, with its Postgres database, Redis cache, and guacd (in-browser RDP) sidecar. See [charts/patchmon-helm/README.md](charts/patchmon-helm/README.md).
 
+### tompero-helm
+Deploys [Chez Tomperô](https://github.com/jfms7s/tompero), a self-hosted recipe manager and meal planner, as a single server container with SQLite (or an external Postgres). See [charts/tompero-helm/README.md](charts/tompero-helm/README.md).
+
 ### ticket-live-event-scanner-helm
 Deploys [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings, with its in-cluster NATS (JetStream) message bus. See [charts/ticket-live-event-scanner-helm/README.md](charts/ticket-live-event-scanner-helm/README.md).
 
