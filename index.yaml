@@ -601,4 +601,26 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.1.0/ticket-live-event-scanner-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-10T23:32:55.646834189Z"
+  tompero-helm:
+  - apiVersion: v2
+    appVersion: v0.1.0
+    created: "2026-10-11T14:53:37.937636136Z"
+    description: A Helm chart for Chez Tomperô, a self-hosted recipe manager and meal
+      planner
+    digest: 82407e0064e6229b66609fff785b06fd125573b3f4e471a476bef7b0dfd9808d
+    keywords:
+    - tompero
+    - recipes
+    - meal-planner
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: tompero-helm
+    sources:
+    - https://github.com/jfms7s/tompero
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-10-11T14:53:37.937735652Z"
