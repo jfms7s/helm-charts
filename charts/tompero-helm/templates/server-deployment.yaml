@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-tompero-server
+  labels:
+    {{- include "tompero-helm.labels" (dict "context" $ "name" "server" "component" "server") | nindent 4 }}
+spec:
+  # One replica only: the default SQLite database and the image store live in
+  # a single volume, so a second pod (or an overlapping rollout) would share it.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "tompero-helm.selectorLabels" (dict "context" $ "name" "server") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tompero-helm.labels" (dict "context" $ "name" "server" "component" "server") | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: tompero-server
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DATA_DIR
+              value: /data
+            - name: PORT
+              value: "8080"
+            - name: SECURE_COOKIES
+              value: {{ .Values.server.secureCookies | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.server.logLevel | quote }}
+            {{- if or .Values.server.databaseUrl.value .Values.server.databaseUrl.valueFrom }}
+            - name: DATABASE_URL
+              {{- include "tompero-helm.credentialEnv" .Values.server.databaseUrl | nindent 14 }}
+            {{- end }}
+            {{- range .Values.server.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              {{- with .Values.server.persistence.subPath }}
+              subPath: {{ . }}
+              {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      restartPolicy: Always
+      volumes:
+        - name: data
+          {{- if .Values.server.persistence.volume }}
+          {{- toYaml .Values.server.persistence.volume | nindent 10 }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

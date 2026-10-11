@@ -11,6 +11,7 @@ helm-charts/
 │   ├── budget-manager-helm/  # Chart for Budget Manager personal finance application
 │   ├── data-lab-helm/   # Shared infra for the Spark/Flink learning labs
 │   ├── patchmon-helm/   # Chart for PatchMon application
+│   ├── tompero-helm/    # Chart for Chez Tomperô recipe manager
 │   ├── ticket-live-event-scanner-helm/  # Chart for Ticket Live Event Scanner
 │   └── common/          # Generic chart for multiple applications
 └── .github/workflows/   # CI/CD pipelines
@@ -50,6 +51,12 @@ Application-specific chart for deploying [PatchMon](https://patchmon.net/), a Li
 - Redis cache
 - guacd (in-browser RDP) sidecar
 - Ingress configuration
+
+### tompero-helm
+Application-specific chart for deploying [Chez Tomperô](https://github.com/jfms7s/tompero), a self-hosted recipe manager and meal planner. Includes:
+- Server deployment (single replica, Recreate) + Service + optional Ingress
+- `/data` volume for the SQLite database and images, with an optional chart-created PVC (kept on uninstall)
+- Optional external Postgres via `server.databaseUrl` (EnvVarSource)
 
 ### ticket-live-event-scanner-helm
 Application-specific chart for deploying [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings. Modeled on upstream's own [deploy/k8s](https://github.com/jfms7s/ticket-live-event-scanner/tree/main/deploy/k8s) manifests. Includes:
