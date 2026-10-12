@@ -1,0 +1,30 @@
+{{- if and .Values.ingress.enabled .Values.bankSync.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "firstdime-helm.fullname" . }}-bank-sync
+  labels:
+    {{- include "firstdime-helm.labels" (dict "context" $ "name" "bank-sync" "component" "bank-sync") | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- with (.Values.bankSync.tls | default .Values.ingress.tls) }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    # The admin page only (Service port 80). Never add the metrics port (9464).
+    - host: {{ .Values.bankSync.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "firstdime-helm.fullname" . }}-bank-sync
+                port:
+                  number: 80
+{{- end }}

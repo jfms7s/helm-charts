@@ -1,0 +1,329 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: bank-sync-deployment
+templates:
+  - templates/bank-sync-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: points at the api by the firstdime base name
+    release:
+      name: firstdime
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.persistence.volume: {persistentVolumeClaim: {claimName: firstdime-bank-sync-data}}
+    asserts:
+      - equal:
+          path: metadata.name
+          value: firstdime-bank-sync
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_BM_URL, value: "http://firstdime-api:80"}
+
+  - it: does not render by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders one Recreate replica when enabled
+    values:
+      - ../ci/bank-sync-values.yaml
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-firstdime-bank-sync
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/name"]
+          value: bank-sync
+
+  - it: uses the bank-sync image
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.image.tag: v9.9.9
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/firstdime-bank-sync:v9.9.9
+
+  - it: is hardened (uid 1000, read-only root, no capabilities, seccomp, no token)
+    values:
+      - ../ci/bank-sync-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+
+  - it: gives SIGTERM at least 30 s (bank-sync waits 25 s for a run)
+    values:
+      - ../ci/bank-sync-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 30
+
+  - it: derives the public URL, the api URL, the key file and the db path
+    values:
+      - ../ci/bank-sync-values.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_PUBLIC_URL, value: "https://bank-sync.example.com"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_BM_URL, value: "http://RELEASE-NAME-firstdime-api:80"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_EB_PRIVATE_KEY_FILE, value: /run/secrets/eb/private.key}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_DB_PATH, value: /app/.data/bank-sync.db}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_EB_COUNTRY, value: PT}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_INTERVAL_HOURS, value: "6"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_TRUST_PROXY, value: 10.42.0.0/16}
+
+  - it: omits BANK_SYNC_TRUST_PROXY when trustProxy is empty
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.trustProxy: ""
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_TRUST_PROXY}
+          any: true
+
+  - it: reads every credential from its EnvVarSource
+    values:
+      - ../ci/bank-sync-values.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BANK_SYNC_EB_APP_ID
+            valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: eb-app-id}}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BANK_SYNC_BM_TOKEN
+            valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: bm-token}}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BANK_SYNC_ADMIN_PASSWORD_HASH
+            valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: admin-password-hash}}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BANK_SYNC_SESSION_SECRET
+            valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: session-secret}}
+
+  - it: mounts only the private key, read-only, mode 0400
+    values:
+      - ../ci/bank-sync-values.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: eb-private-key
+            secret:
+              secretName: firstdime-bank-sync-secrets
+              items:
+                - key: eb-private-key
+                  path: private.key
+              defaultMode: 256
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: eb-private-key, mountPath: /run/secrets/eb, readOnly: true}
+
+  - it: mounts the data volume at /app/.data with its subPath, and a writable /tmp
+    values:
+      - ../ci/bank-sync-values.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: data, mountPath: /app/.data, subPath: data}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            persistentVolumeClaim: {claimName: test-release-firstdime-bank-sync-data}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: tmp, mountPath: /tmp}
+
+  - it: exposes http 8080 and metrics 9464, and probes /health
+    values:
+      - ../ci/bank-sync-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - {name: http, containerPort: 8080}
+            - {name: metrics, containerPort: 9464}
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet
+          value: {path: /health, port: http}
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+          value: {path: /health, port: http}
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+          value: {path: /health, port: http}
+
+  - it: fails without a host
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.host: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.host must be set"
+
+  - it: fails on a host with a scheme or path
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.host: https://bank-sync.example.com/admin
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.host must be a bare lower-case hostname"
+
+  - it: fails without a persistence volume
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.persistence.volume: null
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.persistence.volume must be persistent storage"
+
+  - it: fails without the private key Secret
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.privateKeySecret.name: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.privateKeySecret.name and .key must be set"
+
+  - it: fails without a credential
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.bmToken.valueFrom: null
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.bmToken must be set"
+
+  - it: fails on a literal session secret under 32 characters
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.sessionSecret: {value: too-short, valueFrom: null}
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.sessionSecret must be at least 32 characters"
+
+  - it: refuses trustProxy true
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.trustProxy: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "never \"true\" or a hop count"
+
+  - it: refuses a trustProxy hop count
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.trustProxy: "2"
+    asserts:
+      - failedTemplate:
+          errorPattern: "never \"true\" or a hop count"
+
+  - it: refuses an interval under 6 hours
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.intervalHours: 2
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.intervalHours must be 6-168"
+
+  - it: refuses a trustProxy entry that isn't an address
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.trustProxy: "10.42.0.0/16,beef"
+    asserts:
+      - failedTemplate:
+          errorPattern: "never \"true\" or a hop count"
+
+  - it: refuses a trustProxy prefix out of range
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.trustProxy: "10.42.0.0/16,10.0.0.0/99"
+    asserts:
+      - failedTemplate:
+          errorPattern: "never \"true\" or a hop count"
+
+  - it: refuses an invalid IPv4 trustProxy
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.trustProxy: "10.42.0.0/16,300.1.1.1"
+    asserts:
+      - failedTemplate:
+          errorPattern: "never \"true\" or a hop count"
+
+  - it: accepts a list of IPv4 and IPv6 ranges
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.trustProxy: "10.42.0.0/16, fd00::/8,127.0.0.1"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_TRUST_PROXY, value: "10.42.0.0/16, fd00::/8,127.0.0.1"}
+
+  - it: fails on an emptyDir volume
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.persistence.volume: {emptyDir: {}}
+    asserts:
+      - failedTemplate:
+          errorPattern: "not emptyDir"

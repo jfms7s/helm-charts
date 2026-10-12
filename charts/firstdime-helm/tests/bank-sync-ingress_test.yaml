@@ -1,0 +1,68 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: bank-sync-ingress
+templates:
+  - templates/bank-sync-ingress.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: does not render by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: does not render when the chart's ingress is off
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      ingress.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: routes only / on the host to Service port 80, never metrics
+    values:
+      - ../ci/bank-sync-values.yaml
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+      - equal:
+          path: spec.rules
+          value:
+            - host: bank-sync.example.com
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: RELEASE-NAME-firstdime-bank-sync
+                        port:
+                          number: 80
+
+  - it: carries the chart's ingress annotations and tls
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      ingress.annotations: {example.com/a: b}
+      ingress.tls: [{secretName: tls, hosts: [bank-sync.example.com]}]
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value: {example.com/a: b}
+      - equal:
+          path: spec.tls[0].secretName
+          value: tls
+
+  - it: prefers bankSync.tls over the chart-wide ingress.tls
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      ingress.tls: [{secretName: web-api, hosts: [budget.example.com]}]
+      bankSync.tls: [{secretName: bank-sync, hosts: [bank-sync.example.com]}]
+    asserts:
+      - equal:
+          path: spec.tls
+          value: [{secretName: bank-sync, hosts: [bank-sync.example.com]}]

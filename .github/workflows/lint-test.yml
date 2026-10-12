@@ -32,9 +32,9 @@ jobs:
           helm lint charts/patchmon-helm
           helm lint charts/tompero-helm
           helm lint charts/ticket-live-event-scanner-helm
-          helm lint -f charts/budget-manager-helm/ci/test-values.yaml charts/budget-manager-helm
-          helm lint -f charts/budget-manager-helm/ci/test-values.yaml -f charts/budget-manager-helm/ci/frankfurter-values.yaml charts/budget-manager-helm
-          helm lint -f charts/budget-manager-helm/ci/test-values.yaml -f charts/budget-manager-helm/ci/bank-sync-values.yaml charts/budget-manager-helm
+          helm lint -f charts/firstdime-helm/ci/test-values.yaml charts/firstdime-helm
+          helm lint -f charts/firstdime-helm/ci/test-values.yaml -f charts/firstdime-helm/ci/frankfurter-values.yaml charts/firstdime-helm
+          helm lint -f charts/firstdime-helm/ci/test-values.yaml -f charts/firstdime-helm/ci/bank-sync-values.yaml charts/firstdime-helm
 
       - name: Template Helm charts
         run: |
@@ -44,9 +44,9 @@ jobs:
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml
           helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml
-          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml
-          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml --values charts/budget-manager-helm/ci/frankfurter-values.yaml
-          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml --values charts/budget-manager-helm/ci/bank-sync-values.yaml
+          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml
+          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml
+          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/bank-sync-values.yaml
 
       - name: Install kubeconform
         run: |
@@ -64,9 +64,9 @@ jobs:
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml | kubeconform -summary
           helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml | kubeconform -summary
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml | kubeconform -summary
-          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml | kubeconform -summary
-          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml --values charts/budget-manager-helm/ci/frankfurter-values.yaml | kubeconform -summary
-          helm template test-release charts/budget-manager-helm --values charts/budget-manager-helm/ci/test-values.yaml --values charts/budget-manager-helm/ci/bank-sync-values.yaml | kubeconform -summary
+          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml | kubeconform -summary
+          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml | kubeconform -summary
+          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/bank-sync-values.yaml | kubeconform -summary
 
       - name: Run helm-unittest
         run: |
@@ -76,4 +76,4 @@ jobs:
           helm unittest charts/patchmon-helm --file 'tests/**/*.yaml'
           helm unittest charts/tompero-helm --file 'tests/**/*.yaml'
           helm unittest charts/ticket-live-event-scanner-helm --file 'tests/**/*.yaml'
-          helm unittest charts/budget-manager-helm --file 'tests/**/*.yaml'
+          helm unittest charts/firstdime-helm --file 'tests/**/*.yaml'

@@ -10,8 +10,8 @@ A generic application chart that provides a standardized template for deploying 
 ### affine-helm
 Deploys [Affine](https://affine.pro/), a self-hosted workspace/collaboration app, with its Postgres (pgvector) database and Redis cache. See [charts/affine-helm/README.md](charts/affine-helm/README.md).
 
-### budget-manager-helm
-Deploys [Budget Manager](https://github.com/jfms7s/budget-manager), a personal finance application, with its API server, web UI frontend, async worker, NATS (JetStream) message bus, an optional Frankfurter exchange-rate API, and optional Enable Banking bank sync (bank-sync). See [charts/budget-manager-helm/README.md](charts/budget-manager-helm/README.md).
+### firstdime-helm
+Deploys [First Dime](https://github.com/jfms7s/firstdime) (Number One Dime), a personal finance application, with its API server, web UI frontend, async worker, NATS (JetStream) message bus, an optional Frankfurter exchange-rate API, and optional Enable Banking bank sync (bank-sync). See [charts/firstdime-helm/README.md](charts/firstdime-helm/README.md).
 
 ### patchmon-helm
 Deploys [PatchMon](https://patchmon.net/), a self-hosted Linux patch management platform, with its Postgres database, Redis cache, and guacd (in-browser RDP) sidecar. See [charts/patchmon-helm/README.md](charts/patchmon-helm/README.md).

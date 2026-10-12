@@ -26,7 +26,7 @@ help: ## Show this help
 lint: ## helm lint every chart (same as CI's "Lint Helm charts" step)
 	@for c in $(CHARTS); do \
 		echo "==> helm lint $(CHARTS_DIR)/$$c"; \
-		if [ "$$c" = "budget-manager-helm" ]; then \
+		if [ "$$c" = "firstdime-helm" ]; then \
 			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
 			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml -f $(CHARTS_DIR)/$$c/ci/frankfurter-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
 			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml -f $(CHARTS_DIR)/$$c/ci/bank-sync-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
@@ -38,7 +38,7 @@ lint: ## helm lint every chart (same as CI's "Lint Helm charts" step)
 template: ## helm template every chart (same as CI's "Template Helm charts" step)
 	@for c in $(CHARTS); do \
 		echo "==> helm template $(CHARTS_DIR)/$$c"; \
-		if [ "$$c" = "budget-manager-helm" ]; then \
+		if [ "$$c" = "firstdime-helm" ]; then \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml > /dev/null || exit 1; \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/frankfurter-values.yaml > /dev/null || exit 1; \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/bank-sync-values.yaml > /dev/null || exit 1; \
@@ -55,7 +55,7 @@ $(KUBECONFORM):
 validate: $(KUBECONFORM) ## Validate rendered manifests against Kubernetes schemas via kubeconform (same as CI)
 	@for c in $(CHARTS); do \
 		echo "==> kubeconform $(CHARTS_DIR)/$$c"; \
-		if [ "$$c" = "budget-manager-helm" ]; then \
+		if [ "$$c" = "firstdime-helm" ]; then \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml | $(KUBECONFORM) -summary || exit 1; \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/frankfurter-values.yaml | $(KUBECONFORM) -summary || exit 1; \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/bank-sync-values.yaml | $(KUBECONFORM) -summary || exit 1; \

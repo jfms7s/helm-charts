@@ -1,0 +1,15 @@
+apiVersion: v2
+name: firstdime-helm
+description: A Helm chart for deploying First Dime (Number One Dime) on Kubernetes
+type: application
+version: 0.7.0
+appVersion: "0.1.0"
+keywords:
+  - firstdime
+  - personal-finance
+sources:
+  - https://github.com/jfms7s/firstdime
+  - https://github.com/jfms7s/helm-charts
+maintainers:
+  - name: jfms7s
+    url: https://github.com/jfms7s
