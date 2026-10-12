@@ -1,0 +1,31 @@
+{{- range $component := list "sqld" "nats" "frankfurter" "bankSync" }}
+{{- $persistence := (index $.Values $component).persistence }}
+{{- /* Resource names and labels: bankSync -> bank-sync. */}}
+{{- $slug := kebabcase $component }}
+{{- $claim := $persistence.claim | default dict }}
+{{- /* bank-sync's claim only renders with bank-sync itself (off means no bank-sync resources at all). */}}
+{{- if and $claim.storageClassName (or (ne $component "bankSync") $.Values.bankSync.enabled) }}
+{{- if not $claim.size }}
+{{- fail (printf "firstdime-helm: %s.persistence.claim.size is required" $component) }}
+{{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $claim.name | default (printf "%s-%s-data" (include "firstdime-helm.fullname" $) $slug) }}
+  labels:
+    {{- include "firstdime-helm.labels" (dict "context" $ "name" $slug "component" "storage") | nindent 4 }}
+  annotations:
+    # Data outlives the release: never delete on uninstall, prune, or
+    # Application deletion. Removing a claim is a deliberate manual step.
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ $claim.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ $claim.size | quote }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,30 @@
+# Layered on top of test-values.yaml (helm lint/template/kubeconform in CI): renders the
+# optional bank-sync Deployment + Service + Ingress + PVC, which test-values.yaml leaves
+# off so that default-off stays covered.
+bankSync:
+  enabled: true
+  host: bank-sync.example.com
+  trustProxy: "10.42.0.0/16"
+  ebAppId:
+    valueFrom:
+      secretKeyRef: {name: firstdime-bank-sync-secrets, key: eb-app-id}
+  bmToken:
+    valueFrom:
+      secretKeyRef: {name: firstdime-bank-sync-secrets, key: bm-token}
+  adminPasswordHash:
+    valueFrom:
+      secretKeyRef: {name: firstdime-bank-sync-secrets, key: admin-password-hash}
+  sessionSecret:
+    valueFrom:
+      secretKeyRef: {name: firstdime-bank-sync-secrets, key: session-secret}
+  privateKeySecret:
+    name: firstdime-bank-sync-secrets
+    key: eb-private-key
+  persistence:
+    claim:
+      storageClassName: test-block
+      size: 1Gi
+    subPath: data
+    volume:
+      persistentVolumeClaim:
+        claimName: test-release-firstdime-bank-sync-data
