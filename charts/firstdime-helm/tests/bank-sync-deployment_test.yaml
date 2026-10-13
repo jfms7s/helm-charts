@@ -113,7 +113,8 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content: {name: BANK_SYNC_EB_COUNTRY, value: PT}
-      - contains:
+      # bank-sync schedules with BANK_SYNC_RUN_AT (its default); the interval went in 0.9.1
+      - notContains:
           path: spec.template.spec.containers[0].env
           content: {name: BANK_SYNC_INTERVAL_HOURS, value: "6"}
       - contains:
@@ -309,14 +310,16 @@ tests:
       - failedTemplate:
           errorPattern: "never \"true\" or a hop count"
 
-  - it: refuses an interval under 6 hours
+  - it: ignores a leftover bankSync.intervalHours (no longer used since 0.9.1)
     values:
       - ../ci/bank-sync-values.yaml
     set:
       bankSync.intervalHours: 2
     asserts:
-      - failedTemplate:
-          errorPattern: "bankSync.intervalHours must be 6-168"
+      - notFailedTemplate: {}
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_INTERVAL_HOURS, value: "2"}
 
   - it: refuses a trustProxy entry that isn't an address
     values:

@@ -50,7 +50,7 @@ tests:
           value: 1000
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/jfms7s/firstdime-api:v0.1.0
+          value: ghcr.io/jfms7s/firstdime-api:v0.18.0
       - equal:
           path: spec.template.spec.containers[0].imagePullPolicy
           value: IfNotPresent

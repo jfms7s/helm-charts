@@ -73,8 +73,6 @@ spec:
               value: /app/.data/bank-sync.db
             - name: BANK_SYNC_EB_COUNTRY
               value: {{ .Values.bankSync.country | quote }}
-            - name: BANK_SYNC_INTERVAL_HOURS
-              value: {{ .Values.bankSync.intervalHours | quote }}
             - name: BANK_SYNC_PORT
               value: "8080"
             - name: BANK_SYNC_METRICS_PORT
