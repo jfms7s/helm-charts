@@ -434,6 +434,25 @@ entries:
   firstdime-helm:
   - apiVersion: v2
     appVersion: 0.1.0
+    created: "2026-10-13T18:45:06.862377921Z"
+    description: A Helm chart for deploying First Dime (Number One Dime) on Kubernetes
+    digest: f612ca43f5152ed85413f9921f1676c108109330aeb5eab3a985ea2cff85312e
+    keywords:
+    - firstdime
+    - personal-finance
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: firstdime-helm
+    sources:
+    - https://github.com/jfms7s/firstdime
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/firstdime-helm-0.8.0/firstdime-helm-0.8.0.tgz
+    version: 0.8.0
+  - apiVersion: v2
+    appVersion: 0.1.0
     created: "2026-10-12T21:58:10.939025191Z"
     description: A Helm chart for deploying First Dime (Number One Dime) on Kubernetes
     digest: d725f82090e538090e032a16846d31a22fbaf7c96258a28e72a6e5bbe2103941
@@ -643,4 +662,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-12T21:58:10.939077214Z"
+generated: "2026-10-13T18:45:06.862447224Z"
