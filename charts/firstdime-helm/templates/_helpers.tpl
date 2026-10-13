@@ -169,10 +169,6 @@ than as a crash-looping pod.
 {{- if and (not $bs.sessionSecret.valueFrom) (lt (len ($bs.sessionSecret.value | default "")) 32) -}}
   {{- fail "firstdime-helm: bankSync.sessionSecret must be at least 32 characters" -}}
 {{- end -}}
-{{- $interval := int $bs.intervalHours -}}
-{{- if or (lt $interval 6) (gt $interval 168) -}}
-  {{- fail (printf "firstdime-helm: bankSync.intervalHours must be 6-168 (got %v)" $bs.intervalHours) -}}
-{{- end -}}
 {{- $trust := toString ($bs.trustProxy | default "") -}}
 {{- if $trust -}}
   {{- /* Each entry an IPv4/IPv6 address, optionally with a /prefix in range (0-32 or 0-128), as bank-sync's own parser requires. */ -}}
