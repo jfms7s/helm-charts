@@ -175,7 +175,7 @@ resource and default PVC name changes on the move to 0.7.0: it is a data migrati
 | `bankSync.image.{repository,tag,pullPolicy}` | bank-sync image (private ghcr, like the other First Dime images) | `ghcr.io/jfms7s/firstdime-bank-sync`, `v0.1.0`, `IfNotPresent` |
 | `bankSync.host` | Admin page host (REQUIRED when enabled; bare hostname). `BANK_SYNC_PUBLIC_URL` is `https://<host>`, and the Enable Banking app's redirect URL must be exactly `https://<host>/callback`. Routed with `ingress.className` and `ingress.annotations` | `""` |
 | `bankSync.tls` | TLS for the bank-sync Ingress; empty uses `ingress.tls` (whose hosts must then include `bankSync.host`) or the cluster's default certificate | `[]` |
-| `bankSync.{ebAppId,bmToken,adminPasswordHash,sessionSecret}` | `value` or `valueFrom` (REQUIRED when enabled): `BANK_SYNC_EB_APP_ID`, `BANK_SYNC_BM_TOKEN` (PAT with exactly `imports:write imports:read accounts:read`), `BANK_SYNC_ADMIN_PASSWORD_HASH` (argon2id, from bank-sync's `hash-password`), `BANK_SYNC_SESSION_SECRET` (32+ characters) | unset |
+| `bankSync.{ebAppId,fdToken,adminPasswordHash,sessionSecret}` | `value` or `valueFrom` (REQUIRED when enabled): `BANK_SYNC_EB_APP_ID`, `BANK_SYNC_FD_TOKEN` (PAT with exactly `imports:write imports:read accounts:read`), `BANK_SYNC_ADMIN_PASSWORD_HASH` (argon2id, from bank-sync's `hash-password`), `BANK_SYNC_SESSION_SECRET` (32+ characters) | unset |
 | `bankSync.privateKeySecret.{name,key}` | Secret and key holding the Enable Banking application's PEM private key (name REQUIRED when enabled). Only that key is mounted, read-only, mode 0400, at `/run/secrets/eb/private.key` | `""`, `eb-private-key` |
 | `bankSync.trustProxy` | Proxies whose X-Forwarded-For bank-sync believes (`BANK_SYNC_TRUST_PROXY`), so its login limiter sees client addresses: comma-separated addresses or CIDRs, e.g. `10.42.0.0/16` on k3s. Empty trusts nobody; `true` and hop counts fail the render | `""` |
 | `bankSync.country` / `bankSync.intervalHours` / `bankSync.logLevel` | `BANK_SYNC_EB_COUNTRY`, `BANK_SYNC_INTERVAL_HOURS` (6-168, checked at render), `LOG_LEVEL` | `PT`, `6`, `info` |
@@ -292,7 +292,7 @@ bankSync:
 
 [bank-sync](https://github.com/jfms7s/firstdime/tree/main/apps/bank-sync) links bank accounts through
 Enable Banking and, every `bankSync.intervalHours`, pushes their booked transactions into this release's api
-(`BANK_SYNC_BM_URL` is `http://<fullname>-api:80`, in-cluster). Its README covers registering the
+(`BANK_SYNC_FD_URL` is `http://<fullname>-api:80`, in-cluster). Its README covers registering the
 Enable Banking application, the PAT and hashing the admin password. One instance per tenant.
 
 ```yaml
@@ -304,7 +304,7 @@ bankSync:
     tag: "vX.Y.Z"                       # a First Dime release that ships bank-sync
   ebAppId:
     valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: eb-app-id}}
-  bmToken:
+  fdToken:
     valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: bm-token}}
   adminPasswordHash:
     valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: admin-password-hash}}
@@ -339,6 +339,10 @@ kubectl create secret generic firstdime-bank-sync-secrets -n firstdime \
   `https://<host>`, not through a port-forward.
 - Missing values fail the render: the host, the volume (or an `emptyDir` one), the private key Secret, any of the four credentials, a
   literal session secret under 32 characters, an interval outside 6-168, or a `trustProxy` entry that isn't an IP address or CIDR range (`true`, a hop count).
+- **0.8.0 renamed `bankSync.bmToken` to `bankSync.fdToken`** (same `value`/`valueFrom` shape). A leftover `bmToken`
+  fails the render, whether or not bank-sync is enabled. The Deployment sets both `BANK_SYNC_FD_URL`/`BANK_SYNC_FD_TOKEN`
+  and the old `BANK_SYNC_BM_URL`/`BANK_SYNC_BM_TOKEN` with the same values, so it works with bank-sync images that read
+  either; the BM pair goes in a later chart version.
 
 ### sqld's write lock
 

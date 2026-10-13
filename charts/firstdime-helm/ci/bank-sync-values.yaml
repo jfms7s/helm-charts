@@ -8,7 +8,7 @@ bankSync:
   ebAppId:
     valueFrom:
       secretKeyRef: {name: firstdime-bank-sync-secrets, key: eb-app-id}
-  bmToken:
+  fdToken:
     valueFrom:
       secretKeyRef: {name: firstdime-bank-sync-secrets, key: bm-token}
   adminPasswordHash:

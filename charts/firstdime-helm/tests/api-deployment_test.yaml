@@ -64,6 +64,13 @@ tests:
           path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
           value: true
 
+  - it: fails when the renamed bankSync.bmToken is still set, even with bankSync off
+    set:
+      bankSync.bmToken: {value: old-pat}
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.bmToken was renamed to bankSync.fdToken \\(0.8.0\\)"
+
   - it: fails when database.authToken is unset
     set:
       database.authToken.value: ""

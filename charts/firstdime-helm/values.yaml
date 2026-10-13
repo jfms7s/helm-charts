@@ -114,7 +114,7 @@ frankfurter:
   affinity: {}
 
 # bank-sync (apps/bank-sync): Enable Banking client that pushes booked bank
-# transactions into this release's api through POST /imports (BANK_SYNC_BM_URL
+# transactions into this release's api through POST /imports (BANK_SYNC_FD_URL
 # is the api Service). One instance per tenant: one PAT, one admin password.
 # Its state is a SQLite file: put it on block storage (iSCSI), never NFS.
 # Exactly 1 replica, Recreate (hardcoded): startup clears the run lease.
@@ -150,9 +150,10 @@ bankSync:
   ebAppId:
     value: ""
     valueFrom: {}
-  # First Dime personal access token (BANK_SYNC_BM_TOKEN), scopes exactly
-  # imports:write imports:read accounts:read.
-  bmToken:
+  # First Dime personal access token (BANK_SYNC_FD_TOKEN), scopes exactly
+  # imports:write imports:read accounts:read. Renamed from bmToken in 0.8.0
+  # (setting bmToken fails the render).
+  fdToken:
     value: ""
     valueFrom: {}
   # argon2id hash of the admin password (BANK_SYNC_ADMIN_PASSWORD_HASH), from
