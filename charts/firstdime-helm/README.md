@@ -340,9 +340,10 @@ kubectl create secret generic firstdime-bank-sync-secrets -n firstdime \
 - Missing values fail the render: the host, the volume (or an `emptyDir` one), the private key Secret, any of the four credentials, a
   literal session secret under 32 characters, an interval outside 6-168, or a `trustProxy` entry that isn't an IP address or CIDR range (`true`, a hop count).
 - **0.8.0 renamed `bankSync.bmToken` to `bankSync.fdToken`** (same `value`/`valueFrom` shape). A leftover `bmToken`
-  fails the render, whether or not bank-sync is enabled. The Deployment sets both `BANK_SYNC_FD_URL`/`BANK_SYNC_FD_TOKEN`
-  and the old `BANK_SYNC_BM_URL`/`BANK_SYNC_BM_TOKEN` with the same values, so it works with bank-sync images that read
-  either; the BM pair goes in a later chart version.
+  fails the render, whether or not bank-sync is enabled. 0.8.0 set both `BANK_SYNC_FD_URL`/`BANK_SYNC_FD_TOKEN`
+  and the old `BANK_SYNC_BM_URL`/`BANK_SYNC_BM_TOKEN`.
+- **0.9.0 sets only `BANK_SYNC_FD_*`**, so it needs bank-sync **v0.18.0 or later** (earlier images read only the BM
+  names and fail to start).
 
 ### sqld's write lock
 
