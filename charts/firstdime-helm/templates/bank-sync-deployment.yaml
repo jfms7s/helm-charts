@@ -64,12 +64,8 @@ spec:
             - name: BANK_SYNC_PUBLIC_URL
               value: {{ printf "https://%s" .Values.bankSync.host | quote }}
             # This release's api Service (api-service.yaml), in-cluster.
-            # BANK_SYNC_FD_* and the old BANK_SYNC_BM_* names carry the same values:
-            # images up to v0.17.0 read only BM, later ones read FD. The BM pair
-            # goes in a later chart version, once every deployed image reads FD.
+            # bank-sync v0.18.0+ reads only BANK_SYNC_FD_*; the old BANK_SYNC_BM_* pair went in 0.9.0.
             - name: BANK_SYNC_FD_URL
-              value: {{ printf "http://%s-api:80" (include "firstdime-helm.fullname" .) | quote }}
-            - name: BANK_SYNC_BM_URL
               value: {{ printf "http://%s-api:80" (include "firstdime-helm.fullname" .) | quote }}
             - name: BANK_SYNC_EB_PRIVATE_KEY_FILE
               value: /run/secrets/eb/private.key
@@ -94,9 +90,6 @@ spec:
             - name: BANK_SYNC_EB_APP_ID
               {{- include "firstdime-helm.credentialEnv" .Values.bankSync.ebAppId | nindent 14 }}
             - name: BANK_SYNC_FD_TOKEN
-              {{- include "firstdime-helm.credentialEnv" .Values.bankSync.fdToken | nindent 14 }}
-            # old name, same value (see BANK_SYNC_BM_URL above)
-            - name: BANK_SYNC_BM_TOKEN
               {{- include "firstdime-helm.credentialEnv" .Values.bankSync.fdToken | nindent 14 }}
             - name: BANK_SYNC_ADMIN_PASSWORD_HASH
               {{- include "firstdime-helm.credentialEnv" .Values.bankSync.adminPasswordHash | nindent 14 }}
