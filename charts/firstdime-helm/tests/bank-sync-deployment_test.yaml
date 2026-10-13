@@ -18,6 +18,10 @@ tests:
           value: firstdime-bank-sync
       - contains:
           path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_FD_URL, value: "http://firstdime-api:80"}
+      # the BM name too, for images that read only it (until a later chart version)
+      - contains:
+          path: spec.template.spec.containers[0].env
           content: {name: BANK_SYNC_BM_URL, value: "http://firstdime-api:80"}
 
   - it: does not render by default
@@ -95,6 +99,10 @@ tests:
           content: {name: BANK_SYNC_PUBLIC_URL, value: "https://bank-sync.example.com"}
       - contains:
           path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_FD_URL, value: "http://RELEASE-NAME-firstdime-api:80"}
+      # the BM name too, for images that read only it (until a later chart version)
+      - contains:
+          path: spec.template.spec.containers[0].env
           content: {name: BANK_SYNC_BM_URL, value: "http://RELEASE-NAME-firstdime-api:80"}
       - contains:
           path: spec.template.spec.containers[0].env
@@ -132,6 +140,11 @@ tests:
           content:
             name: BANK_SYNC_EB_APP_ID
             valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: eb-app-id}}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BANK_SYNC_FD_TOKEN
+            valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: bm-token}}
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -241,10 +254,33 @@ tests:
     values:
       - ../ci/bank-sync-values.yaml
     set:
-      bankSync.bmToken.valueFrom: null
+      bankSync.fdToken.valueFrom: null
     asserts:
       - failedTemplate:
-          errorPattern: "bankSync.bmToken must be set"
+          errorPattern: "bankSync.fdToken must be set"
+
+  - it: emits the FD and BM token pair from one literal value
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.fdToken: {value: literal-pat, valueFrom: null}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_FD_TOKEN, value: literal-pat}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BANK_SYNC_BM_TOKEN, value: literal-pat}
+
+  - it: fails when the renamed bankSync.bmToken is still set
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.bmToken:
+        valueFrom: {secretKeyRef: {name: firstdime-bank-sync-secrets, key: bm-token}}
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.bmToken was renamed to bankSync.fdToken \\(0.8.0\\)"
 
   - it: fails on a literal session secret under 32 characters
     values:

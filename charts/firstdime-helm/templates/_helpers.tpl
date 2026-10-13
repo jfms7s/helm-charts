@@ -93,12 +93,24 @@ Pass: (dict "context" $ "originName" "webOrigin" "origin" .Values.webOrigin)
 {{- end -}}
 
 {{/*
+Values that were renamed: a leftover old key fails the render with its new name
+instead of being silently ignored. Included by both validate helpers, so it runs
+whether or not bankSync is enabled.
+*/}}
+{{- define "firstdime-helm.renamedValues" -}}
+{{- if hasKey (.Values.bankSync | default dict) "bmToken" -}}
+  {{- fail "firstdime-helm: bankSync.bmToken was renamed to bankSync.fdToken (0.8.0)" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Every chart-wide render-time guard, in one place. Both the api and the worker
 template include it, so neither can ever render on its own with a placeholder
 credential, a missing database, an unshared attachments volume or a bad origin.
 */}}
 {{- define "firstdime-helm.validate" -}}
 {{- $ := . -}}
+{{- include "firstdime-helm.renamedValues" $ }}
 {{- if and (eq $.Values.database.url "") (not $.Values.sqld.enabled) -}}
   {{- fail "firstdime-helm: database.url must be set (or enable sqld.enabled)" -}}
 {{- end -}}
@@ -136,6 +148,7 @@ than as a crash-looping pod.
 */}}
 {{- define "firstdime-helm.bankSyncValidate" -}}
 {{- $ := . -}}
+{{- include "firstdime-helm.renamedValues" $ }}
 {{- $bs := $.Values.bankSync -}}
 {{- if not $bs.host -}}
   {{- fail "firstdime-helm: bankSync.host must be set (the admin page's ingress host; BANK_SYNC_PUBLIC_URL is https://<host>)" -}}
@@ -150,7 +163,7 @@ than as a crash-looping pod.
   {{- fail "firstdime-helm: bankSync.privateKeySecret.name and .key must be set (the Secret holding the Enable Banking private key)" -}}
 {{- end -}}
 {{- include "firstdime-helm.requiredCredential" (dict "context" $ "credentialName" "bankSync.ebAppId" "credential" $bs.ebAppId) }}
-{{- include "firstdime-helm.requiredCredential" (dict "context" $ "credentialName" "bankSync.bmToken" "credential" $bs.bmToken) }}
+{{- include "firstdime-helm.requiredCredential" (dict "context" $ "credentialName" "bankSync.fdToken" "credential" $bs.fdToken) }}
 {{- include "firstdime-helm.requiredCredential" (dict "context" $ "credentialName" "bankSync.adminPasswordHash" "credential" $bs.adminPasswordHash) }}
 {{- include "firstdime-helm.requiredCredential" (dict "context" $ "credentialName" "bankSync.sessionSecret" "credential" $bs.sessionSecret) }}
 {{- if and (not $bs.sessionSecret.valueFrom) (lt (len ($bs.sessionSecret.value | default "")) 32) -}}
