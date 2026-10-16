@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "meiun-helm.fullname" . }}-worker
+  labels:
+    {{- include "meiun-helm.labels" (dict "context" $ "name" "worker" "component" "worker") | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "meiun-helm.selectorLabels" (dict "context" $ "name" "worker") | nindent 4 }}
+  ports:
+    - name: metrics
+      port: {{ .Values.metrics.port }}
+      targetPort: metrics

@@ -1,0 +1,137 @@
+# meiun: the API (Better Auth, tRPC, SSE), the worker (scheduler, minds queue, Web Push), the web app (static PWA on
+# nginx) and Postgres with pgvector, behind one Ingress host: /trpc and /api go to the API, everything else to the web
+# app. One origin, so no CORS.
+#
+# Credentials are {value, valueFrom} maps: `valueFrom` (a corev1 EnvVarSource body, e.g. secretKeyRef) wins over
+# `value`. Argo CD cannot run Helm's `lookup`, so the chart never generates a secret; the render fails while a required
+# one is unset or CHANGE_ME.
+
+# The app's one public hostname, no scheme (e.g. meiun.example.com). BETTER_AUTH_URL and WEB_ORIGIN are https://<host>.
+host: ""
+
+# Private images: name a docker-registry Secret that can pull ghcr.io/jfms7s, e.g. [{name: meiun-ghcr-secrets}].
+imagePullSecrets: []
+
+# Better Auth's signing secret (at least 32 characters), for the API.
+betterAuthSecret:
+  value: ""
+  valueFrom: {}
+
+# The database. With postgres.enabled (the default) the API and the worker reach the in-chart Postgres as
+# postgres://<postgres.user>@<release>-postgres:5432/<postgres.db>, the password in PGPASSWORD (node-postgres reads it
+# when the URL has none), so the password never has to be URL-safe. Set `url` to use another database instead.
+database:
+  url: ""
+
+# The minds' routes (v1 §4), for the API (a village's persona call) and the worker. Blank values are not set; with no
+# route at all the minds fall back to their rule defaults.
+minds:
+  localBaseUrl: ""
+  localModel: ""
+  hostedModel: ""
+  tokensPerDay: ""
+  localApiKey:
+    value: ""
+    valueFrom: {}
+  anthropicApiKey:
+    value: ""
+    valueFrom: {}
+
+# External login through an OpenID Connect provider: on when issuer, clientId and clientSecret are all set. The
+# provider's redirect URI is https://<host>/api/auth/callback/<providerId>.
+oidc:
+  issuer: ""
+  providerId: homelab
+  clientId:
+    value: ""
+    valueFrom: {}
+  clientSecret:
+    value: ""
+    valueFrom: {}
+
+# Web Push: on when all three are set. The public key goes to the API and the worker; the private key and the
+# subject (a mailto: or https: URL) to the worker only.
+vapid:
+  subject: ""
+  publicKey:
+    value: ""
+    valueFrom: {}
+  privateKey:
+    value: ""
+    valueFrom: {}
+
+# Opens the 0.01x-1000x clock range to players. Off in production.
+debugSpeeds: false
+
+api:
+  image:
+    repository: ghcr.io/jfms7s/meiun-api
+    tag: v0.1.0
+    pullPolicy: IfNotPresent
+  # SSE fan-out runs over Postgres LISTEN/NOTIFY, so more than one replica serves correctly. But every API pod runs
+  # the migrations on start, with no lock: keep 1 on a fresh install and during an upgrade that adds migrations.
+  replicas: 1
+  # The API drains requests for 5 s and exits within 15 s of SIGTERM.
+  terminationGracePeriodSeconds: 30
+  extraEnv: []
+  resources: {}
+
+worker:
+  image:
+    repository: ghcr.io/jfms7s/meiun-worker
+    tag: v0.1.0
+    pullPolicy: IfNotPresent
+  # One worker (Recreate): its scheduler stamps game time with its own clock, so a second worker on another node would
+  # need its clock to agree (NTP). Advisory locks and the queue would keep two correct.
+  # Stop: the scheduler's pass, up to 15 s of pushes, then pg-boss's graceful stop of running minds jobs.
+  terminationGracePeriodSeconds: 90
+  extraEnv: []
+  resources: {}
+
+web:
+  image:
+    repository: ghcr.io/jfms7s/meiun-web
+    tag: v0.1.0
+    pullPolicy: IfNotPresent
+  replicas: 1
+  resources: {}
+
+postgres:
+  enabled: true
+  # pgvector's image (Postgres 18, PGlite's version in the tests), digest-pinned by the caller.
+  image:
+    repository: docker.io/pgvector/pgvector
+    tag: pg18
+    pullPolicy: IfNotPresent
+  user: meiun
+  db: meiun
+  # The superuser the image creates owns the database, so the first migration's `create extension vector` works.
+  password:
+    value: ""
+    valueFrom: {}
+  # Volume source for /var/lib/postgresql (Postgres 18 keeps its data in a versioned directory below it). Must be
+  # persistent; emptyDir is refused.
+  persistence:
+    volume: {}
+    # Optional: have the chart create a PVC named <release>-postgres-data. Kept on uninstall and prune.
+    claim:
+      storageClassName: ""
+      size: ""
+    # ext4's lost+found stays out of the data directory on block-backed claims.
+    subPath: data
+  resources: {}
+
+# Prometheus metrics on the API and the worker (GET /metrics on this port), never routed by the Ingress.
+metrics:
+  port: 9464
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    labels: {}
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  # TLS is usually the ingress controller's default certificate; set entries only for a per-host secret.
+  tls: []

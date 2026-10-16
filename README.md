@@ -16,6 +16,9 @@ Deploys [First Dime](https://github.com/jfms7s/firstdime) (Number One Dime), a p
 ### patchmon-helm
 Deploys [PatchMon](https://patchmon.net/), a self-hosted Linux patch management platform, with its Postgres database, Redis cache, and guacd (in-browser RDP) sidecar. See [charts/patchmon-helm/README.md](charts/patchmon-helm/README.md).
 
+### meiun-helm
+Deploys [meiun](https://github.com/jfms7s/meiun), a village sim with LLM-driven villagers: an API, a worker, a static PWA and an optional pgvector Postgres behind one path-split Ingress host. See [charts/meiun-helm/README.md](charts/meiun-helm/README.md).
+
 ### tompero-helm
 Deploys [Chez Tomperô](https://github.com/jfms7s/tompero), a self-hosted recipe manager and meal planner, as a single server container with SQLite (or an external Postgres). See [charts/tompero-helm/README.md](charts/tompero-helm/README.md).
 

@@ -1,0 +1,60 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: worker-deployment
+templates:
+  - templates/worker-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+release:
+  name: meiun
+tests:
+  - it: runs one worker, never two during a rollout, with time to stop its jobs
+    asserts:
+      - equal:
+          path: metadata.name
+          value: meiun-worker
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 90
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+          value: {path: /metrics, port: metrics}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_URL, value: "postgres://meiun@meiun-postgres:5432/meiun"}
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+
+  - it: holds the VAPID private key and subject (the worker sends the pushes)
+    set:
+      vapid:
+        subject: mailto:god@example.test
+        publicKey: {value: public-key}
+        privateKey: {valueFrom: {secretKeyRef: {name: meiun-secrets, key: VAPID_PRIVATE_KEY}}}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: VAPID_PRIVATE_KEY, valueFrom: {secretKeyRef: {name: meiun-secrets, key: VAPID_PRIVATE_KEY}}}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: VAPID_SUBJECT, value: "mailto:god@example.test"}
+
+  - it: has no auth secret (the worker serves no sessions)
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "BETTER_AUTH_SECRET")]
+
+  - it: renders an unquoted million-token budget as an integer, not 2e+06
+    values:
+      - ../ci/test-values.yaml
+      - ../ci/tokens-per-day-values.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: MEIUN_TOKENS_PER_DAY, value: "2000000"}

@@ -1,0 +1,86 @@
+{{- if .Values.postgres.enabled }}
+{{- include "meiun-helm.validate" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "meiun-helm.fullname" . }}-postgres
+  labels:
+    {{- include "meiun-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 4 }}
+spec:
+  # One pod on one RWO volume: never two during a rollout.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "meiun-helm.selectorLabels" (dict "context" $ "name" "postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "meiun-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      # A clean shutdown checkpoints; give it time before SIGKILL.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          # The image's entrypoint starts as root, owns the data directory, then drops to the postgres user: it keeps
+          # only the capabilities that needs.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - FOWNER
+                - SETGID
+                - SETUID
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.db | quote }}
+            - name: POSTGRES_PASSWORD
+              {{- include "meiun-helm.credentialEnv" .Values.postgres.password | nindent 14 }}
+          # Crash recovery replays WAL before Postgres accepts connections: up to five minutes before liveness applies.
+          startupProbe:
+            exec:
+              command: [pg_isready, -U, {{ .Values.postgres.user | quote }}, -d, {{ .Values.postgres.db | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, {{ .Values.postgres.user | quote }}, -d, {{ .Values.postgres.db | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: [pg_isready, -U, {{ .Values.postgres.user | quote }}, -d, {{ .Values.postgres.db | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          volumeMounts:
+            # Postgres 18's images keep PGDATA in /var/lib/postgresql/18/docker and refuse a mount at the old
+            # /var/lib/postgresql/data: the volume goes on the parent.
+            - name: data
+              mountPath: /var/lib/postgresql
+              {{- with .Values.postgres.persistence.subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
+      volumes:
+        - name: data
+          {{- toYaml .Values.postgres.persistence.volume | nindent 10 }}
+{{- end }}

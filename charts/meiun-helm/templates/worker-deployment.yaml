@@ -1,0 +1,78 @@
+{{- include "meiun-helm.validate" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "meiun-helm.fullname" . }}-worker
+  labels:
+    {{- include "meiun-helm.labels" (dict "context" $ "name" "worker" "component" "worker") | nindent 4 }}
+spec:
+  # One worker, and never two during a rollout (see values.yaml worker).
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "meiun-helm.selectorLabels" (dict "context" $ "name" "worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "meiun-helm.labels" (dict "context" $ "name" "worker" "component" "worker") | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worker
+          image: {{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          securityContext:
+            {{- include "meiun-helm.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+          env:
+            {{- include "meiun-helm.sharedEnv" . | nindent 12 }}
+            {{- if .Values.vapid.subject }}
+            - name: VAPID_SUBJECT
+              value: {{ .Values.vapid.subject | quote }}
+            - name: VAPID_PUBLIC_KEY
+              {{- include "meiun-helm.credentialEnv" .Values.vapid.publicKey | nindent 14 }}
+            - name: VAPID_PRIVATE_KEY
+              {{- include "meiun-helm.credentialEnv" .Values.vapid.privateKey | nindent 14 }}
+            {{- end }}
+            {{- range .Values.worker.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          # The worker has no HTTP API; its metrics server answers once the queue and the scheduler started.
+          startupProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

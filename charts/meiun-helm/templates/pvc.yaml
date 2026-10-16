@@ -1,0 +1,23 @@
+{{- $claim := .Values.postgres.persistence.claim | default dict }}
+{{- if and .Values.postgres.enabled $claim.storageClassName }}
+{{- if not $claim.size }}
+{{- fail "meiun-helm: postgres.persistence.claim.size is required" }}
+{{- end }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "meiun-helm.fullname" . }}-postgres-data
+  labels:
+    {{- include "meiun-helm.labels" (dict "context" $ "name" "postgres" "component" "storage") | nindent 4 }}
+  annotations:
+    # The villages outlive the release: never deleted on uninstall, prune or Application deletion.
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ $claim.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ $claim.size | quote }}
+{{- end }}

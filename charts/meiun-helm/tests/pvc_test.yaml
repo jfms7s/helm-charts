@@ -1,0 +1,35 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: pvc
+templates:
+  - templates/pvc.yaml
+values:
+  - ../ci/test-values.yaml
+release:
+  name: meiun
+tests:
+  - it: creates the Postgres claim and keeps it on uninstall and prune
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: meiun-postgres-data
+      - equal:
+          path: spec.storageClassName
+          value: synology-iscsi
+      - equal:
+          path: spec.resources.requests.storage
+          value: 2Gi
+      - equal:
+          path: metadata.annotations["helm.sh/resource-policy"]
+          value: keep
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-options"]
+          value: Prune=false,Delete=false
+
+  - it: needs a size with a storage class
+    set:
+      postgres.persistence.claim.size: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.persistence.claim.size is required"

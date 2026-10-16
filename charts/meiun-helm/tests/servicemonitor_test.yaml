@@ -1,0 +1,31 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: servicemonitor
+templates:
+  - templates/servicemonitor.yaml
+values:
+  - ../ci/test-values.yaml
+release:
+  name: meiun
+  namespace: meiun
+tests:
+  - it: is off by default
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: scrapes the API's and the worker's metrics ports in its own namespace
+    set:
+      metrics.serviceMonitor.enabled: true
+    asserts:
+      - isKind:
+          of: ServiceMonitor
+      - equal:
+          path: spec.selector
+          value:
+            matchLabels: {app.kubernetes.io/instance: meiun}
+            matchExpressions: [{key: app.kubernetes.io/name, operator: In, values: [api, worker]}]
+      - equal:
+          path: spec.namespaceSelector.matchNames
+          value: [meiun]
+      - equal:
+          path: spec.endpoints
+          value: [{port: metrics, path: /metrics, interval: 30s}]

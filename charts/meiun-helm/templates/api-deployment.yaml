@@ -1,0 +1,102 @@
+{{- include "meiun-helm.validate" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "meiun-helm.fullname" . }}-api
+  labels:
+    {{- include "meiun-helm.labels" (dict "context" $ "name" "api" "component" "api") | nindent 4 }}
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      {{- include "meiun-helm.selectorLabels" (dict "context" $ "name" "api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "meiun-helm.labels" (dict "context" $ "name" "api" "component" "api") | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.api.terminationGracePeriodSeconds }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: {{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          securityContext:
+            {{- include "meiun-helm.containerSecurityContext" . | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 3000
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+          env:
+            {{- include "meiun-helm.sharedEnv" . | nindent 12 }}
+            - name: PORT
+              value: "3000"
+            - name: BETTER_AUTH_URL
+              value: {{ printf "https://%s" .Values.host | quote }}
+            - name: WEB_ORIGIN
+              value: {{ printf "https://%s" .Values.host | quote }}
+            - name: BETTER_AUTH_SECRET
+              {{- include "meiun-helm.credentialEnv" .Values.betterAuthSecret | nindent 14 }}
+            {{- if .Values.oidc.issuer }}
+            - name: OIDC_ISSUER
+              value: {{ .Values.oidc.issuer | quote }}
+            - name: OIDC_PROVIDER_ID
+              value: {{ .Values.oidc.providerId | quote }}
+            - name: OIDC_CLIENT_ID
+              {{- include "meiun-helm.credentialEnv" .Values.oidc.clientId | nindent 14 }}
+            - name: OIDC_CLIENT_SECRET
+              {{- include "meiun-helm.credentialEnv" .Values.oidc.clientSecret | nindent 14 }}
+            {{- end }}
+            {{- if .Values.vapid.subject }}
+            # The public half only: the private key is the worker's alone.
+            - name: VAPID_PUBLIC_KEY
+              {{- include "meiun-helm.credentialEnv" .Values.vapid.publicKey | nindent 14 }}
+            {{- end }}
+            {{- if .Values.debugSpeeds }}
+            - name: MEIUN_DEBUG_SPEEDS
+              value: "1"
+            {{- end }}
+            {{- range .Values.api.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          # Migrations run before the server listens: allow five minutes for them on start.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
