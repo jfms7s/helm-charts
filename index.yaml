@@ -508,6 +508,27 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/firstdime-helm-0.7.0/firstdime-helm-0.7.0.tgz
     version: 0.7.0
+  meiun-helm:
+  - apiVersion: v2
+    appVersion: v0.1.0
+    created: "2026-10-16T21:31:46.31263149Z"
+    description: A Helm chart for deploying meiun, a village sim of LLM-driven villagers,
+      on Kubernetes
+    digest: 3cc8208249f7338e1f79c418145ac7f21a617aa47fb5e63532ca7b024aa64a54
+    keywords:
+    - meiun
+    - game
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: meiun-helm
+    sources:
+    - https://github.com/jfms7s/meiun
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/meiun-helm-0.1.0/meiun-helm-0.1.0.tgz
+    version: 0.1.0
   patchmon-helm:
   - apiVersion: v2
     appVersion: latest
@@ -700,4 +721,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-13T20:18:01.157223564Z"
+generated: "2026-10-16T21:31:46.312716204Z"
