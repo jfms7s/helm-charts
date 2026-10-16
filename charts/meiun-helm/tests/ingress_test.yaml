@@ -1,0 +1,39 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: ingress
+templates:
+  - templates/ingress.yaml
+values:
+  - ../ci/test-values.yaml
+release:
+  name: meiun
+tests:
+  - it: serves one host, the API's paths to the API and everything else to the PWA
+    set:
+      ingress.className: traefik
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+      - equal:
+          path: spec.rules[0].host
+          value: meiun.example.test
+      - equal:
+          path: spec.rules[0].http.paths
+          value:
+            - {path: /trpc, pathType: Prefix, backend: {service: {name: meiun-api, port: {name: http}}}}
+            - {path: /api, pathType: Prefix, backend: {service: {name: meiun-api, port: {name: http}}}}
+            - {path: /, pathType: Prefix, backend: {service: {name: meiun-web, port: {name: http}}}}
+      - notExists:
+          path: spec.tls
+
+  - it: never routes the metrics port
+    asserts:
+      - notExists:
+          path: spec.rules[0].http.paths[?(@.backend.service.port.name == "metrics")]
+
+  - it: renders nothing when disabled
+    set:
+      ingress.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

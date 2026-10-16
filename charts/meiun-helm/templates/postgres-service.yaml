@@ -1,0 +1,16 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "meiun-helm.fullname" . }}-postgres
+  labels:
+    {{- include "meiun-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "meiun-helm.selectorLabels" (dict "context" $ "name" "postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+{{- end }}

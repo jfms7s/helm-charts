@@ -1,0 +1,153 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: api-deployment
+templates:
+  - templates/api-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+release:
+  name: meiun
+tests:
+  - it: runs the API hardened as uid 1000, on one origin, with the in-chart database
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: meiun-api
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/meiun-api:v0.1.0
+      - equal:
+          path: spec.template.spec.securityContext
+          value: {runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: BETTER_AUTH_URL, value: "https://meiun.example.test"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: WEB_ORIGIN, value: "https://meiun.example.test"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_URL, value: "postgres://meiun@meiun-postgres:5432/meiun"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: PGPASSWORD, value: "test-postgres-password"}
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: metrics, containerPort: 9464}
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 30
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet
+          value: {path: /health, port: http}
+
+  - it: names everything <release>-meiun-* when the release does not say meiun
+    release:
+      name: game
+    asserts:
+      - equal:
+          path: metadata.name
+          value: game-meiun-api
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_URL, value: "postgres://meiun@game-meiun-postgres:5432/meiun"}
+
+  - it: gives the API the VAPID public key only, never the private key or the subject
+    set:
+      vapid:
+        subject: mailto:god@example.test
+        publicKey: {value: public-key}
+        privateKey: {valueFrom: {secretKeyRef: {name: meiun-secrets, key: VAPID_PRIVATE_KEY}}}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: VAPID_PUBLIC_KEY, value: public-key}
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "VAPID_PRIVATE_KEY")]
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "VAPID_SUBJECT")]
+
+  - it: turns OIDC on with the issuer, the provider id and the client from secrets
+    set:
+      oidc:
+        issuer: https://authentik.example.test/application/o/meiun/
+        clientId: {valueFrom: {secretKeyRef: {name: meiun-secrets, key: OIDC_CLIENT_ID}}}
+        clientSecret: {valueFrom: {secretKeyRef: {name: meiun-secrets, key: OIDC_CLIENT_SECRET}}}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: OIDC_ISSUER, value: "https://authentik.example.test/application/o/meiun/"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: OIDC_PROVIDER_ID, value: homelab}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: OIDC_CLIENT_SECRET, valueFrom: {secretKeyRef: {name: meiun-secrets, key: OIDC_CLIENT_SECRET}}}
+
+  - it: passes the minds' routes and the Anthropic key, and leaves blank ones out
+    set:
+      minds:
+        hostedModel: claude-sonnet-5
+        anthropicApiKey: {valueFrom: {secretKeyRef: {name: meiun-secrets, key: ANTHROPIC_API_KEY}}}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: MEIUN_HOSTED_MODEL, value: claude-sonnet-5}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: ANTHROPIC_API_KEY, valueFrom: {secretKeyRef: {name: meiun-secrets, key: ANTHROPIC_API_KEY}}}
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "MEIUN_LOCAL_BASE_URL")]
+
+  - it: uses an external database URL when the in-chart Postgres is off
+    set:
+      postgres.enabled: false
+      database.url: postgres://meiun:pw@db.example.test:5432/meiun
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DATABASE_URL, value: "postgres://meiun:pw@db.example.test:5432/meiun"}
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "PGPASSWORD")]
+
+  - it: fails without a host
+    set:
+      host: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "host must be set"
+
+  - it: fails with a scheme in the host
+    set:
+      host: https://meiun.example.test
+    asserts:
+      - failedTemplate:
+          errorPattern: "host must be a bare lower-case hostname"
+
+  - it: fails with a short Better Auth secret
+    set:
+      betterAuthSecret.value: too-short
+    asserts:
+      - failedTemplate:
+          errorPattern: "betterAuthSecret must be at least 32 characters"
+
+  - it: fails with half an OIDC configuration
+    set:
+      oidc.issuer: https://authentik.example.test/application/o/meiun/
+    asserts:
+      - failedTemplate:
+          errorPattern: "oidc.issuer, oidc.clientId and oidc.clientSecret must be set together, or none"
+
+  - it: fails without a database
+    set:
+      postgres.enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: "database.url must be set when postgres.enabled is false"

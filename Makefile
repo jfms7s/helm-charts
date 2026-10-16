@@ -30,6 +30,8 @@ lint: ## helm lint every chart (same as CI's "Lint Helm charts" step)
 			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
 			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml -f $(CHARTS_DIR)/$$c/ci/frankfurter-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
 			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml -f $(CHARTS_DIR)/$$c/ci/bank-sync-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
+		elif [ -f $(CHARTS_DIR)/$$c/ci/test-values.yaml ]; then \
+			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
 		else \
 			helm lint $(CHARTS_DIR)/$$c || exit 1; \
 		fi; \
@@ -42,6 +44,8 @@ template: ## helm template every chart (same as CI's "Template Helm charts" step
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml > /dev/null || exit 1; \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/frankfurter-values.yaml > /dev/null || exit 1; \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/bank-sync-values.yaml > /dev/null || exit 1; \
+		elif [ -f $(CHARTS_DIR)/$$c/ci/test-values.yaml ]; then \
+			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml > /dev/null || exit 1; \
 		else \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/values.yaml > /dev/null || exit 1; \
 		fi; \
@@ -59,6 +63,8 @@ validate: $(KUBECONFORM) ## Validate rendered manifests against Kubernetes schem
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml | $(KUBECONFORM) -summary || exit 1; \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/frankfurter-values.yaml | $(KUBECONFORM) -summary || exit 1; \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/bank-sync-values.yaml | $(KUBECONFORM) -summary || exit 1; \
+		elif [ -f $(CHARTS_DIR)/$$c/ci/test-values.yaml ]; then \
+			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml | $(KUBECONFORM) -summary || exit 1; \
 		else \
 			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/values.yaml | $(KUBECONFORM) -summary || exit 1; \
 		fi; \

@@ -12,6 +12,7 @@ helm-charts/
 │   ├── data-lab-helm/   # Shared infra for the Spark/Flink learning labs
 │   ├── patchmon-helm/   # Chart for PatchMon application
 │   ├── tompero-helm/    # Chart for Chez Tomperô recipe manager
+│   ├── meiun-helm/      # Chart for meiun, the LLM-villager village sim
 │   ├── ticket-live-event-scanner-helm/  # Chart for Ticket Live Event Scanner
 │   └── common/          # Generic chart for multiple applications
 └── .github/workflows/   # CI/CD pipelines
@@ -51,6 +52,15 @@ Application-specific chart for deploying [PatchMon](https://patchmon.net/), a Li
 - Redis cache
 - guacd (in-browser RDP) sidecar
 - Ingress configuration
+
+### meiun-helm
+Application-specific chart for deploying [meiun](https://github.com/jfms7s/meiun), a village sim with LLM-driven villagers. Includes:
+- API deployment (Better Auth, tRPC, SSE; migrations on start) + Service
+- Worker deployment (scheduler, minds queue, Web Push; single replica, Recreate) + metrics Service
+- Web (static PWA on nginx-unprivileged) deployment + Service
+- Optional pgvector Postgres (single replica, Recreate) with an optional chart-created PVC (kept on uninstall)
+- One Ingress host, path-split: `/trpc` and `/api` to the API, `/` to the web app (one origin, no CORS)
+- Optional ServiceMonitor for the API's and the worker's metrics ports (never routed by the Ingress)
 
 ### tompero-helm
 Application-specific chart for deploying [Chez Tomperô](https://github.com/jfms7s/tompero), a self-hosted recipe manager and meal planner. Includes:

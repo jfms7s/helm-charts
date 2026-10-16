@@ -1,0 +1,25 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: web-deployment
+templates:
+  - templates/web-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+release:
+  name: meiun
+tests:
+  - it: serves the PWA from nginx-unprivileged as uid 101 on a read-only root
+    asserts:
+      - equal:
+          path: metadata.name
+          value: meiun-web
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/meiun-web:v0.1.0
+      - equal:
+          path: spec.template.spec.securityContext.runAsUser
+          value: 101
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value: [{name: http, containerPort: 8080}]
+      - notExists:
+          path: spec.template.spec.containers[0].env

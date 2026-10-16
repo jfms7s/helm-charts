@@ -1,0 +1,17 @@
+# Test values for CI: valid dummy values for rendering and testing.
+# Used by .github/workflows/lint-test.yml, the Makefile and helm-unittest.
+host: meiun.example.test
+
+betterAuthSecret:
+  value: "test-better-auth-secret-1234567890abcdef"
+
+postgres:
+  password:
+    value: "test-postgres-password"
+  persistence:
+    claim:
+      storageClassName: synology-iscsi
+      size: 2Gi
+    volume:
+      persistentVolumeClaim:
+        claimName: meiun-postgres-data

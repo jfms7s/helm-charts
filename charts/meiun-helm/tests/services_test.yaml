@@ -1,0 +1,36 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: services
+templates:
+  - templates/api-service.yaml
+  - templates/worker-service.yaml
+  - templates/web-service.yaml
+  - templates/postgres-service.yaml
+values:
+  - ../ci/test-values.yaml
+release:
+  name: meiun
+tests:
+  - it: exposes the API and its metrics port
+    template: templates/api-service.yaml
+    asserts:
+      - equal:
+          path: spec.ports
+          value: [{name: http, port: 3000, targetPort: http}, {name: metrics, port: 9464, targetPort: metrics}]
+  - it: exposes only the worker's metrics port
+    template: templates/worker-service.yaml
+    asserts:
+      - equal:
+          path: spec.ports
+          value: [{name: metrics, port: 9464, targetPort: metrics}]
+  - it: exposes the PWA on 8080
+    template: templates/web-service.yaml
+    asserts:
+      - equal:
+          path: spec.ports
+          value: [{name: http, port: 8080, targetPort: http}]
+  - it: names the Postgres Service the database URL points at
+    template: templates/postgres-service.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: meiun-postgres
