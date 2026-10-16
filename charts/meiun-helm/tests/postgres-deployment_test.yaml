@@ -33,6 +33,13 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].securityContext.capabilities.drop
           value: [ALL]
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            exec: {command: [pg_isready, -U, meiun, -d, meiun]}
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
 
   - it: renders nothing when the in-chart Postgres is off
     set:

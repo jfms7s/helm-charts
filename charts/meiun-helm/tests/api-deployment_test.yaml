@@ -151,3 +151,34 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "database.url must be set when postgres.enabled is false"
+
+  - it: renders an unquoted million-token budget as an integer, not 2e+06
+    values:
+      - ../ci/test-values.yaml
+      - ../ci/tokens-per-day-values.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: MEIUN_TOKENS_PER_DAY, value: "2000000"}
+
+  - it: keeps a quoted token budget as written
+    set:
+      minds.tokensPerDay: "200000"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: MEIUN_TOKENS_PER_DAY, value: "200000"}
+
+  - it: fails with a token budget that is not a whole number
+    set:
+      minds.tokensPerDay: lots
+    asserts:
+      - failedTemplate:
+          errorPattern: "minds.tokensPerDay must be a whole number of tokens"
+
+  - it: fails with half a VAPID configuration
+    set:
+      vapid.subject: mailto:god@example.test
+    asserts:
+      - failedTemplate:
+          errorPattern: "vapid.subject, vapid.publicKey and vapid.privateKey must be set together, or none"

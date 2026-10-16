@@ -52,6 +52,13 @@ spec:
               value: {{ .Values.postgres.db | quote }}
             - name: POSTGRES_PASSWORD
               {{- include "meiun-helm.credentialEnv" .Values.postgres.password | nindent 14 }}
+          # Crash recovery replays WAL before Postgres accepts connections: up to five minutes before liveness applies.
+          startupProbe:
+            exec:
+              command: [pg_isready, -U, {{ .Values.postgres.user | quote }}, -d, {{ .Values.postgres.db | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             exec:
               command: [pg_isready, -U, {{ .Values.postgres.user | quote }}, -d, {{ .Values.postgres.db | quote }}]

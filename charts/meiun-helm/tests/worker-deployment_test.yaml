@@ -49,3 +49,12 @@ tests:
     asserts:
       - notExists:
           path: spec.template.spec.containers[0].env[?(@.name == "BETTER_AUTH_SECRET")]
+
+  - it: renders an unquoted million-token budget as an integer, not 2e+06
+    values:
+      - ../ci/test-values.yaml
+      - ../ci/tokens-per-day-values.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: MEIUN_TOKENS_PER_DAY, value: "2000000"}

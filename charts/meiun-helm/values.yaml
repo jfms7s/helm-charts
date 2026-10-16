@@ -68,7 +68,8 @@ api:
     repository: ghcr.io/jfms7s/meiun-api
     tag: v0.1.0
     pullPolicy: IfNotPresent
-  # SSE fan-out runs over Postgres LISTEN/NOTIFY, so more than one replica is safe.
+  # SSE fan-out runs over Postgres LISTEN/NOTIFY, so more than one replica serves correctly. But every API pod runs
+  # the migrations on start, with no lock: keep 1 on a fresh install and during an upgrade that adds migrations.
   replicas: 1
   # The API drains requests for 5 s and exits within 15 s of SIGTERM.
   terminationGracePeriodSeconds: 30

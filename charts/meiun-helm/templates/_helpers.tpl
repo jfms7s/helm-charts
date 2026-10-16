@@ -49,6 +49,18 @@ value: {{ .value | default "CHANGE_ME" | quote }}
 {{- end -}}
 
 {{/*
+A plain value as an env string. Helm reads an unquoted number from a values file as float64, which would print a large
+integer as 2e+06: whole numbers print as integers, anything else as-is.
+*/}}
+{{- define "meiun-helm.envString" -}}
+{{- if and (or (kindIs "float64" .) (kindIs "int64" .) (kindIs "int" .)) (eq (float64 .) (floor .)) -}}
+{{- int64 . | toString -}}
+{{- else -}}
+{{- toString . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Whether a {value, valueFrom} map is set (a valueFrom, or a value other than "" and CHANGE_ME).
 */}}
 {{- define "meiun-helm.isSet" -}}
@@ -83,6 +95,11 @@ placeholder credential, no host, or a database that would not survive a restart.
 {{- else if not $.Values.database.url -}}
   {{- fail "meiun-helm: database.url must be set when postgres.enabled is false" -}}
 {{- end -}}
+{{- with $.Values.minds.tokensPerDay -}}
+  {{- if not (regexMatch "^[0-9]+$" (include "meiun-helm.envString" .)) -}}
+    {{- fail (printf "meiun-helm: minds.tokensPerDay must be a whole number of tokens (got %v)" .) -}}
+  {{- end -}}
+{{- end -}}
 {{- $oidc := list $.Values.oidc.issuer (include "meiun-helm.isSet" $.Values.oidc.clientId) (include "meiun-helm.isSet" $.Values.oidc.clientSecret) | compact | len -}}
 {{- if and (ne $oidc 0) (ne $oidc 3) -}}
   {{- fail "meiun-helm: oidc.issuer, oidc.clientId and oidc.clientSecret must be set together, or none" -}}
@@ -114,7 +131,7 @@ The env both the API and the worker need: the database and the minds' routes. On
 {{- range $name, $key := dict "MEIUN_LOCAL_BASE_URL" "localBaseUrl" "MEIUN_LOCAL_MODEL" "localModel" "MEIUN_HOSTED_MODEL" "hostedModel" "MEIUN_TOKENS_PER_DAY" "tokensPerDay" }}
 {{- with (index $.Values.minds $key) }}
 - name: {{ $name }}
-  value: {{ . | quote }}
+  value: {{ include "meiun-helm.envString" . | quote }}
 {{- end }}
 {{- end }}
 {{- if include "meiun-helm.isSet" $.Values.minds.localApiKey }}
