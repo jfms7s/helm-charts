@@ -3,7 +3,7 @@
 #
 # Credentials come from one existing Secret; the chart never generates one.
 
-# The quality-collector image (private). It has no ENTRYPOINT: the chart sets the command.
+# The quality-collector image (private). Its inherited ENTRYPOINT/CMD are node's, so the chart must set `command: [quality-collector]`.
 image:
   repository: ghcr.io/jfms7s/quality-report
   tag: "0.1.0"
@@ -35,6 +35,10 @@ postgres:
     # Subdirectory of the volume that holds PGDATA (keeps ext4's lost+found out of it).
     subPath: pgdata
   resources: {}
+
+migrate:
+  # Hard cap on the PostSync migrate Job so a stuck pod fails the sync instead of hanging it.
+  activeDeadlineSeconds: 900
 
 collector:
   schedule: "0 3 * * *"

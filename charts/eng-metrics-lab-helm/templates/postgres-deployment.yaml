@@ -44,6 +44,9 @@ spec:
             - name: POSTGRES_DB
               value: {{ .Values.postgres.database | quote }}
             {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "POSTGRES_PASSWORD") | nindent 12 }}
+            # The nested pgdata/pgdata is load-bearing: PGDATA must be a directory owned by uid 999 inside the
+            # root-owned subPath directory the kubelet creates. It also avoids Postgres 18 refusing an old mount
+            # layout when PGDATA is left at the default.
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           startupProbe:

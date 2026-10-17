@@ -9,7 +9,7 @@ Deploys eng-metrics-lab, a code-quality reporting stack built on `ghcr.io/jfms7s
 | `<release>-collector` | CronJob | `quality-collector collect`: GitHub artifacts into Postgres; no concurrency, no retries |
 | `<release>-backup` | CronJob + PVC | `pg_dump -Fc` to `/backups` on an NFS-backed PVC, written to `.tmp` and renamed only on success (umask 077); dumps older than `backup.keepDays` are pruned even when the dump fails, which still fails the job |
 
-The quality-collector image has no ENTRYPOINT or USER: the chart sets the command and runs the migrate and collector containers as uid 1000, read-only root, `HOME=/tmp` on an `emptyDir`. Postgres runs as uid 999.
+The quality-collector image has no USER and its inherited ENTRYPOINT/CMD are node's, so the chart must set `command: [quality-collector]`; it runs the migrate and collector containers as uid 1000, read-only root, `HOME=/tmp` on an `emptyDir`. Postgres runs as uid 999.
 
 ## Secret
 

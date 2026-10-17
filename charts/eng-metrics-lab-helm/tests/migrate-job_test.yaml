@@ -10,6 +10,7 @@ tests:
       - equal: {path: "metadata.annotations[\"argocd.argoproj.io/hook\"]", value: PostSync}
       - equal: {path: "metadata.annotations[\"argocd.argoproj.io/hook-delete-policy\"]", value: "BeforeHookCreation,HookSucceeded"}
       - equal: {path: spec.backoffLimit, value: 6}
+      - equal: {path: spec.activeDeadlineSeconds, value: 900}
       - equal: {path: "spec.template.spec.containers[0].command", value: [quality-collector]}
       - equal: {path: "spec.template.spec.containers[0].args", value: [migrate]}
 

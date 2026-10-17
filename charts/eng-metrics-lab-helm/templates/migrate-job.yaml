@@ -10,6 +10,8 @@ metadata:
 spec:
   # Retries wait out Postgres startup.
   backoffLimit: 6
+  # Fails the hook visibly (e.g. ImagePullBackOff) instead of hanging the Argo CD sync.
+  activeDeadlineSeconds: {{ .Values.migrate.activeDeadlineSeconds }}
   template:
     metadata:
       labels:
