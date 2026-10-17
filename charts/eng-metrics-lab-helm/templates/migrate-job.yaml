@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-migrate
+  labels:
+    {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "migrate" "component" "migration") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  # Retries wait out Postgres startup.
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "migrate" "component" "migration") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- include "eng-metrics-lab-helm.collectorPodSpec" . | nindent 6 }}
+      containers:
+        - name: migrate
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [quality-collector]
+          args: [migrate]
+          securityContext:
+            {{- include "eng-metrics-lab-helm.collectorSecurityContext" . | nindent 12 }}
+          env:
+            - name: HOME
+              value: /tmp
+            # POSTGRES_PASSWORD must stay above QUALITY_ADMIN_URL: $(VAR) only expands earlier entries.
+            {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "POSTGRES_PASSWORD") | nindent 12 }}
+            - name: QUALITY_ADMIN_URL
+              value: postgresql://postgres:$(POSTGRES_PASSWORD)@{{ include "eng-metrics-lab-helm.postgresHost" . }}:5432/{{ .Values.postgres.database }}
+            {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "QUALITY_WRITER_PASSWORD") | nindent 12 }}
+            {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "QUALITY_COLLECTOR_PASSWORD") | nindent 12 }}
+            {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "QUALITY_GRAFANA_PASSWORD") | nindent 12 }}
+          resources:
+            {{- toYaml .Values.collector.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

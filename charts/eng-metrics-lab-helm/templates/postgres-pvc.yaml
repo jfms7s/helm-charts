@@ -1,0 +1,19 @@
+{{- if not .Values.postgres.persistence.claim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-postgres-data
+  labels:
+    {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "postgres" "component" "storage") | nindent 4 }}
+  annotations:
+    # The reports outlive the release: never deleted on uninstall, prune or Application deletion.
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.postgres.persistence.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.persistence.size | quote }}
+{{- end }}

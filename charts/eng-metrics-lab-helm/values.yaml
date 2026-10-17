@@ -1,0 +1,52 @@
+# eng-metrics-lab: a small Postgres holding code-quality reports, a PostSync migrate Job (schema and least-privilege
+# roles), a nightly collector CronJob (GitHub artifacts into Postgres) and a nightly pg_dump CronJob to NFS.
+#
+# Credentials come from one existing Secret; the chart never generates one.
+
+# The quality-collector image (private). It has no ENTRYPOINT: the chart sets the command.
+image:
+  repository: ghcr.io/jfms7s/quality-report
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+# Docker-registry Secrets that can pull the image, e.g. [{name: eng-metrics-lab-ghcr-secrets}]. The Postgres image is public.
+imagePullSecrets: []
+
+# Secret with POSTGRES_PASSWORD, QUALITY_WRITER_PASSWORD, QUALITY_COLLECTOR_PASSWORD, QUALITY_GRAFANA_PASSWORD and
+# GITHUB_TOKEN. GITHUB_TOKEN may be absent: the collector then starts and exits 2 naming it. Passwords must be
+# alphanumeric: they are placed in connection URLs unescaped.
+existingSecret: eng-metrics-lab-secrets
+
+postgres:
+  image:
+    repository: docker.io/library/postgres
+    tag: "18-bookworm"
+    pullPolicy: IfNotPresent
+  database: quality
+  persistence:
+    # Name of an existing PVC to use instead of having the chart create <release>-postgres-data.
+    claim: ""
+    storageClass: synology-iscsi
+    size: 2Gi
+    # Subdirectory of the volume that holds PGDATA (keeps ext4's lost+found out of it).
+    subPath: pgdata
+  resources: {}
+
+collector:
+  schedule: "0 3 * * *"
+  githubOwner: jfms7s
+  githubRepos:
+    - replica-sync
+  lookbackDays: 3
+  resources: {}
+
+backup:
+  schedule: "30 3 * * *"
+  # Dumps older than this many days are deleted after each run.
+  keepDays: 30
+  persistence:
+    # Name of an existing PVC to use instead of having the chart create <release>-backup.
+    claim: ""
+    storageClass: nfs-client
+    size: 1Gi
+  resources: {}

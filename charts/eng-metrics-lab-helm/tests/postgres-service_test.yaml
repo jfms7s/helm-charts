@@ -1,0 +1,11 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-service
+templates:
+  - templates/postgres-service.yaml
+release:
+  name: eng-metrics-lab
+tests:
+  - it: exposes Postgres on 5432 as <release>-postgres
+    asserts:
+      - equal: {path: metadata.name, value: eng-metrics-lab-postgres}
+      - equal: {path: "spec.ports[0].port", value: 5432}

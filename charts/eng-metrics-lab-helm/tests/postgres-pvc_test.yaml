@@ -1,0 +1,20 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-pvc
+templates:
+  - templates/postgres-pvc.yaml
+release:
+  name: eng-metrics-lab
+tests:
+  - it: keeps the database claim on uninstall
+    asserts:
+      - equal: {path: metadata.name, value: eng-metrics-lab-postgres-data}
+      - equal: {path: "metadata.annotations[\"helm.sh/resource-policy\"]", value: keep}
+      - equal: {path: spec.storageClassName, value: synology-iscsi}
+      - equal: {path: spec.resources.requests.storage, value: 2Gi}
+      - equal: {path: spec.accessModes, value: [ReadWriteOnce]}
+
+  - it: renders nothing when an existing claim is named
+    set:
+      postgres.persistence.claim: my-claim
+    asserts:
+      - hasDocuments: {count: 0}

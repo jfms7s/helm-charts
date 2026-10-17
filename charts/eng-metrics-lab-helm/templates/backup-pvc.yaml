@@ -1,0 +1,19 @@
+{{- if not .Values.backup.persistence.claim }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-backup
+  labels:
+    {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "backup" "component" "storage") | nindent 4 }}
+  annotations:
+    # The dumps outlive the release: never deleted on uninstall, prune or Application deletion.
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.backup.persistence.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.backup.persistence.size | quote }}
+{{- end }}
