@@ -13,6 +13,7 @@ helm-charts/
 │   ├── patchmon-helm/   # Chart for PatchMon application
 │   ├── tompero-helm/    # Chart for Chez Tomperô recipe manager
 │   ├── meiun-helm/      # Chart for meiun, the LLM-villager village sim
+│   ├── eng-metrics-lab-helm/  # Chart for the eng-metrics-lab code-quality reporting stack
 │   ├── ticket-live-event-scanner-helm/  # Chart for Ticket Live Event Scanner
 │   └── common/          # Generic chart for multiple applications
 └── .github/workflows/   # CI/CD pipelines
@@ -61,6 +62,14 @@ Application-specific chart for deploying [meiun](https://github.com/jfms7s/meiun
 - Optional pgvector Postgres (single replica, Recreate) with an optional chart-created PVC (kept on uninstall)
 - One Ingress host, path-split: `/trpc` and `/api` to the API, `/` to the web app (one origin, no CORS)
 - Optional ServiceMonitor for the API's and the worker's metrics ports (never routed by the Ingress)
+
+### eng-metrics-lab-helm
+Application-specific chart for deploying eng-metrics-lab, a code-quality reporting stack (`ghcr.io/jfms7s/quality-report`). Includes:
+- Postgres (single replica, Recreate; PVC kept on uninstall; superuser password from an existing Secret)
+- Argo CD PostSync migrate Job (schema and least-privilege roles)
+- Nightly collector CronJob (GitHub artifacts into Postgres; `GITHUB_TOKEN` optional in the Secret)
+- Nightly backup CronJob (`pg_dump` to an NFS-backed PVC, old dumps pruned after `backup.keepDays`)
+- Security hardening: non-root containers, dropped capabilities, read-only root filesystem on the collector, migrate and backup pods
 
 ### tompero-helm
 Application-specific chart for deploying [Chez Tomperô](https://github.com/jfms7s/tompero), a self-hosted recipe manager and meal planner. Includes:

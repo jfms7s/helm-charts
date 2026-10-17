@@ -1,0 +1,67 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: collector-cronjob
+templates:
+  - templates/collector-cronjob.yaml
+release:
+  name: eng-metrics-lab
+tests:
+  - it: collects the configured repos, never concurrently
+    asserts:
+      - equal: {path: metadata.name, value: eng-metrics-lab-collector}
+      - equal: {path: spec.schedule, value: "0 3 * * *"}
+      - equal: {path: spec.concurrencyPolicy, value: Forbid}
+      - equal: {path: spec.successfulJobsHistoryLimit, value: 3}
+      - equal: {path: spec.failedJobsHistoryLimit, value: 3}
+      - equal: {path: spec.jobTemplate.spec.backoffLimit, value: 0}
+      - equal: {path: spec.jobTemplate.spec.template.spec.restartPolicy, value: Never}
+      - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].command", value: [quality-collector]}
+      - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].args", value: [collect]}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content: {name: QUALITY_GITHUB_REPOS, value: replica-sync}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content: {name: QUALITY_GITHUB_OWNER, value: jfms7s}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content: {name: QUALITY_LOOKBACK_DAYS, value: "3"}
+
+  - it: joins several repos with commas
+    set:
+      collector.githubRepos: [replica-sync, firstdime]
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content: {name: QUALITY_GITHUB_REPOS, value: "replica-sync,firstdime"}
+
+  - it: builds the collector URL after the password it references
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env[1].name
+          value: QUALITY_COLLECTOR_PASSWORD
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env[2]
+          value:
+            name: QUALITY_COLLECTOR_URL
+            value: postgresql://quality_collector:$(QUALITY_COLLECTOR_PASSWORD)@eng-metrics-lab-postgres:5432/quality
+
+  - it: tolerates an absent GITHUB_TOKEN so the collector exits 2 instead of failing to start
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env[?(@.name=="GITHUB_TOKEN")].valueFrom.secretKeyRef
+          value: {name: eng-metrics-lab-secrets, key: GITHUB_TOKEN, optional: true}
+
+  - it: runs as uid 1000 on a read-only root with a writable /tmp
+    asserts:
+      - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].securityContext.runAsUser", value: 1000}
+      - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].securityContext.runAsNonRoot", value: true}
+      - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem", value: true}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content: {name: HOME, value: /tmp}
+
+  - it: passes the image pull secrets
+    set:
+      imagePullSecrets: [{name: eng-metrics-lab-ghcr-secrets}]
+    asserts:
+      - equal: {path: spec.jobTemplate.spec.template.spec.imagePullSecrets, value: [{name: eng-metrics-lab-ghcr-secrets}]}

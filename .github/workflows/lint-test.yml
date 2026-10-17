@@ -33,6 +33,7 @@ jobs:
           helm lint charts/tompero-helm
           helm lint -f charts/meiun-helm/ci/test-values.yaml charts/meiun-helm
           helm lint charts/ticket-live-event-scanner-helm
+          helm lint charts/eng-metrics-lab-helm
           helm lint -f charts/firstdime-helm/ci/test-values.yaml charts/firstdime-helm
           helm lint -f charts/firstdime-helm/ci/test-values.yaml -f charts/firstdime-helm/ci/frankfurter-values.yaml charts/firstdime-helm
           helm lint -f charts/firstdime-helm/ci/test-values.yaml -f charts/firstdime-helm/ci/bank-sync-values.yaml charts/firstdime-helm
@@ -46,6 +47,7 @@ jobs:
           helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml
           helm template test-release charts/meiun-helm --values charts/meiun-helm/ci/test-values.yaml
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml
+          helm template test-release charts/eng-metrics-lab-helm --values charts/eng-metrics-lab-helm/values.yaml
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/bank-sync-values.yaml
@@ -67,6 +69,7 @@ jobs:
           helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml | kubeconform -summary
           helm template test-release charts/meiun-helm --values charts/meiun-helm/ci/test-values.yaml | kubeconform -summary
           helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml | kubeconform -summary
+          helm template test-release charts/eng-metrics-lab-helm --values charts/eng-metrics-lab-helm/values.yaml | kubeconform -summary
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml | kubeconform -summary
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml | kubeconform -summary
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/bank-sync-values.yaml | kubeconform -summary
@@ -80,4 +83,5 @@ jobs:
           helm unittest charts/tompero-helm --file 'tests/**/*.yaml'
           helm unittest charts/meiun-helm --file 'tests/**/*.yaml'
           helm unittest charts/ticket-live-event-scanner-helm --file 'tests/**/*.yaml'
+          helm unittest charts/eng-metrics-lab-helm --file 'tests/**/*.yaml'
           helm unittest charts/firstdime-helm --file 'tests/**/*.yaml'

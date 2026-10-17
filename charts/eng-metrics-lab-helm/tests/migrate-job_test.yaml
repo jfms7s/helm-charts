@@ -1,0 +1,49 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: migrate-job
+templates:
+  - templates/migrate-job.yaml
+release:
+  name: eng-metrics-lab
+tests:
+  - it: is an Argo CD PostSync hook running migrate
+    asserts:
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/hook\"]", value: PostSync}
+      - equal: {path: "metadata.annotations[\"argocd.argoproj.io/hook-delete-policy\"]", value: "BeforeHookCreation,HookSucceeded"}
+      - equal: {path: spec.backoffLimit, value: 6}
+      - equal: {path: spec.activeDeadlineSeconds, value: 900}
+      - equal: {path: "spec.template.spec.containers[0].command", value: [quality-collector]}
+      - equal: {path: "spec.template.spec.containers[0].args", value: [migrate]}
+
+  - it: builds the admin URL after the password it references
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[1].name
+          value: POSTGRES_PASSWORD
+      - equal:
+          path: spec.template.spec.containers[0].env[2]
+          value:
+            name: QUALITY_ADMIN_URL
+            value: postgresql://postgres:$(POSTGRES_PASSWORD)@eng-metrics-lab-postgres:5432/quality
+      - equal:
+          path: spec.template.spec.containers[0].env[?(@.name=="QUALITY_WRITER_PASSWORD")].valueFrom.secretKeyRef.key
+          value: QUALITY_WRITER_PASSWORD
+      - equal:
+          path: spec.template.spec.containers[0].env[?(@.name=="QUALITY_GRAFANA_PASSWORD")].valueFrom.secretKeyRef.name
+          value: eng-metrics-lab-secrets
+
+  - it: runs as uid 1000 on a read-only root with a writable /tmp
+    asserts:
+      - equal: {path: "spec.template.spec.containers[0].securityContext.runAsUser", value: 1000}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.runAsNonRoot", value: true}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem", value: true}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.capabilities.drop", value: [ALL]}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: HOME, value: /tmp}
+      - equal: {path: "spec.template.spec.volumes[0]", value: {name: tmp, emptyDir: {}}}
+
+  - it: passes the image pull secrets
+    set:
+      imagePullSecrets: [{name: eng-metrics-lab-ghcr-secrets}]
+    asserts:
+      - equal: {path: spec.template.spec.imagePullSecrets, value: [{name: eng-metrics-lab-ghcr-secrets}]}

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "eng-metrics-lab-helm.postgresHost" . }}
+  labels:
+    {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "eng-metrics-lab-helm.selectorLabels" (dict "context" $ "name" "postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

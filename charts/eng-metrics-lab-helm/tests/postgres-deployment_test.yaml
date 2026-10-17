@@ -1,0 +1,60 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-deployment
+templates:
+  - templates/postgres-deployment.yaml
+release:
+  name: eng-metrics-lab
+tests:
+  - it: runs one replica with Recreate on the claim
+    asserts:
+      - equal: {path: metadata.name, value: eng-metrics-lab-postgres}
+      - equal: {path: spec.strategy.type, value: Recreate}
+      - equal: {path: spec.replicas, value: 1}
+      - equal: {path: "spec.template.spec.containers[0].image", value: "docker.io/library/postgres:18-bookworm"}
+      - equal: {path: "spec.template.spec.containers[0].env[?(@.name==\"PGDATA\")].value", value: /var/lib/postgresql/data/pgdata}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: POSTGRES_DB, value: quality}
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0]
+          value: {name: data, mountPath: /var/lib/postgresql/data, subPath: pgdata}
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value: {name: data, persistentVolumeClaim: {claimName: eng-metrics-lab-postgres-data}}
+
+  - it: reads the superuser password from the existing secret
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[?(@.name=="POSTGRES_PASSWORD")].valueFrom.secretKeyRef
+          value: {name: eng-metrics-lab-secrets, key: POSTGRES_PASSWORD}
+
+  - it: runs as the postgres uid with no capabilities and probes readiness
+    asserts:
+      - equal: {path: spec.template.spec.securityContext.fsGroup, value: 999}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.runAsUser", value: 999}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation", value: false}
+      - equal: {path: "spec.template.spec.containers[0].securityContext.capabilities.drop", value: [ALL]}
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value: [pg_isready, -U, postgres, -d, quality]
+      - exists: {path: "spec.template.spec.containers[0].livenessProbe"}
+
+  - it: uses an explicit volume source instead of the created claim
+    set:
+      postgres.persistence.volume: {persistentVolumeClaim: {claimName: my-claim}}
+    asserts:
+      - equal: {path: "spec.template.spec.volumes[0]", value: {name: data, persistentVolumeClaim: {claimName: my-claim}}}
+
+  - it: refuses an emptyDir
+    set:
+      postgres.persistence.volume: {emptyDir: {}}
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.persistence.volume must be persistent storage, not emptyDir"
+
+  - it: needs a volume or a claim
+    set:
+      postgres.persistence.claim.storageClassName: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "set postgres.persistence.volume"

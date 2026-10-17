@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "eng-metrics-lab-helm.postgresHost" . }}
+  labels:
+    {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 4 }}
+spec:
+  # One pod on one RWO volume: never two during a rollout.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "eng-metrics-lab-helm.selectorLabels" (dict "context" $ "name" "postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      # A clean shutdown checkpoints; give it time before SIGKILL.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          # Started directly as the image's postgres user (uid 999), so the entrypoint never needs root or chown.
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "POSTGRES_PASSWORD") | nindent 12 }}
+            # The nested pgdata/pgdata is load-bearing: PGDATA must be a directory owned by uid 999 inside the
+            # root-owned subPath directory the kubelet creates. It also avoids Postgres 18 refusing an old mount
+            # layout when PGDATA is left at the default.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          startupProbe:
+            exec:
+              command: [pg_isready, -U, postgres, -d, {{ .Values.postgres.database | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, postgres, -d, {{ .Values.postgres.database | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: [pg_isready, -U, postgres, -d, {{ .Values.postgres.database | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              {{- with .Values.postgres.persistence.subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
+      volumes:
+        - name: data
+          {{- include "eng-metrics-lab-helm.volumeSource" (dict "persistence" .Values.postgres.persistence "claimName" (printf "%s-postgres-data" .Release.Name) "key" "postgres.persistence") | nindent 10 }}

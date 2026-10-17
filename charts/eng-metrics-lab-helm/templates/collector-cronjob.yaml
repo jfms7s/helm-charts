@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-collector
+  labels:
+    {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "collector" "component" "collector") | nindent 4 }}
+spec:
+  schedule: {{ .Values.collector.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # A failure should show, not retry against GitHub.
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "collector" "component" "collector") | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          {{- include "eng-metrics-lab-helm.collectorPodSpec" . | nindent 10 }}
+          containers:
+            - name: collector
+              image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: [quality-collector]
+              args: [collect]
+              securityContext:
+                {{- include "eng-metrics-lab-helm.collectorSecurityContext" . | nindent 16 }}
+              env:
+                - name: HOME
+                  value: /tmp
+                # QUALITY_COLLECTOR_PASSWORD must stay above QUALITY_COLLECTOR_URL: $(VAR) only expands earlier entries.
+                {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "QUALITY_COLLECTOR_PASSWORD") | nindent 16 }}
+                - name: QUALITY_COLLECTOR_URL
+                  value: postgresql://quality_collector:$(QUALITY_COLLECTOR_PASSWORD)@{{ include "eng-metrics-lab-helm.postgresHost" . }}:5432/{{ .Values.postgres.database }}
+                # Optional: until the PAT is added the collector starts and exits 2 naming GITHUB_TOKEN.
+                {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "GITHUB_TOKEN" "optional" true) | nindent 16 }}
+                - name: QUALITY_GITHUB_OWNER
+                  value: {{ .Values.collector.githubOwner | quote }}
+                - name: QUALITY_GITHUB_REPOS
+                  value: {{ join "," .Values.collector.githubRepos | quote }}
+                - name: QUALITY_LOOKBACK_DAYS
+                  value: {{ .Values.collector.lookbackDays | int | quote }}
+              resources:
+                {{- toYaml .Values.collector.resources | nindent 16 }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}
