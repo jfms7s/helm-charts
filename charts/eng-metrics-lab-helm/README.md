@@ -7,7 +7,7 @@ Deploys eng-metrics-lab, a code-quality reporting stack built on `ghcr.io/jfms7s
 | `<release>-postgres` | Deployment + Service + PVC | Postgres 18, one replica, Recreate; the PVC is kept on uninstall and prune |
 | `<release>-migrate` | Job (Argo CD `PostSync` hook) | `quality-collector migrate`: schema and least-privilege roles; `backoffLimit: 6` waits out Postgres startup |
 | `<release>-collector` | CronJob | `quality-collector collect`: GitHub artifacts into Postgres; no concurrency, no retries |
-| `<release>-backup` | CronJob + PVC | `pg_dump -Fc` to `/backups` on an NFS-backed PVC; dumps older than `backup.keepDays` are deleted |
+| `<release>-backup` | CronJob + PVC | `pg_dump -Fc` to `/backups` on an NFS-backed PVC, written to `.tmp` and renamed only on success (umask 077); dumps older than `backup.keepDays` are pruned even when the dump fails, which still fails the job |
 
 The quality-collector image has no ENTRYPOINT or USER: the chart sets the command and runs the migrate and collector containers as uid 1000, read-only root, `HOME=/tmp` on an `emptyDir`. Postgres runs as uid 999.
 
@@ -28,9 +28,9 @@ The quality-collector image has no ENTRYPOINT or USER: the chart sets the comman
 | `postgres.image.tag` | `18-bookworm` | |
 | `postgres.image.pullPolicy` | `IfNotPresent` | |
 | `postgres.database` | `quality` | database name |
-| `postgres.persistence.claim` | `""` | existing PVC to use instead of creating `<release>-postgres-data` |
-| `postgres.persistence.storageClass` | `synology-iscsi` | storage class of the created PVC |
-| `postgres.persistence.size` | `2Gi` | size of the created PVC |
+| `postgres.persistence.volume` | `{}` | volume source for the data directory (e.g. `persistentVolumeClaim.claimName`); empty means the chart-created PVC; emptyDir is refused |
+| `postgres.persistence.claim.storageClassName` | `synology-iscsi` | the chart creates PVC `<release>-postgres-data` while this is set; clear it to skip |
+| `postgres.persistence.claim.size` | `2Gi` | size of the created PVC |
 | `postgres.persistence.subPath` | `pgdata` | subdirectory of the volume mounted at `/var/lib/postgresql/data` |
 | `postgres.resources` | `{}` | |
 | `collector.schedule` | `0 3 * * *` | cron schedule |
@@ -40,9 +40,9 @@ The quality-collector image has no ENTRYPOINT or USER: the chart sets the comman
 | `collector.resources` | `{}` | also applied to the migrate Job |
 | `backup.schedule` | `30 3 * * *` | cron schedule |
 | `backup.keepDays` | `30` | dumps older than this are deleted |
-| `backup.persistence.claim` | `""` | existing PVC to use instead of creating `<release>-backup` |
-| `backup.persistence.storageClass` | `nfs-client` | storage class of the created PVC |
-| `backup.persistence.size` | `1Gi` | size of the created PVC |
+| `backup.persistence.volume` | `{}` | volume source for `/backups`; empty means the chart-created PVC |
+| `backup.persistence.claim.storageClassName` | `nfs-client` | the chart creates PVC `<release>-backup` while this is set; clear it to skip |
+| `backup.persistence.claim.size` | `1Gi` | size of the created PVC |
 | `backup.resources` | `{}` | |
 
 Both created PVCs carry `helm.sh/resource-policy: keep` and `argocd.argoproj.io/sync-options: Prune=false,Delete=false`.

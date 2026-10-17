@@ -39,8 +39,22 @@ tests:
           value: [pg_isready, -U, postgres, -d, quality]
       - exists: {path: "spec.template.spec.containers[0].livenessProbe"}
 
-  - it: mounts an existing claim when one is named
+  - it: uses an explicit volume source instead of the created claim
     set:
-      postgres.persistence.claim: my-claim
+      postgres.persistence.volume: {persistentVolumeClaim: {claimName: my-claim}}
     asserts:
-      - equal: {path: "spec.template.spec.volumes[0].persistentVolumeClaim.claimName", value: my-claim}
+      - equal: {path: "spec.template.spec.volumes[0]", value: {name: data, persistentVolumeClaim: {claimName: my-claim}}}
+
+  - it: refuses an emptyDir
+    set:
+      postgres.persistence.volume: {emptyDir: {}}
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.persistence.volume must be persistent storage, not emptyDir"
+
+  - it: needs a volume or a claim
+    set:
+      postgres.persistence.claim.storageClassName: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "set postgres.persistence.volume"

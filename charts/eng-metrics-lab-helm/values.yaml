@@ -24,10 +24,14 @@ postgres:
     pullPolicy: IfNotPresent
   database: quality
   persistence:
-    # Name of an existing PVC to use instead of having the chart create <release>-postgres-data.
-    claim: ""
-    storageClass: synology-iscsi
-    size: 2Gi
+    # Volume source for the data directory (e.g. persistentVolumeClaim.claimName for an existing PVC). Left empty, it
+    # points at the PVC the chart creates from `claim`. emptyDir is refused.
+    volume: {}
+    # Have the chart create a PVC named <release>-postgres-data (kept on uninstall and prune). Clear storageClassName
+    # to skip it and set `volume` instead.
+    claim:
+      storageClassName: synology-iscsi
+      size: 2Gi
     # Subdirectory of the volume that holds PGDATA (keeps ext4's lost+found out of it).
     subPath: pgdata
   resources: {}
@@ -45,8 +49,11 @@ backup:
   # Dumps older than this many days are deleted after each run.
   keepDays: 30
   persistence:
-    # Name of an existing PVC to use instead of having the chart create <release>-backup.
-    claim: ""
-    storageClass: nfs-client
-    size: 1Gi
+    # Volume source for /backups. Left empty, it points at the PVC the chart creates from `claim`.
+    volume: {}
+    # Have the chart create a PVC named <release>-backup (kept on uninstall and prune). Set storageClassName to ""
+    # to skip it, and set `volume` instead.
+    claim:
+      storageClassName: nfs-client
+      size: 1Gi
   resources: {}

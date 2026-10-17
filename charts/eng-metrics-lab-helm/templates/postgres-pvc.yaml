@@ -1,4 +1,8 @@
-{{- if not .Values.postgres.persistence.claim }}
+{{- $claim := .Values.postgres.persistence.claim | default dict }}
+{{- if $claim.storageClassName }}
+{{- if not $claim.size }}
+{{- fail "eng-metrics-lab-helm: postgres.persistence.claim.size is required" }}
+{{- end }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -12,8 +16,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: {{ .Values.postgres.persistence.storageClass | quote }}
+  storageClassName: {{ $claim.storageClassName | quote }}
   resources:
     requests:
-      storage: {{ .Values.postgres.persistence.size | quote }}
+      storage: {{ $claim.size | quote }}
 {{- end }}

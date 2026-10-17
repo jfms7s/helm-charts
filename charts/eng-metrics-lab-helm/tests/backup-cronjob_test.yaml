@@ -18,13 +18,28 @@ tests:
       - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].image", value: "docker.io/library/postgres:18-bookworm"}
       - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].command", value: [sh, "-c"]}
       - matchRegex: {path: "spec.jobTemplate.spec.template.spec.containers[0].args[0]", pattern: "pg_dump -Fc -h eng-metrics-lab-postgres -U postgres quality"}
-      - matchRegex: {path: "spec.jobTemplate.spec.template.spec.containers[0].args[0]", pattern: "> /backups/quality-\\$\\(date \\+%F\\)\\.dump"}
+      - matchRegex: {path: "spec.jobTemplate.spec.template.spec.containers[0].args[0]", pattern: "out=/backups/quality-\\$\\(date \\+%F\\)\\.dump"}
       - equal:
           path: spec.jobTemplate.spec.template.spec.containers[0].env[?(@.name=="PGPASSWORD")].valueFrom.secretKeyRef
           value: {name: eng-metrics-lab-secrets, key: POSTGRES_PASSWORD}
       - equal:
           path: spec.jobTemplate.spec.template.spec.volumes[0]
           value: {name: backups, persistentVolumeClaim: {claimName: eng-metrics-lab-backup}}
+
+  - it: dumps to a tmp file renamed only on success, with a private umask
+    asserts:
+      - matchRegex: {path: "spec.jobTemplate.spec.template.spec.containers[0].args[0]", pattern: "^umask 077\\n"}
+      - matchRegex: {path: "spec.jobTemplate.spec.template.spec.containers[0].args[0]", pattern: "> \"\\$out\\.tmp\"; then\\n\\s+mv \"\\$out\\.tmp\" \"\\$out\""}
+      - matchRegex: {path: "spec.jobTemplate.spec.template.spec.containers[0].args[0]", pattern: "else\\n\\s+rc=\\$\\?\\n\\s+rm -f \"\\$out\\.tmp\""}
+      - matchRegex: {path: "spec.jobTemplate.spec.template.spec.containers[0].args[0]", pattern: "-delete\\nexit \\$rc"}
+
+  - it: uses an explicit volume source instead of the created claim
+    set:
+      backup.persistence.volume: {nfs: {server: nas.example.test, path: /backups}}
+    asserts:
+      - equal:
+          path: "spec.jobTemplate.spec.template.spec.volumes[0]"
+          value: {name: backups, nfs: {server: nas.example.test, path: /backups}}
 
   - it: honours keepDays
     set:

@@ -28,12 +28,21 @@ spec:
               image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
               imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
               command: [sh, -c]
-              # $(date) is shell, not Kubernetes: it is not a declared env var, so it is passed through.
+              # A dump is only renamed into place once complete; pruning runs even when the dump fails, and the dump's
+              # status stays the job's. $(date) is shell: Kubernetes leaves an undeclared $(...) untouched.
               args:
-                - >-
-                  pg_dump -Fc -h {{ include "eng-metrics-lab-helm.postgresHost" . }} -U postgres {{ .Values.postgres.database }}
-                  > /backups/quality-$(date +%F).dump
-                  && find /backups -name 'quality-*.dump' -mtime +{{ .Values.backup.keepDays | int }} -delete
+                - |
+                  umask 077
+                  out=/backups/quality-$(date +%F).dump
+                  rc=0
+                  if pg_dump -Fc -h {{ include "eng-metrics-lab-helm.postgresHost" . }} -U postgres {{ .Values.postgres.database }} > "$out.tmp"; then
+                    mv "$out.tmp" "$out" || rc=$?
+                  else
+                    rc=$?
+                    rm -f "$out.tmp"
+                  fi
+                  find /backups -name 'quality-*.dump' -mtime +{{ .Values.backup.keepDays | int }} -delete
+                  exit $rc
               securityContext:
                 runAsUser: 999
                 runAsGroup: 999
@@ -56,5 +65,4 @@ spec:
                   mountPath: /backups
           volumes:
             - name: backups
-              persistentVolumeClaim:
-                claimName: {{ .Values.backup.persistence.claim | default (printf "%s-backup" .Release.Name) }}
+              {{- include "eng-metrics-lab-helm.volumeSource" (dict "persistence" .Values.backup.persistence "claimName" (printf "%s-backup" .Release.Name) "key" "backup.persistence") | nindent 14 }}

@@ -12,8 +12,15 @@ tests:
       - equal: {path: spec.storageClassName, value: nfs-client}
       - equal: {path: spec.resources.requests.storage, value: 1Gi}
 
-  - it: renders nothing when an existing claim is named
+  - it: renders nothing when the claim is cleared
     set:
-      backup.persistence.claim: my-claim
+      backup.persistence.claim.storageClassName: ""
     asserts:
       - hasDocuments: {count: 0}
+
+  - it: needs a size with a storage class
+    set:
+      backup.persistence.claim.size: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "backup.persistence.claim.size is required"

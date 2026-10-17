@@ -73,5 +73,4 @@ spec:
               {{- end }}
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: {{ .Values.postgres.persistence.claim | default (printf "%s-postgres-data" .Release.Name) }}
+          {{- include "eng-metrics-lab-helm.volumeSource" (dict "persistence" .Values.postgres.persistence "claimName" (printf "%s-postgres-data" .Release.Name) "key" "postgres.persistence") | nindent 10 }}

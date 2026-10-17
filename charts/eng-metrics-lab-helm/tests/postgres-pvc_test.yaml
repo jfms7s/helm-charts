@@ -13,8 +13,15 @@ tests:
       - equal: {path: spec.resources.requests.storage, value: 2Gi}
       - equal: {path: spec.accessModes, value: [ReadWriteOnce]}
 
-  - it: renders nothing when an existing claim is named
+  - it: renders nothing when the claim is cleared
     set:
-      postgres.persistence.claim: my-claim
+      postgres.persistence.claim.storageClassName: ""
     asserts:
       - hasDocuments: {count: 0}
+
+  - it: needs a size with a storage class
+    set:
+      postgres.persistence.claim.size: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.persistence.claim.size is required"
