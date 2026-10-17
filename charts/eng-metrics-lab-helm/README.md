@@ -24,6 +24,9 @@ The quality-collector image has no USER and its inherited ENTRYPOINT/CMD are nod
 | `image.pullPolicy` | `IfNotPresent` | |
 | `imagePullSecrets` | `[]` | pull secrets for the migrate and collector pods |
 | `existingSecret` | `eng-metrics-lab-secrets` | Secret holding the keys above |
+| `nodeSelector` | `{}` | node selector for all four pod specs (Postgres, migrate, collector, backup); the image is amd64-only, so set `kubernetes.io/arch: amd64` |
+| `affinity` | `{}` | affinity for all four pod specs |
+| `tolerations` | `[]` | tolerations for all four pod specs |
 | `postgres.image.repository` | `docker.io/library/postgres` | also used by the backup CronJob (it has `pg_dump`) |
 | `postgres.image.tag` | `18-bookworm` | |
 | `postgres.image.pullPolicy` | `IfNotPresent` | |
@@ -33,6 +36,7 @@ The quality-collector image has no USER and its inherited ENTRYPOINT/CMD are nod
 | `postgres.persistence.claim.size` | `2Gi` | size of the created PVC |
 | `postgres.persistence.subPath` | `pgdata` | subdirectory of the volume mounted at `/var/lib/postgresql/data` |
 | `postgres.resources` | `{}` | |
+| `migrate.activeDeadlineSeconds` | `900` | hard cap on the PostSync migrate Job, so a stuck pod fails the sync instead of hanging it |
 | `collector.schedule` | `0 3 * * *` | cron schedule |
 | `collector.githubOwner` | `jfms7s` | `QUALITY_GITHUB_OWNER` |
 | `collector.githubRepos` | `[replica-sync]` | joined with commas into `QUALITY_GITHUB_REPOS` |

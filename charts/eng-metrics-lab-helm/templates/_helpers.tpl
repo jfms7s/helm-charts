@@ -62,6 +62,24 @@ capabilities:
 {{/*
 The pod-level settings shared by the migrate and collector pods.
 */}}
+{{/*
+Pod placement shared by all four pod specs; each key is omitted when its value is empty.
+*/}}
+{{- define "eng-metrics-lab-helm.placement" -}}
+{{- with .Values.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.affinity }}
+affinity:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end -}}
+
 {{- define "eng-metrics-lab-helm.collectorPodSpec" -}}
 automountServiceAccountToken: false
 securityContext:
@@ -70,6 +88,9 @@ securityContext:
 {{- with .Values.imagePullSecrets }}
 imagePullSecrets:
   {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with (include "eng-metrics-lab-helm.placement" . | trim) }}
+{{- . | nindent 0 }}
 {{- end }}
 {{- end -}}
 

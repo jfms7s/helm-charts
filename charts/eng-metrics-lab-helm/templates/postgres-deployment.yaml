@@ -18,6 +18,9 @@ spec:
         {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 8 }}
     spec:
       automountServiceAccountToken: false
+      {{- with (include "eng-metrics-lab-helm.placement" . | trim) }}
+      {{- . | nindent 6 }}
+      {{- end }}
       # A clean shutdown checkpoints; give it time before SIGKILL.
       terminationGracePeriodSeconds: 60
       securityContext:

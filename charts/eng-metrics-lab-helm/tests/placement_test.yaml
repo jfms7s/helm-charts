@@ -1,0 +1,73 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: node placement
+templates:
+  - templates/postgres-deployment.yaml
+  - templates/migrate-job.yaml
+  - templates/collector-cronjob.yaml
+  - templates/backup-cronjob.yaml
+release:
+  name: eng-metrics-lab
+tests:
+  - it: renders no placement by default
+    asserts:
+      - notExists: {path: spec.template.spec.nodeSelector}
+        template: templates/postgres-deployment.yaml
+      - notExists: {path: spec.template.spec.affinity}
+        template: templates/postgres-deployment.yaml
+      - notExists: {path: spec.template.spec.tolerations}
+        template: templates/postgres-deployment.yaml
+      - notExists: {path: spec.template.spec.nodeSelector}
+        template: templates/migrate-job.yaml
+      - notExists: {path: spec.template.spec.affinity}
+        template: templates/migrate-job.yaml
+      - notExists: {path: spec.template.spec.tolerations}
+        template: templates/migrate-job.yaml
+      - notExists: {path: spec.jobTemplate.spec.template.spec.nodeSelector}
+        template: templates/collector-cronjob.yaml
+      - notExists: {path: spec.jobTemplate.spec.template.spec.affinity}
+        template: templates/collector-cronjob.yaml
+      - notExists: {path: spec.jobTemplate.spec.template.spec.tolerations}
+        template: templates/collector-cronjob.yaml
+      - notExists: {path: spec.jobTemplate.spec.template.spec.nodeSelector}
+        template: templates/backup-cronjob.yaml
+      - notExists: {path: spec.jobTemplate.spec.template.spec.affinity}
+        template: templates/backup-cronjob.yaml
+      - notExists: {path: spec.jobTemplate.spec.template.spec.tolerations}
+        template: templates/backup-cronjob.yaml
+
+  - it: applies nodeSelector to every pod spec
+    set:
+      nodeSelector:
+        kubernetes.io/arch: amd64
+    asserts:
+      - equal: {path: spec.template.spec.nodeSelector, value: {kubernetes.io/arch: amd64}}
+        template: templates/postgres-deployment.yaml
+      - equal: {path: spec.template.spec.nodeSelector, value: {kubernetes.io/arch: amd64}}
+        template: templates/migrate-job.yaml
+      - equal: {path: spec.jobTemplate.spec.template.spec.nodeSelector, value: {kubernetes.io/arch: amd64}}
+        template: templates/collector-cronjob.yaml
+      - equal: {path: spec.jobTemplate.spec.template.spec.nodeSelector, value: {kubernetes.io/arch: amd64}}
+        template: templates/backup-cronjob.yaml
+
+  - it: passes affinity and tolerations through to every pod spec
+    set:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+      tolerations:
+        - key: dedicated
+          operator: Exists
+    asserts:
+      - equal: {path: "spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight", value: 100}
+        template: templates/postgres-deployment.yaml
+      - equal: {path: "spec.template.spec.tolerations[0].key", value: dedicated}
+        template: templates/postgres-deployment.yaml
+      - equal: {path: "spec.template.spec.tolerations[0].key", value: dedicated}
+        template: templates/migrate-job.yaml
+      - equal: {path: "spec.jobTemplate.spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight", value: 100}
+        template: templates/collector-cronjob.yaml
+      - equal: {path: "spec.jobTemplate.spec.template.spec.tolerations[0].key", value: dedicated}
+        template: templates/backup-cronjob.yaml

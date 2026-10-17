@@ -19,6 +19,9 @@ spec:
         spec:
           restartPolicy: Never
           automountServiceAccountToken: false
+          {{- with (include "eng-metrics-lab-helm.placement" . | trim) }}
+          {{- . | nindent 10 }}
+          {{- end }}
           securityContext:
             fsGroup: 999
             seccompProfile:
