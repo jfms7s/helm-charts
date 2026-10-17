@@ -36,6 +36,12 @@ postgres:
     subPath: pgdata
   resources: {}
 
+# Pod placement, applied to the Postgres Deployment and the migrate, collector and backup pods. Empty by default: the
+# deployer decides (the quality-report image is amd64-only, so pin nodeSelector to kubernetes.io/arch: amd64).
+nodeSelector: {}
+affinity: {}
+tolerations: []
+
 migrate:
   # Hard cap on the PostSync migrate Job so a stuck pod fails the sync instead of hanging it.
   activeDeadlineSeconds: 900
