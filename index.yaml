@@ -434,6 +434,26 @@ entries:
   eng-metrics-lab-helm:
   - apiVersion: v2
     appVersion: 0.1.0
+    created: "2026-10-17T22:43:40.594925938Z"
+    description: A Helm chart for the eng-metrics-lab code-quality reporting stack
+      (Postgres, schema migration, nightly GitHub collector and backup) on Kubernetes
+    digest: 9b7af86a1e4726acd4c3c1855c7dc6ffb3be40f8005fabe4d66d316744a2ac47
+    keywords:
+    - eng-metrics-lab
+    - code-quality
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: eng-metrics-lab-helm
+    sources:
+    - https://github.com/jfms7s/eng-metrics-lab
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/eng-metrics-lab-helm-0.1.1/eng-metrics-lab-helm-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
+    appVersion: 0.1.0
     created: "2026-10-17T22:12:38.632125024Z"
     description: A Helm chart for the eng-metrics-lab code-quality reporting stack
       (Postgres, schema migration, nightly GitHub collector and backup) on Kubernetes
@@ -742,4 +762,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-17T22:12:38.632206407Z"
+generated: "2026-10-17T22:43:40.59499136Z"
