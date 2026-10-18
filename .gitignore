@@ -5,3 +5,6 @@
 .bin/
 charts/*/tests/__snapshot__/
 .superpowers/
+
+# eng-metrics-lab quality-report output
+.quality/

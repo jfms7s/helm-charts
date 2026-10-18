@@ -1,0 +1,20 @@
+name: Code Quality
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  # eng-metrics-lab (report-only): duplication and complexity; the collector picks up the artifact.
+  quality:
+    runs-on: ubuntu-latest
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Code quality (report-only)
+        uses: jfms7s/eng-metrics-lab/action@v0
+        continue-on-error: true
