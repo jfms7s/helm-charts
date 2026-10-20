@@ -7,26 +7,27 @@ Deploys eng-metrics-lab, a code-quality reporting stack built on `ghcr.io/jfms7s
 | `<release>-postgres` | Deployment + Service + PVC | Postgres 18, one replica, Recreate; the PVC is kept on uninstall and prune |
 | `<release>-migrate` | Job (Argo CD `PostSync` hook) | `quality-collector migrate`: schema and least-privilege roles; `backoffLimit: 6` waits out Postgres startup |
 | `<release>-collector` | CronJob | `quality-collector collect`: GitHub artifacts into Postgres; no concurrency, no retries |
+| `<release>-hotspots` | CronJob | `quality-collector hotspots` (image ≥0.4.0): weekly churn × complexity per file into the `hotspots` table; one blob-less clone at a time in a size-limited `/tmp`; rendered only when `hotspots.repos` is set |
 | `<release>-backup` | CronJob + PVC | `pg_dump -Fc` to `/backups` on an NFS-backed PVC, written to `.tmp` and renamed only on success (umask 077); dumps older than `backup.keepDays` are pruned even when the dump fails, which still fails the job |
 
-The quality-collector image has no USER and its inherited ENTRYPOINT/CMD are node's, so the chart must set `command: [quality-collector]`; it runs the migrate and collector containers as uid 1000, read-only root, `HOME=/tmp` on an `emptyDir`. Postgres runs as uid 999.
+The quality-collector image has no USER and its inherited ENTRYPOINT/CMD are node's, so the chart must set `command: [quality-collector]`; it runs the migrate, collector and hotspots containers as uid 1000, read-only root, `HOME=/tmp` on an `emptyDir`. Postgres runs as uid 999.
 
 ## Secret
 
-`existingSecret` (default `eng-metrics-lab-secrets`) must hold `POSTGRES_PASSWORD`, `QUALITY_WRITER_PASSWORD`, `QUALITY_COLLECTOR_PASSWORD`, `QUALITY_GRAFANA_PASSWORD` and `GITHUB_TOKEN`. The chart never generates a secret. Passwords must be alphanumeric: connection URLs are built with Kubernetes `$(VAR)` expansion, unescaped. `GITHUB_TOKEN` may be absent: its `secretKeyRef` is `optional`, so the collector starts and exits 2 naming the missing variable instead of the pod failing with `CreateContainerConfigError`.
+`existingSecret` (default `eng-metrics-lab-secrets`) must hold `POSTGRES_PASSWORD`, `QUALITY_WRITER_PASSWORD`, `QUALITY_COLLECTOR_PASSWORD`, `QUALITY_GRAFANA_PASSWORD` and `GITHUB_TOKEN`. The hotspots CronJob clones every repo in `hotspots.repos` with `GITHUB_TOKEN`, so the token needs *Contents: read* on the private ones. The chart never generates a secret. Passwords must be alphanumeric: connection URLs are built with Kubernetes `$(VAR)` expansion, unescaped. `GITHUB_TOKEN` may be absent: its `secretKeyRef` is `optional`, so the collector (and hotspots) starts and exits 2 naming the missing variable instead of the pod failing with `CreateContainerConfigError`.
 
 ## Values
 
 | Key | Default | Description |
 |---|---|---|
 | `image.repository` | `ghcr.io/jfms7s/quality-report` | quality-collector image (private) |
-| `image.tag` | `0.1.0` | image tag |
+| `image.tag` | `0.4.0` | image tag (the hotspots CronJob needs ≥0.4.0) |
 | `image.pullPolicy` | `IfNotPresent` | |
 | `imagePullSecrets` | `[]` | pull secrets for the migrate and collector pods |
 | `existingSecret` | `eng-metrics-lab-secrets` | Secret holding the keys above |
-| `nodeSelector` | `{}` | node selector for all four pod specs (Postgres, migrate, collector, backup); the image is amd64-only, so set `kubernetes.io/arch: amd64` |
-| `affinity` | `{}` | affinity for all four pod specs |
-| `tolerations` | `[]` | tolerations for all four pod specs |
+| `nodeSelector` | `{}` | node selector for all five pod specs (Postgres, migrate, collector, hotspots, backup); the image is amd64-only, so set `kubernetes.io/arch: amd64` |
+| `affinity` | `{}` | affinity for all five pod specs |
+| `tolerations` | `[]` | tolerations for all five pod specs |
 | `postgres.image.repository` | `docker.io/library/postgres` | also used by the backup CronJob (it has `pg_dump`) |
 | `postgres.image.tag` | `18-bookworm` | |
 | `postgres.image.pullPolicy` | `IfNotPresent` | |
@@ -42,6 +43,10 @@ The quality-collector image has no USER and its inherited ENTRYPOINT/CMD are nod
 | `collector.githubRepos` | `[replica-sync]` | joined with commas into `QUALITY_GITHUB_REPOS` |
 | `collector.lookbackDays` | `3` | `QUALITY_LOOKBACK_DAYS` |
 | `collector.resources` | `{}` | also applied to the migrate Job |
+| `hotspots.repos` | `[]` | repos under `collector.githubOwner` to measure, joined into `QUALITY_HOTSPOT_REPOS`; empty renders no CronJob |
+| `hotspots.schedule` | `0 4 * * 0` | cron schedule (Sunday, after the collector and the backup) |
+| `hotspots.workdirSizeLimit` | `1Gi` | `sizeLimit` of the `/tmp` emptyDir holding the clone |
+| `hotspots.resources` | `{}` | |
 | `backup.schedule` | `30 3 * * *` | cron schedule |
 | `backup.keepDays` | `30` | dumps older than this are deleted |
 | `backup.persistence.volume` | `{}` | volume source for `/backups`; empty means the chart-created PVC |

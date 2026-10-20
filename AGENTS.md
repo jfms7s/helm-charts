@@ -68,8 +68,9 @@ Application-specific chart for deploying eng-metrics-lab, a code-quality reporti
 - Postgres (single replica, Recreate; PVC kept on uninstall; superuser password from an existing Secret)
 - Argo CD PostSync migrate Job (schema and least-privilege roles)
 - Nightly collector CronJob (GitHub artifacts into Postgres; `GITHUB_TOKEN` optional in the Secret)
+- Weekly hotspots CronJob (churn × complexity per file; blob-less clones of `hotspots.repos` in a size-limited `/tmp`; rendered only when the list is set)
 - Nightly backup CronJob (`pg_dump` to an NFS-backed PVC, old dumps pruned after `backup.keepDays`)
-- Security hardening: non-root containers, dropped capabilities, read-only root filesystem on the collector, migrate and backup pods
+- Security hardening: non-root containers, dropped capabilities, read-only root filesystem on the collector, hotspots, migrate and backup pods
 
 ### tompero-helm
 Application-specific chart for deploying [Chez Tomperô](https://github.com/jfms7s/tompero), a self-hosted recipe manager and meal planner. Includes:

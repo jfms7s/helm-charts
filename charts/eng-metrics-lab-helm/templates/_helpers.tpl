@@ -60,10 +60,10 @@ capabilities:
 {{- end -}}
 
 {{/*
-The pod-level settings shared by the migrate and collector pods.
+The pod-level settings shared by the migrate, collector and hotspots pods.
 */}}
 {{/*
-Pod placement shared by all four pod specs; each key is omitted when its value is empty.
+Pod placement shared by all five pod specs; each key is omitted when its value is empty.
 */}}
 {{- define "eng-metrics-lab-helm.placement" -}}
 {{- with .Values.nodeSelector }}
