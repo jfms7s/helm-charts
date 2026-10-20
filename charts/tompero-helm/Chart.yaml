@@ -2,7 +2,7 @@ apiVersion: v2
 name: tompero-helm
 description: A Helm chart for Chez Tomperô, a self-hosted recipe manager and meal planner
 type: application
-version: 0.1.0
+version: 0.2.0
 appVersion: "v0.1.0"
 keywords:
   - tompero

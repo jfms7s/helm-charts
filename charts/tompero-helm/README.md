@@ -32,7 +32,7 @@ the app creates the household and its admin account.
 | `server.secureCookies` | Mark the session cookie `Secure` (set `true` when served over HTTPS) | `false` |
 | `server.logLevel` | Log filter (`LOG_LEVEL`, RUST_LOG syntax) | `info,sqlx=warn` |
 | `server.databaseUrl` | Postgres URL, a standard Kubernetes EnvVarSource; empty uses SQLite in `/data` (see note below) | `value: ""` |
-| `server.extraEnv` | Extra `{name, value}` env vars for the server container | `[]` |
+| `server.extraEnv` | Extra env vars for the server container: `{name, value}` or `{name, valueFrom}` (an EnvVarSource, e.g. `TOMPERO_SECRET_KEY` from a Secret) | `[]` |
 | `server.persistence.volume` | Volume source (excl. `name`) for `/data` (SQLite database and images) | `{}` (emptyDir) |
 | `server.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-tompero-server-data` (RWO, kept on uninstall/prune); point `server.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
 | `server.persistence.subPath` | Subdirectory of the volume to mount as `/data` (keeps ext4's `lost+found` out of it on block-backed PVCs) | `""` |
