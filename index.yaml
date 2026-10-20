@@ -784,6 +784,27 @@ entries:
   tompero-helm:
   - apiVersion: v2
     appVersion: v0.1.0
+    created: "2026-10-20T22:45:11.740145776Z"
+    description: A Helm chart for Chez Tomperô, a self-hosted recipe manager and meal
+      planner
+    digest: 5f4dfb04a6230d3db0ed69b558876356c830a12b96040a6ada678994a1e90def
+    keywords:
+    - tompero
+    - recipes
+    - meal-planner
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: tompero-helm
+    sources:
+    - https://github.com/jfms7s/tompero
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.2.0/tompero-helm-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: v0.1.0
     created: "2026-10-11T14:53:37.937636136Z"
     description: A Helm chart for Chez Tomperô, a self-hosted recipe manager and meal
       planner
@@ -803,4 +824,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-20T19:25:46.695832216Z"
+generated: "2026-10-20T22:45:11.740497458Z"
