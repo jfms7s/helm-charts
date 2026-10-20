@@ -6,8 +6,12 @@ metadata:
     {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "scraper" "component" "scraper") | nindent 4 }}
 spec:
   schedule: {{ .Values.scraper.schedule | quote }}
+  failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
+      # Finished Jobs are deleted after a day: kube-prometheus-stack's
+      # KubeJobFailed fires for each failed Job until it is gone.
+      ttlSecondsAfterFinished: {{ .Values.scraper.ttlSecondsAfterFinished }}
       backoffLimit: {{ .Values.scraper.backoffLimit }}
       template:
         metadata:

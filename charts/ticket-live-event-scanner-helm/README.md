@@ -41,6 +41,7 @@ below.
 | `scraper.image.*` | Scraper image | `ghcr.io/jfms7s/ticket-live-event-scanner-scraper:latest` |
 | `scraper.schedule` | CronJob schedule for the scraper | `0 * * * *` (hourly) |
 | `scraper.backoffLimit` | CronJob `backoffLimit` | `2` |
+| `scraper.ttlSecondsAfterFinished` | Seconds a finished scraper Job is kept before deletion | `86400` |
 | `scraper.hubPages` | Comma-separated ticketline.pt hub page slugs to re-check for new session IDs | `auchan-live-academia-maia-98164,auchan-live-academia-aveiro-98167` |
 | `scraper.userAgent` | HTTP User-Agent sent by the scraper | `ticket-live-event-scanner/0.1 (personal project; contact: jfms7s@gmail.com)` |
 | `scraper.requestDelayMs` | Delay between scrape requests, in milliseconds | `1500` |

@@ -11,7 +11,8 @@ tests:
       - equal: {path: spec.schedule, value: "0 3 * * *"}
       - equal: {path: spec.concurrencyPolicy, value: Forbid}
       - equal: {path: spec.successfulJobsHistoryLimit, value: 3}
-      - equal: {path: spec.failedJobsHistoryLimit, value: 3}
+      - equal: {path: spec.failedJobsHistoryLimit, value: 1}
+      - equal: {path: spec.jobTemplate.spec.ttlSecondsAfterFinished, value: 86400}
       - equal: {path: spec.jobTemplate.spec.backoffLimit, value: 0}
       - equal: {path: spec.jobTemplate.spec.template.spec.restartPolicy, value: Never}
       - equal: {path: "spec.jobTemplate.spec.template.spec.containers[0].command", value: [quality-collector]}
