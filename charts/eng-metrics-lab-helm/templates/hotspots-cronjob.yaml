@@ -1,0 +1,58 @@
+{{- if .Values.hotspots.repos }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-hotspots
+  labels:
+    {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "hotspots" "component" "hotspots") | nindent 4 }}
+spec:
+  schedule: {{ .Values.hotspots.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      # Finished Jobs are deleted after a day: kube-prometheus-stack's
+      # KubeJobFailed fires for each failed Job until it is gone.
+      ttlSecondsAfterFinished: 86400
+      # A failure should show, not retry against GitHub.
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "hotspots" "component" "hotspots") | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          {{- include "eng-metrics-lab-helm.collectorPodSpec" . | nindent 10 }}
+          containers:
+            - name: hotspots
+              image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: [quality-collector]
+              args: [hotspots]
+              securityContext:
+                {{- include "eng-metrics-lab-helm.collectorSecurityContext" . | nindent 16 }}
+              env:
+                - name: HOME
+                  value: /tmp
+                # QUALITY_COLLECTOR_PASSWORD must stay above QUALITY_COLLECTOR_URL: $(VAR) only expands earlier entries.
+                {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "QUALITY_COLLECTOR_PASSWORD") | nindent 16 }}
+                - name: QUALITY_COLLECTOR_URL
+                  value: postgresql://quality_collector:$(QUALITY_COLLECTOR_PASSWORD)@{{ include "eng-metrics-lab-helm.postgresHost" . }}:5432/{{ .Values.postgres.database }}
+                # Clones private repos: the token needs Contents: read on them. Optional so a missing key exits 2.
+                {{- include "eng-metrics-lab-helm.secretEnv" (dict "context" $ "name" "GITHUB_TOKEN" "optional" true) | nindent 16 }}
+                - name: QUALITY_GITHUB_OWNER
+                  value: {{ .Values.collector.githubOwner | quote }}
+                - name: QUALITY_HOTSPOT_REPOS
+                  value: {{ join "," .Values.hotspots.repos | quote }}
+              resources:
+                {{- toYaml .Values.hotspots.resources | nindent 16 }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            # One blob-less clone at a time lives here, deleted before the next.
+            - name: tmp
+              emptyDir:
+                sizeLimit: {{ .Values.hotspots.workdirSizeLimit }}
+{{- end }}

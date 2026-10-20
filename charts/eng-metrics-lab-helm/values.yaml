@@ -1,12 +1,13 @@
 # eng-metrics-lab: a small Postgres holding code-quality reports, a PostSync migrate Job (schema and least-privilege
-# roles), a nightly collector CronJob (GitHub artifacts into Postgres) and a nightly pg_dump CronJob to NFS.
+# roles), a nightly collector CronJob (GitHub artifacts into Postgres), a weekly hotspots CronJob (churn × complexity
+# per file) and a nightly pg_dump CronJob to NFS.
 #
 # Credentials come from one existing Secret; the chart never generates one.
 
 # The quality-collector image (private). Its inherited ENTRYPOINT/CMD are node's, so the chart must set `command: [quality-collector]`.
 image:
   repository: ghcr.io/jfms7s/quality-report
-  tag: "0.1.0"
+  tag: "0.4.0"
   pullPolicy: IfNotPresent
 
 # Docker-registry Secrets that can pull the image, e.g. [{name: eng-metrics-lab-ghcr-secrets}]. The Postgres image is public.
@@ -36,7 +37,7 @@ postgres:
     subPath: pgdata
   resources: {}
 
-# Pod placement, applied to the Postgres Deployment and the migrate, collector and backup pods. Empty by default: the
+# Pod placement, applied to the Postgres Deployment and the migrate, collector, hotspots and backup pods. Empty by default: the
 # deployer decides (the quality-report image is amd64-only, so pin nodeSelector to kubernetes.io/arch: amd64).
 nodeSelector: {}
 affinity: {}
@@ -52,6 +53,17 @@ collector:
   githubRepos:
     - replica-sync
   lookbackDays: 3
+  resources: {}
+
+# Weekly churn × complexity per file (`quality-collector hotspots`, quality-report ≥0.4.0) into the hotspots table.
+hotspots:
+  # Repos to clone from github.com/<collector.githubOwner>; empty renders no CronJob. GITHUB_TOKEN needs Contents: read
+  # on the private ones.
+  repos: []
+  # Sunday 04:00, after the collector and the backup.
+  schedule: "0 4 * * 0"
+  # The /tmp emptyDir that holds one clone at a time.
+  workdirSizeLimit: 1Gi
   resources: {}
 
 backup:

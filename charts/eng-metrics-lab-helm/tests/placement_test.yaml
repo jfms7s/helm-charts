@@ -5,8 +5,11 @@ templates:
   - templates/migrate-job.yaml
   - templates/collector-cronjob.yaml
   - templates/backup-cronjob.yaml
+  - templates/hotspots-cronjob.yaml
 release:
   name: eng-metrics-lab
+set:
+  hotspots.repos: [firstdime]
 tests:
   - it: renders no placement by default
     asserts:
@@ -34,6 +37,8 @@ tests:
         template: templates/backup-cronjob.yaml
       - notExists: {path: spec.jobTemplate.spec.template.spec.tolerations}
         template: templates/backup-cronjob.yaml
+      - notExists: {path: spec.jobTemplate.spec.template.spec.nodeSelector}
+        template: templates/hotspots-cronjob.yaml
 
   - it: applies nodeSelector to every pod spec
     set:
@@ -48,6 +53,8 @@ tests:
         template: templates/collector-cronjob.yaml
       - equal: {path: spec.jobTemplate.spec.template.spec.nodeSelector, value: {kubernetes.io/arch: amd64}}
         template: templates/backup-cronjob.yaml
+      - equal: {path: spec.jobTemplate.spec.template.spec.nodeSelector, value: {kubernetes.io/arch: amd64}}
+        template: templates/hotspots-cronjob.yaml
 
   - it: passes affinity and tolerations through to every pod spec
     set:
@@ -71,3 +78,5 @@ tests:
         template: templates/collector-cronjob.yaml
       - equal: {path: "spec.jobTemplate.spec.template.spec.tolerations[0].key", value: dedicated}
         template: templates/backup-cronjob.yaml
+      - equal: {path: "spec.jobTemplate.spec.template.spec.tolerations[0].key", value: dedicated}
+        template: templates/hotspots-cronjob.yaml
