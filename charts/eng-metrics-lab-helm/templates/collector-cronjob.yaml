@@ -8,9 +8,12 @@ spec:
   schedule: {{ .Values.collector.schedule | quote }}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
+      # Finished Jobs are deleted after a day: kube-prometheus-stack's
+      # KubeJobFailed fires for each failed Job until it is gone.
+      ttlSecondsAfterFinished: 86400
       # A failure should show, not retry against GitHub.
       backoffLimit: 0
       template:

@@ -2,7 +2,7 @@ apiVersion: v2
 name: eng-metrics-lab-helm
 description: A Helm chart for the eng-metrics-lab code-quality reporting stack (Postgres, schema migration, nightly GitHub collector and backup) on Kubernetes
 type: application
-version: 0.1.1
+version: 0.1.2
 appVersion: "0.1.0"
 keywords:
   - eng-metrics-lab

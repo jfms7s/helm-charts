@@ -89,6 +89,8 @@ scraper:
   # Cron schedule the scraper CronJob runs on.
   schedule: "0 * * * *"
   backoffLimit: 2
+  # Seconds a finished scraper Job (and its pod's logs) is kept before deletion.
+  ttlSecondsAfterFinished: 86400
   # Comma-separated ticketline.pt hub page slugs the scraper re-checks for
   # new session IDs.
   hubPages: "auchan-live-academia-maia-98164,auchan-live-academia-aveiro-98167"
