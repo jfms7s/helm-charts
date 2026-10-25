@@ -613,6 +613,27 @@ entries:
     version: 0.1.0
   padel-score-helm:
   - apiVersion: v2
+    appVersion: v0.2.0
+    created: "2026-10-25T18:30:27.463617713Z"
+    description: A Helm chart for padel-score, a padel match scorer with live spectator
+      links
+    digest: e9d533bc446ee3761d8831036b2b211c758986315ae71de657a10dd6b69923bf
+    keywords:
+    - padel-score
+    - padel
+    - scoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: padel-score-helm
+    sources:
+    - https://github.com/jfms7s/padel-score
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/padel-score-helm-0.2.0/padel-score-helm-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
     appVersion: v0.1.0
     created: "2026-10-25T15:39:58.611966202Z"
     description: A Helm chart for padel-score, a padel match scorer with live spectator
@@ -867,4 +888,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-25T15:39:58.612062983Z"
+generated: "2026-10-25T18:30:27.463721288Z"
