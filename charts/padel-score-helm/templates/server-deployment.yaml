@@ -33,6 +33,24 @@ spec:
               value: "8080"
             - name: LOG_LEVEL
               value: {{ .Values.server.logLevel | quote }}
+            - name: SECURE_COOKIES
+              value: {{ .Values.server.secureCookies | quote }}
+            {{- with .Values.server.trustedProxies }}
+            - name: TRUSTED_PROXIES
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.server.publicOrigin }}
+            - name: PUBLIC_ORIGIN
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if or .Values.server.setupToken.value .Values.server.setupToken.valueFrom }}
+            - name: SETUP_TOKEN
+              {{- if .Values.server.setupToken.valueFrom }}
+              valueFrom: {{- toYaml .Values.server.setupToken.valueFrom | nindent 16 }}
+              {{- else }}
+              value: {{ .Values.server.setupToken.value | quote }}
+              {{- end }}
+            {{- end }}
             {{- range .Values.server.extraEnv }}
             - name: {{ .name }}
               {{- if .valueFrom }}

@@ -22,9 +22,13 @@ helm install my-release . \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `image.repository` / `image.tag` / `image.pullPolicy` | padel-score server image | `ghcr.io/jfms7s/padel-score:v0.1.0` |
+| `image.repository` / `image.tag` / `image.pullPolicy` | padel-score server image | `ghcr.io/jfms7s/padel-score:v0.2.0` |
 | `imagePullSecrets` | Pull secrets, only needed for a private mirror | `[]` |
 | `server.logLevel` | Log filter (`LOG_LEVEL`, RUST_LOG syntax) | `info,sqlx=warn` |
+| `server.secureCookies` | `SECURE_COOKIES`: Secure attribute on session cookies | `true` |
+| `server.trustedProxies` | `TRUSTED_PROXIES`: CIDRs/IPs whose forwarded headers are trusted; omitted when empty | `""` |
+| `server.publicOrigin` | `PUBLIC_ORIGIN`: public site origin, e.g. `https://padel.example.com`; omitted when empty | `""` |
+| `server.setupToken` | `SETUP_TOKEN` as `{value, valueFrom}` (e.g. a secretKeyRef); `valueFrom` wins; omitted when both unset | unset |
 | `server.extraEnv` | Extra env vars for the server container: `{name, value}` or `{name, valueFrom}` | `[]` |
 | `server.persistence.ephemeral` | Opt in to a non-persistent emptyDir; without it, rendering fails unless `volume` is set | `false` |
 | `server.persistence.volume` | Volume source (excl. `name`) for `/data` (the SQLite database) | `{}` (emptyDir) |
