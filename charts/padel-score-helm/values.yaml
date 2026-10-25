@@ -26,10 +26,15 @@ server:
   # be writable by it: set podSecurityContext.fsGroup: 65532 for volumes that
   # honour fsGroup, or chown the export for NFS.
   persistence:
+    # Rendering fails unless a `volume` or a `claim` (with size) is set, so
+    # data is never silently lost on an emptyDir. Set true to opt in to a
+    # non-persistent emptyDir (quick tests only).
+    ephemeral: false
     volume: {}
     # Optional: have the chart create a PVC named <release>-padel-score-server-data.
     # Point `volume` at it with persistentVolumeClaim.claimName. Kept on uninstall/prune.
     claim:
+      # Created when size is set; storageClassName empty = cluster default class.
       storageClassName: ""
       size: ""
     # Optional subdirectory of the volume to mount as /data (keeps ext4's
@@ -44,17 +49,21 @@ resources: {}
   #   cpu: 50m
   #   memory: 64Mi
 
-securityContext: {}
-  # The image already runs as uid 65532 and only writes to /data, so this
-  # hardening works as-is:
-  # runAsNonRoot: true
-  # readOnlyRootFilesystem: true
-  # allowPrivilegeEscalation: false
-  # capabilities:
-  #   drop: [ALL]
+# The image runs as uid 65532 (distroless nonroot) and only writes to /data.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+  seccompProfile:
+    type: RuntimeDefault
 
-podSecurityContext: {}
-  # fsGroup: 65532
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
 
 # The app streams live scores over Server-Sent Events (text/event-stream).
 # Traefik streams SSE by default, so no buffering middleware or annotation is

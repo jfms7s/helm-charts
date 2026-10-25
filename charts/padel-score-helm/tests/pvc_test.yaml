@@ -32,9 +32,18 @@ tests:
           path: metadata.annotations["argocd.argoproj.io/sync-options"]
           value: Prune=false,Delete=false
 
-  - it: refuses a claim with a class but no size
+  - it: renders a claim with the default class when only size is set
+    set:
+      server.persistence.claim: {size: 1Gi}
+    asserts:
+      - hasDocuments:
+          count: 1
+      - notExists:
+          path: spec.storageClassName
+
+  - it: renders no claim when only a class is set
     set:
       server.persistence.claim: {storageClassName: synology-iscsi}
     asserts:
-      - failedTemplate:
-          errorMessage: "padel-score-helm: server.persistence.claim.size is required"
+      - hasDocuments:
+          count: 0

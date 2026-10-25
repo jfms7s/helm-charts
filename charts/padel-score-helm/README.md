@@ -14,6 +14,7 @@ The image is public, so no pull secret is needed.
 
 ```bash
 helm install my-release . \
+  --set server.persistence.claim.size=1Gi \
   --set server.persistence.volume.persistentVolumeClaim.claimName=my-release-padel-score-server-data
 ```
 
@@ -25,10 +26,11 @@ helm install my-release . \
 | `imagePullSecrets` | Pull secrets, only needed for a private mirror | `[]` |
 | `server.logLevel` | Log filter (`LOG_LEVEL`, RUST_LOG syntax) | `info,sqlx=warn` |
 | `server.extraEnv` | Extra env vars for the server container: `{name, value}` or `{name, valueFrom}` | `[]` |
+| `server.persistence.ephemeral` | Opt in to a non-persistent emptyDir; without it, rendering fails unless `volume` is set | `false` |
 | `server.persistence.volume` | Volume source (excl. `name`) for `/data` (the SQLite database) | `{}` (emptyDir) |
-| `server.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-padel-score-server-data` (RWO, kept on uninstall/prune); point `server.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
+| `server.persistence.claim` | `{storageClassName, size}`: when `size` is set, render a PVC `<release>-padel-score-server-data` (RWO, kept on uninstall/prune; empty class = cluster default); point `server.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
 | `server.persistence.subPath` | Subdirectory of the volume to mount as `/data` | `""` |
-| `resources` / `securityContext` / `podSecurityContext` | Server container/pod settings | `{}` |
+| `resources` / `securityContext` / `podSecurityContext` | Server container/pod settings | hardened (uid/gid 65532, read-only root, drop ALL, seccomp RuntimeDefault, fsGroup 65532) |
 | `ingress.enabled` / `ingress.className` / `ingress.hosts` / `ingress.tls` | Ingress for the server | disabled |
 
 ### Persistent storage
@@ -36,8 +38,9 @@ helm install my-release . \
 `/data` holds the SQLite database, so it needs a real volume. The container
 runs as uid 65532 (distroless `nonroot`), so the volume must be writable by
 that user: set `podSecurityContext.fsGroup: 65532` for volumes that honour
-`fsGroup` (PVCs), or chown the export for NFS. Leaving `volume` unset falls
-back to `emptyDir` (non-persistent), fine for a quick test only.
+`fsGroup` (PVCs), or chown the export for NFS. Leaving `volume` unset fails the render, so data is never lost silently; set
+`server.persistence.ephemeral=true` to opt in to a non-persistent `emptyDir`
+(quick tests only).
 
 ### Live updates (SSE)
 
@@ -47,22 +50,15 @@ buffering proxy, disable response buffering for `/api/`.
 
 ### Hardening
 
-The image only writes to `/data`, so the usual hardening works unchanged:
-
-```yaml
-securityContext:
-  runAsNonRoot: true
-  readOnlyRootFilesystem: true
-  allowPrivilegeEscalation: false
-  capabilities:
-    drop: [ALL]
-```
+Defaults are hardened: non-root uid/gid 65532, read-only root filesystem
+(a `/tmp` emptyDir is mounted), no privilege escalation, all capabilities
+dropped, `RuntimeDefault` seccomp, `fsGroup` 65532.
 
 ## Deployment
 
 A Deployment (one replica, `Recreate` strategy, since SQLite allows a single
-writer) + Service (+ optional Ingress and PVC). Probes hit `GET /api/health`
-on port 8080.
+writer) + Service (+ optional Ingress and PVC). Startup, liveness and readiness probes hit `GET /api/health` on port 8080
+(the startup probe allows up to 5 minutes).
 
 ## Uninstalling
 

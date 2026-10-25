@@ -3,7 +3,58 @@ suite: server-deployment
 templates:
   - templates/server-deployment.yaml
 tests:
+  - it: fails without a volume unless ephemeral is explicit
+    set:
+      server.persistence.ephemeral: false
+    asserts:
+      - failedTemplate:
+          errorMessage: "padel-score-helm: set server.persistence.volume (or claim.size and point volume at it), or server.persistence.ephemeral=true to accept data loss"
+
+  - it: uses emptyDir when ephemeral is set
+    set:
+      server.persistence.ephemeral: true
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value: {name: data, emptyDir: {}}
+
+  - it: hardened security defaults
+    set:
+      server.persistence.ephemeral: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+            seccompProfile: {type: RuntimeDefault}
+      - equal:
+          path: spec.template.spec.securityContext
+          value: {fsGroup: 65532, fsGroupChangePolicy: OnRootMismatch}
+      - contains:
+          path: spec.template.spec.volumes
+          content: {name: tmp, emptyDir: {}}
+
+  - it: has a startupProbe on the health endpoint
+    set:
+      server.persistence.ephemeral: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.path
+          value: /api/health
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.periodSeconds
+          value: 5
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.failureThreshold
+          value: 60
   - it: deployment uses Recreate and health probes
+    set:
+      server.persistence.ephemeral: true
     asserts:
       - isKind:
           of: Deployment
@@ -42,12 +93,15 @@ tests:
           value: /api/health
 
   - it: no pull secrets by default
+    set:
+      server.persistence.ephemeral: true
     asserts:
       - notExists:
           path: spec.template.spec.imagePullSecrets
 
   - it: passes log level, extra env and pull secrets through
     set:
+      server.persistence.ephemeral: true
       server.logLevel: debug
       server.extraEnv: [{name: TZ, value: Europe/Lisbon}]
       imagePullSecrets: [{name: ghcr-pull}]

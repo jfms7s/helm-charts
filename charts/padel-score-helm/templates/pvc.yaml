@@ -1,8 +1,5 @@
 {{- $claim := .Values.server.persistence.claim | default dict }}
-{{- if $claim.storageClassName }}
-{{- if not $claim.size }}
-{{- fail "padel-score-helm: server.persistence.claim.size is required" }}
-{{- end }}
+{{- if $claim.size }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -17,7 +14,9 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  {{- if $claim.storageClassName }}
   storageClassName: {{ $claim.storageClassName | quote }}
+  {{- end }}
   resources:
     requests:
       storage: {{ $claim.size | quote }}
