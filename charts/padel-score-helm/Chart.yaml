@@ -1,0 +1,16 @@
+apiVersion: v2
+name: padel-score-helm
+description: A Helm chart for padel-score, a padel match scorer with live spectator links
+type: application
+version: 0.1.0
+appVersion: "v0.1.0"
+keywords:
+  - padel-score
+  - padel
+  - scoring
+sources:
+  - https://github.com/jfms7s/padel-score
+  - https://github.com/jfms7s/helm-charts
+maintainers:
+  - name: jfms7s
+    url: https://github.com/jfms7s

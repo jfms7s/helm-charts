@@ -1,0 +1,132 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: server-deployment
+templates:
+  - templates/server-deployment.yaml
+tests:
+  - it: fails without a volume unless ephemeral is explicit
+    set:
+      server.persistence.ephemeral: false
+    asserts:
+      - failedTemplate:
+          errorMessage: "padel-score-helm: set server.persistence.volume (or claim.size and point volume at it), or server.persistence.ephemeral=true to accept data loss"
+
+  - it: uses emptyDir when ephemeral is set
+    set:
+      server.persistence.ephemeral: true
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value: {name: data, emptyDir: {}}
+
+  - it: hardened security defaults
+    set:
+      server.persistence.ephemeral: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+            seccompProfile: {type: RuntimeDefault}
+      - equal:
+          path: spec.template.spec.securityContext
+          value: {fsGroup: 65532, fsGroupChangePolicy: OnRootMismatch}
+      - contains:
+          path: spec.template.spec.volumes
+          content: {name: tmp, emptyDir: {}}
+
+  - it: has a startupProbe on the health endpoint
+    set:
+      server.persistence.ephemeral: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.path
+          value: /api/health
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.periodSeconds
+          value: 5
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.failureThreshold
+          value: 60
+  - it: deployment uses Recreate and health probes
+    set:
+      server.persistence.ephemeral: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-padel-score-server
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/padel-score:v0.1.0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATA_DIR
+            value: /data
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PORT
+            value: "8080"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LOG_LEVEL
+            value: info,sqlx=warn
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /api/health
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /api/health
+
+  - it: no pull secrets by default
+    set:
+      server.persistence.ephemeral: true
+    asserts:
+      - notExists:
+          path: spec.template.spec.imagePullSecrets
+
+  - it: passes log level, extra env and pull secrets through
+    set:
+      server.persistence.ephemeral: true
+      server.logLevel: debug
+      server.extraEnv: [{name: TZ, value: Europe/Lisbon}]
+      imagePullSecrets: [{name: ghcr-pull}]
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: LOG_LEVEL, value: debug}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: TZ, value: Europe/Lisbon}
+      - equal:
+          path: spec.template.spec.imagePullSecrets
+          value: [{name: ghcr-pull}]
+
+  - it: mounts a custom volume source with a subPath
+    set:
+      server.persistence.volume:
+        nfs: {server: 192.168.1.10, path: /volumes/padel-score}
+      server.persistence.subPath: data
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value:
+            name: data
+            nfs: {server: 192.168.1.10, path: /volumes/padel-score}
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0].subPath
+          value: data

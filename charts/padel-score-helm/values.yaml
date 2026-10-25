@@ -1,0 +1,83 @@
+image:
+  repository: ghcr.io/jfms7s/padel-score
+  tag: v0.1.0
+  pullPolicy: IfNotPresent
+# The image is public on ghcr.io, so no pull secret is needed. Name a
+# docker-registry Secret here only if you mirror it somewhere private.
+imagePullSecrets: []
+
+server:
+  # Log filter, RUST_LOG syntax (LOG_LEVEL), e.g. "info" or "debug,sqlx=warn".
+  logLevel: "info,sqlx=warn"
+  # Extra environment variables appended to the server container. Each entry
+  # is {name, value} or {name, valueFrom} (a standard EnvVarSource, e.g. a
+  # secretKeyRef); valueFrom wins when both are set.
+  extraEnv: []
+  # Volume source for /data: the SQLite database. Each value is the full body
+  # of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
+  # persistentVolumeClaim, etc. Left empty (emptyDir, non-persistent) by
+  # default since the right backend is environment-specific; set explicitly
+  # by the caller, e.g.:
+  #   persistence:
+  #     volume:
+  #       persistentVolumeClaim:
+  #         claimName: <release>-padel-score-server-data
+  # The container runs as uid 65532 (distroless nonroot), so the volume must
+  # be writable by it: set podSecurityContext.fsGroup: 65532 for volumes that
+  # honour fsGroup, or chown the export for NFS.
+  persistence:
+    # Rendering fails unless a `volume` or a `claim` (with size) is set, so
+    # data is never silently lost on an emptyDir. Set true to opt in to a
+    # non-persistent emptyDir (quick tests only).
+    ephemeral: false
+    volume: {}
+    # Optional: have the chart create a PVC named <release>-padel-score-server-data.
+    # Point `volume` at it with persistentVolumeClaim.claimName. Kept on uninstall/prune.
+    claim:
+      # Created when size is set; storageClassName empty = cluster default class.
+      storageClassName: ""
+      size: ""
+    # Optional subdirectory of the volume to mount as /data (keeps ext4's
+    # lost+found out of the data dir on block-backed PVCs).
+    subPath: ""
+
+resources: {}
+  # limits:
+  #   cpu: 500m
+  #   memory: 256Mi
+  # requests:
+  #   cpu: 50m
+  #   memory: 64Mi
+
+# The image runs as uid 65532 (distroless nonroot) and only writes to /data.
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+  seccompProfile:
+    type: RuntimeDefault
+
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+
+# The app streams live scores over Server-Sent Events (text/event-stream).
+# Traefik streams SSE by default, so no buffering middleware or annotation is
+# needed. If you front it with a buffering proxy (e.g. nginx), disable
+# response buffering for /api/ there.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - host: padel-score.example.local
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 8080
+  tls: []

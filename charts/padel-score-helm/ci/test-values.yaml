@@ -1,0 +1,9 @@
+# CI-only values: the chart refuses to render without a data volume.
+server:
+  persistence:
+    claim:
+      storageClassName: standard
+      size: 1Gi
+    volume:
+      persistentVolumeClaim:
+        claimName: test-release-padel-score-server-data

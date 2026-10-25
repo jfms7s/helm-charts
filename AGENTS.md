@@ -12,6 +12,7 @@ helm-charts/
 │   ├── data-lab-helm/   # Shared infra for the Spark/Flink learning labs
 │   ├── patchmon-helm/   # Chart for PatchMon application
 │   ├── tompero-helm/    # Chart for Chez Tomperô recipe manager
+│   ├── padel-score-helm/ # Chart for padel-score match scorer
 │   ├── meiun-helm/      # Chart for meiun, the LLM-villager village sim
 │   ├── eng-metrics-lab-helm/  # Chart for the eng-metrics-lab code-quality reporting stack
 │   ├── ticket-live-event-scanner-helm/  # Chart for Ticket Live Event Scanner
@@ -77,6 +78,12 @@ Application-specific chart for deploying [Chez Tomperô](https://github.com/jfms
 - Server deployment (single replica, Recreate) + Service + optional Ingress
 - `/data` volume for the SQLite database and images, with an optional chart-created PVC (kept on uninstall)
 - Optional external Postgres via `server.databaseUrl` (EnvVarSource)
+
+### padel-score-helm
+Application-specific chart for deploying [padel-score](https://github.com/jfms7s/padel-score), a padel match scorer with live spectator links (SSE). Modeled on tompero-helm. Includes:
+- Server deployment (single replica, Recreate; SQLite single writer) + Service + optional Ingress
+- `/data` volume for the SQLite database, with an optional chart-created PVC (kept on uninstall)
+- Public image, so no pull secret by default
 
 ### ticket-live-event-scanner-helm
 Application-specific chart for deploying [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings. Modeled on upstream's own [deploy/k8s](https://github.com/jfms7s/ticket-live-event-scanner/tree/main/deploy/k8s) manifests. Includes:
