@@ -69,7 +69,7 @@ tests:
           value: Recreate
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/jfms7s/padel-score:v0.1.0
+          value: ghcr.io/jfms7s/padel-score:v0.2.0
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -130,3 +130,55 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].volumeMounts[0].subPath
           value: data
+
+  - it: renders account env defaults without empty vars
+    set:
+      server.persistence.ephemeral: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: SECURE_COOKIES, value: "true"}
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: {name: TRUSTED_PROXIES, value: ""}
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name=="TRUSTED_PROXIES")]
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name=="PUBLIC_ORIGIN")]
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name=="SETUP_TOKEN")]
+
+  - it: renders account env overrides
+    set:
+      server.persistence.ephemeral: true
+      server.secureCookies: false
+      server.trustedProxies: 10.42.0.0/16
+      server.publicOrigin: https://padel.example.com
+      server.setupToken.value: tok
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: SECURE_COOKIES, value: "false"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: TRUSTED_PROXIES, value: 10.42.0.0/16}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: PUBLIC_ORIGIN, value: https://padel.example.com}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: SETUP_TOKEN, value: tok}
+
+  - it: setupToken valueFrom renders a secretKeyRef
+    set:
+      server.persistence.ephemeral: true
+      server.setupToken.value: ignored
+      server.setupToken.valueFrom:
+        secretKeyRef: {name: padel-setup, key: token}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SETUP_TOKEN
+            valueFrom:
+              secretKeyRef: {name: padel-setup, key: token}

@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/jfms7s/padel-score
-  tag: v0.1.0
+  tag: v0.2.0
   pullPolicy: IfNotPresent
 # The image is public on ghcr.io, so no pull secret is needed. Name a
 # docker-registry Secret here only if you mirror it somewhere private.
@@ -9,6 +9,22 @@ imagePullSecrets: []
 server:
   # Log filter, RUST_LOG syntax (LOG_LEVEL), e.g. "info" or "debug,sqlx=warn".
   logLevel: "info,sqlx=warn"
+  # Session cookies carry the Secure attribute (SECURE_COOKIES). Keep true
+  # behind HTTPS; set false only for plain-HTTP local testing.
+  secureCookies: true
+  # Comma-separated CIDRs/IPs of reverse proxies whose X-Forwarded-* headers are
+  # trusted (TRUSTED_PROXIES), e.g. the ingress controller's pod network.
+  # Empty = the variable is omitted.
+  trustedProxies: ""
+  # Public origin of the site, e.g. "https://padel.example.com" (PUBLIC_ORIGIN).
+  # Empty = the variable is omitted.
+  publicOrigin: ""
+  # Optional first-run setup token (SETUP_TOKEN). Unset by default: the app logs
+  # a one-time code instead. Use `valueFrom` (e.g. a secretKeyRef) to keep it
+  # out of values; `valueFrom` takes precedence over `value`.
+  setupToken:
+    value: ""
+    valueFrom: {}
   # Extra environment variables appended to the server container. Each entry
   # is {name, value} or {name, valueFrom} (a standard EnvVarSource, e.g. a
   # secretKeyRef); valueFrom wins when both are set.
