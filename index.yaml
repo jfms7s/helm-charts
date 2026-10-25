@@ -611,6 +611,28 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/meiun-helm-0.1.0/meiun-helm-0.1.0.tgz
     version: 0.1.0
+  padel-score-helm:
+  - apiVersion: v2
+    appVersion: v0.1.0
+    created: "2026-10-25T15:39:58.611966202Z"
+    description: A Helm chart for padel-score, a padel match scorer with live spectator
+      links
+    digest: 7ab1848eb40b1000fb6b64ad6c9f5fad015630bf1cf7eff3a79ec514ad2b3277
+    keywords:
+    - padel-score
+    - padel
+    - scoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: padel-score-helm
+    sources:
+    - https://github.com/jfms7s/padel-score
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/padel-score-helm-0.1.0/padel-score-helm-0.1.0.tgz
+    version: 0.1.0
   patchmon-helm:
   - apiVersion: v2
     appVersion: latest
@@ -845,4 +867,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-20T22:58:34.954613038Z"
+generated: "2026-10-25T15:39:58.612062983Z"
