@@ -1,5 +1,7 @@
 # Common Chart
 
+> **Scope (frozen):** one single-container Deployment + Service + optional Ingress + PVCs (+ ServiceAccount). Defect fixes only; anything that needs a CronJob, StatefulSet, sidecar, ConfigMap, ServiceMonitor or PDB uses bjw-s `app-template` instead (see "Choosing a composition model" in the repo's `AGENTS.md`).
+
 A generic Helm chart for deploying containerized applications to Kubernetes. This chart provides a standardized template with common configurations for deployments, services, and ingress.
 
 ## Prerequisites

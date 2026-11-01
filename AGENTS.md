@@ -96,11 +96,22 @@ Application-specific chart for deploying [Ticket Live Event Scanner](https://git
 - Ingress configuration
 
 ### common
-Reusable chart for deploying containerized applications. Provides:
-- Deployment template
-- Service configuration
-- Ingress support
+Generic chart for one single-container application per release, consumed from helm-argo-cd. **Its scope is frozen** (see "Choosing a composition model"). Provides:
+- One Deployment with one container (plus init containers, probes, update strategy and pod placement)
+- One Service
+- Optional Ingress
+- Optional PersistentVolumeClaims
 - ServiceAccount management
+
+## Choosing a composition model
+
+Owner decision, 2026-10-09:
+
+- **One container, no chart-specific logic** -> a `common` release (configured from helm-argo-cd values). If it needs something outside `common`'s scope below, use bjw-s [`app-template`](https://bjw-s-labs.github.io/helm-charts/docs/app-template/) (`oci://ghcr.io/bjw-s-labs/helm/app-template`) instead.
+- **Several workloads, or render-time validation** (required-value guards, derived config) -> a bespoke `<app>-helm` chart in this repo.
+- **A backing service used by one app** (database, broker, cache) -> either embedded in the app's chart behind `<svc>.enabled`, or a companion source next to the app in helm-argo-cd, with one rule repo-wide. Which of the two is that rule is not decided yet; the two existing sqld placements (embedded in `firstdime-helm`, a `common` companion source for the ticket scanner) stay as they are until it is. Moving a component between the two changes its Service DNS name and so its consumers' config.
+
+**`common`'s scope is frozen** at a single-container Deployment + Service + optional Ingress + PVCs (+ ServiceAccount). It gets defect fixes only, no new controller features: no CronJob, StatefulSet, sidecar or second container, ConfigMap, ServiceMonitor, PodDisruptionBudget or `extraObjects`. The next app that needs one of those uses `app-template`. Existing `common` apps move to `app-template` only when they are next touched for another reason (an owner-run change in helm-argo-cd, one app at a time).
 
 ## Development Commands
 
