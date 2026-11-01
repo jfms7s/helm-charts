@@ -12,9 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {contents: read}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
       - name: Code quality (report-only)
-        uses: jfms7s/eng-metrics-lab/action@v0
+        uses: jfms7s/eng-metrics-lab/action@961b196f18ec58c1fc42cdd0e7e000094a39f545 # v0.4.0
         continue-on-error: true
