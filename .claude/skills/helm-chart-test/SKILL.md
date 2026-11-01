@@ -7,7 +7,7 @@ user-invocable: true
 # /helm-chart-test [chart] [component]
 
 Use this skill whenever the user asks to add, expand, fix, or review helm-unittest
-coverage for `charts/common`, `charts/affine-helm`, or `charts/patchmon-helm`, or
+coverage for any chart under `charts/` (every chart has a `tests/` directory), or
 when a chart feature change (e.g. via the `compose-to-chart` skill) needs matching
 rendered-manifest tests.
 
@@ -19,7 +19,7 @@ rendered behavior without pausing for broad coverage analysis, unless the reques
 behavior is ambiguous.
 
 **If no arguments are provided for a standalone test task**, ask the user which
-chart they want to work on (`common`, `affine-helm`, or `patchmon-helm`).
+chart they want to work on (`ls charts/`).
 
 **If only `<chart>` is provided for a standalone coverage audit**, run the
 discovery and coverage analysis below before asking any questions.
@@ -133,6 +133,10 @@ Tests are YAML files in `charts/<chart-name>/tests/` that validate rendered
 Kubernetes manifests. Each `tests[].it` case renders independently with that
 case's value inputs. Keep tests focused: one behavior per test, explicit value
 overrides via `set`, scoped assertions.
+
+Charts whose defaults refuse to render (required credentials or volumes:
+`firstdime-helm`, `meiun-helm`) load their CI fixture at suite level with
+`values: [../ci/test-values.yaml]`; new suites for those charts do the same.
 
 ### Test File Structure
 

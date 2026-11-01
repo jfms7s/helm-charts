@@ -79,23 +79,22 @@ helm delete my-release
 
 ## Development
 
-### Linting
+```bash
+make test    # every check CI runs, on every chart: lint, template, kubeconform, helm-unittest
+make help    # the individual targets (lint, template, validate, helm-unittest, check-version, ...)
+```
+
+`make test` is the gate; run it before opening a pull request. The tools it needs (kubeconform, the helm-unittest plugin) are installed at pinned, checksum-verified versions on first use.
+
+### By hand
 
 ```bash
 helm lint charts/common
-```
-
-### Template Testing
-
-```bash
 helm template my-release charts/common
-```
-
-### Package Chart
-
-```bash
 helm package charts/common
 ```
+
+`firstdime-helm`, `meiun-helm` and `padel-score-helm` fail to render on their defaults by design (required credentials and volumes); add `-f charts/<chart>/ci/test-values.yaml`.
 
 ### Unit Testing
 
@@ -106,14 +105,12 @@ make helm-unittest                        # every chart
 make helm-unittest HELM_CHART=common      # one chart
 ```
 
-Or use the [Makefile](Makefile) (`make help`) to lint, template, validate, and unit-test every chart in the repo at once — the same checks CI runs.
-
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test your changes with `helm lint` and `helm template`
+4. Run `make test` (and bump the chart `version` if its content changed: `make check-version`)
 5. Submit a pull request
 
 ## License
