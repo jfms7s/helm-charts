@@ -7,9 +7,6 @@ A collection of Helm charts for Kubernetes applications.
 ### Common
 A generic application chart that provides a standardized template for deploying containerized applications to Kubernetes.
 
-### affine-helm
-Deploys [Affine](https://affine.pro/), a self-hosted workspace/collaboration app, with its Postgres (pgvector) database and Redis cache. See [charts/affine-helm/README.md](charts/affine-helm/README.md).
-
 ### firstdime-helm
 Deploys [First Dime](https://github.com/jfms7s/firstdime) (Number One Dime), a personal finance application, with its API server, web UI frontend, async worker, NATS (JetStream) message bus, an optional Frankfurter exchange-rate API, and optional Enable Banking bank sync (bank-sync). See [charts/firstdime-helm/README.md](charts/firstdime-helm/README.md).
 
