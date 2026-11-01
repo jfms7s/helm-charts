@@ -135,10 +135,16 @@ webUiApi:
     repository: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api
     tag: latest
     pullPolicy: IfNotPresent
-  # Allowed frontend origin(s). "*" matches upstream's own default: the API
-  # is unauthenticated and only reachable in-cluster, so relaxing CORS here
-  # exposes nothing sensitive (see upstream docs/design.md).
-  corsOrigin: "*"
+  # Allowed frontend origin(s) (CORS_ORIGIN). The API is unauthenticated,
+  # and some calls have side effects (marking an event purchased sends email
+  # and calendar invites). Empty (default): https://<first ingress host> when
+  # the ingress is on, else "*" -- harmless only while the API is reachable
+  # in-cluster alone. Routing /api through the ingress (a path with
+  # `service: <release>-ticket-scanner-web-ui-api`) publishes the API to
+  # anyone who can reach that host: put an auth middleware in front of it
+  # (see the README's Security section). Set this explicitly if the frontend
+  # is served from another origin or over plain http.
+  corsOrigin: ""
   resources:
     requests:
       cpu: 50m

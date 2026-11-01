@@ -45,3 +45,18 @@ valueFrom: {{- toYaml .valueFrom | nindent 2 }}
 value: {{ .value | default "CHANGE_ME" | quote }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+CORS_ORIGIN for web-ui-api: webUiApi.corsOrigin when set; else, with the
+ingress on, https://<first ingress host> (the origin the frontend is served
+from); else "*" (the API is then reachable only in-cluster).
+*/}}
+{{- define "ticket-live-event-scanner-helm.corsOrigin" -}}
+{{- if .Values.webUiApi.corsOrigin -}}
+{{- .Values.webUiApi.corsOrigin -}}
+{{- else if and .Values.ingress.enabled .Values.ingress.hosts (first .Values.ingress.hosts).host -}}
+{{- printf "https://%s" (first .Values.ingress.hosts).host -}}
+{{- else -}}
+*
+{{- end -}}
+{{- end -}}
