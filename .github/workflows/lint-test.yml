@@ -27,6 +27,7 @@ jobs:
       - name: Lint Helm charts
         run: |
           helm lint charts/common
+          helm lint -f charts/common/ci/ingress-values.yaml charts/common
           helm lint charts/affine-helm
           helm lint charts/data-lab-helm
           helm lint charts/patchmon-helm
@@ -42,6 +43,7 @@ jobs:
       - name: Template Helm charts
         run: |
           helm template test-release charts/common --values charts/common/values.yaml
+          helm template test-release charts/common --values charts/common/values.yaml --values charts/common/ci/ingress-values.yaml
           helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml
@@ -65,6 +67,7 @@ jobs:
       - name: Validate rendered templates
         run: |
           helm template test-release charts/common --values charts/common/values.yaml | kubeconform -summary
+          helm template test-release charts/common --values charts/common/values.yaml --values charts/common/ci/ingress-values.yaml | kubeconform -summary
           helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml | kubeconform -summary
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml | kubeconform -summary
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml | kubeconform -summary

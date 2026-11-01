@@ -46,7 +46,7 @@ The following table lists the configurable parameters of the common chart and th
 | `ingress.enabled` | Enable ingress | `false` |
 | `ingress.className` | Ingress class name | `""` |
 | `ingress.annotations` | Ingress annotations | `{}` |
-| `ingress.hosts` | Ingress host configuration | see values.yaml |
+| `ingress.hosts` | Ingress host configuration; each path's `port` is a Service port name (`http`, rendered as `port.name`) or number (`8080`, rendered as `port.number`), default `80` | see values.yaml |
 | `ingress.tls` | TLS configuration | `[]` |
 
 ### Example Configuration

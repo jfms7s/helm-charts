@@ -35,7 +35,12 @@ spec:
               service:
                 name: {{ $.Release.Namespace }}-{{ include "common.names.fullname" $ }}
                 port:
+                  {{- /* A Service port name ("http") goes in port.name, a number (or a quoted digit string) in port.number. */}}
+                  {{- if and (kindIs "string" .port) (not (regexMatch "^[0-9]+$" (toString .port))) }}
+                  name: {{ .port }}
+                  {{- else }}
                   number: {{ .port | default 80 }}
+                  {{- end }}
           {{- end }}
     {{- end }}
 {{- end }}

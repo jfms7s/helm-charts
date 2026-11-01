@@ -30,14 +30,10 @@ tests:
           path: spec.rules[0].http.paths[0].backend.service.name
           value: NAMESPACE-RELEASE-NAME-common
       - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: http
+      - notExists:
           path: spec.rules[0].http.paths[0].backend.service.port.number
-          # NOTE: values.yaml's own default host ships `port: http` (a port
-          # *name*), but the template does `number: {{ .port | default 80 }}`
-          # -- it never resolves a name to a number, so this renders a
-          # non-numeric `port.number`, which is invalid per the Ingress API
-          # schema. Captured here as current behavior; see PR discussion for
-          # whether values.yaml's example or the template should change.
-          value: "http"
       - notExists:
           path: spec.ingressClassName
       - notExists:
@@ -103,3 +99,51 @@ tests:
       - equal:
           path: spec.rules[1].http.paths[0].pathType
           value: Prefix
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: http
+      - equal:
+          path: spec.rules[1].http.paths[0].backend.service.port.name
+          value: metrics
+
+  - it: renders an integer port as port.number
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: a.example.com
+          paths:
+            - path: /
+              port: 8080
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 8080
+      - notExists:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+
+  - it: defaults a missing port to port.number 80
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: a.example.com
+          paths:
+            - path: /
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 80
+      - notExists:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+
+  - it: renders a quoted numeric port as port.number
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: a.example.com
+          paths:
+            - path: /
+              port: "8080"
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 8080
