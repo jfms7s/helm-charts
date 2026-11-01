@@ -130,11 +130,12 @@ make helm-unittest HELM_CHART=firstdime-helm HELM_UNITTEST_FILE=tests/api-deploy
 make check-version                               # version-bump check CI runs on PRs
 
 # By hand, one chart that renders on its defaults
-helm lint charts/common
-helm template my-release charts/common
+helm lint charts/data-lab-helm
+helm template my-release charts/data-lab-helm
 
-# firstdime-helm, meiun-helm and padel-score-helm refuse to render on their
-# defaults by design (required-credential and volume guards): pass their CI values
+# common, firstdime-helm, meiun-helm and padel-score-helm refuse to render on
+# their defaults by design (required image, credential and volume guards): pass
+# their CI values
 helm lint charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml
 helm template my-release charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml
 ```

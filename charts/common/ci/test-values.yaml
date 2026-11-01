@@ -1,0 +1,6 @@
+# common requires deploy.image.repository (the render fails without it), so
+# CI and the unit-test suites render with this image.
+deploy:
+  image:
+    repository: nginx
+    tag: "1.27"

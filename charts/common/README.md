@@ -25,10 +25,9 @@ The following table lists the configurable parameters of the common chart and th
 |-----------|-------------|---------|
 | `nameOverride` | String to partially override common.names.name | `""` |
 | `fullnameOverride` | String to fully override common.names.fullname | `""` |
-| `commonLabels` | Labels to add to all deployed objects | `{}` |
-| `commonAnnotations` | Annotations to add to all deployed objects | `{}` |
-| `deploy.image.repository` | Container image repository | `""` |
-| `deploy.image.tag` | Container image tag | `""` |
+| `commonAnnotations` | Annotations added to the pod template | `{}` |
+| `deploy.image.repository` | Container image repository (required: the render fails without it) | `""` |
+| `deploy.image.tag` | Container image tag (empty renders the repository alone) | `""` |
 | `deploy.image.pullPolicy` | Container image pull policy | `IfNotPresent` |
 | `deploy.strategy` | Deployment update strategy, rendered verbatim; `type: Recreate` also renders `rollingUpdate: null` so a live RollingUpdate Deployment can be switched in place | `{}` (Kubernetes default, RollingUpdate) |
 | `deploy.nodeSelector` | Node labels the pod must match, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `{}` |

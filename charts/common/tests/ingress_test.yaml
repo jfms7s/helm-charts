@@ -147,3 +147,14 @@ tests:
       - equal:
           path: spec.rules[0].http.paths[0].backend.service.port.number
           value: 8080
+
+  - it: points the backend at the truncated Service name for a long namespace and fullname
+    release:
+      namespace: a-very-long-namespace-name-xx
+    set:
+      ingress.enabled: true
+      fullnameOverride: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: a-very-long-namespace-name-xx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

@@ -52,7 +52,7 @@ spec:
 {{- end }}
       containers:
         - name: {{ include "common.names.name" . | quote }}
-          image: {{ (printf "%s:%s" .Values.deploy.image.repository .Values.deploy.image.tag) | quote }} 
+          image: {{ include "common.image" . | quote }}
           imagePullPolicy: {{ .Values.deploy.image.pullPolicy | quote }}
           securityContext: {{- .Values.deploy.securityContext | toYaml | nindent 12 }}
 {{- if .Values.deploy.env }}
@@ -67,11 +67,12 @@ spec:
           ports:
 {{- range $k, $v := .Values.deploy.containerPorts }}
   {{- if kindIs "map" $v }}
-            - name: {{ $k }}
+            - name: {{ include "common.portName" $k }}
               containerPort: {{ $v.port }}
-              protocol: {{ $v.protocol }}
+              protocol: {{ $v.protocol | default "TCP" }}
   {{- else }}
-            - containerPort: {{ $v }}
+            - name: {{ include "common.portName" $k }}
+              containerPort: {{ $v }}
               protocol: TCP
   {{- end }}
 {{- end }}
