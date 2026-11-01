@@ -9,6 +9,7 @@ KUBECONFORM   := $(BIN_DIR)/kubeconform
 KUBECONFORM_URL := https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
 
 HELM_UNITTEST_VERSION := 1.1.2
+BASE                  ?= origin/main
 HELM_CHART            ?=
 HELM_UNITTEST_FILE    ?= tests/**/*.yaml
 
@@ -18,7 +19,7 @@ else
 UNITTEST_CHARTS := $(HELM_CHART)
 endif
 
-.PHONY: help lint template validate helm-unittest-plugin helm-unittest test package clean $(CHARTS)
+.PHONY: help lint template validate helm-unittest-plugin helm-unittest test check-version package clean $(CHARTS)
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -90,6 +91,9 @@ helm-unittest: helm-unittest-plugin ## Run helm-unittest for every chart, or one
 	done
 
 test: lint template validate helm-unittest ## Run every check the lint-test CI workflow runs
+
+check-version: ## Fail if a changed chart's version was not bumped (BASE=origin/main; CI runs it on PRs)
+	@scripts/check-version-bump.sh $(BASE)
 
 package: ## helm package every chart
 	@for c in $(CHARTS); do \

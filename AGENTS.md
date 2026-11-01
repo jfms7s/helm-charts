@@ -130,6 +130,11 @@ make helm-unittest HELM_CHART=firstdime-helm
 
 See the [Makefile](Makefile) (`make help`) for the same checks CI runs, including `kubeconform` schema validation and `helm-unittest`. Use the `helm-chart-test` skill (`.claude/skills/helm-chart-test/SKILL.md`) to add or expand test coverage for a chart.
 
-## Release Process
+## Chart Versions
+
+Any change to what a chart publishes (`templates/`, `values.yaml`, `Chart.yaml`, `README.md`, `.helmignore`, other chart files) needs a `version` bump in that chart's `Chart.yaml`: the release workflow uses chart-releaser with `skip_existing`, so an unbumped change is never published. Changes only under a chart's `tests/` or `ci/` need no bump.
+
+`make check-version` (`scripts/check-version-bump.sh`, `BASE=origin/main` by default) fails naming each chart whose content changed without a higher version; the `lint-test` workflow runs it on every pull request. It is not part of `make test` because it needs a base ref.
+
 
 Charts are automatically released via GitHub Actions when version tags are pushed.
