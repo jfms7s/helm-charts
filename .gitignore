@@ -8,3 +8,6 @@ charts/*/tests/__snapshot__/
 
 # eng-metrics-lab quality-report output
 .quality/
+
+# git worktrees (agent and human sessions)
+.worktrees/

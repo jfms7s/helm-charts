@@ -1,0 +1,4 @@
+# Renders the chart's own default ingress host (port: http, a Service port
+# name) so kubeconform sees the Ingress branch, which is off by default.
+ingress:
+  enabled: true
