@@ -4,11 +4,27 @@ CHARTS_DIR := charts
 CHARTS     := $(notdir $(wildcard $(CHARTS_DIR)/*))
 RELEASE    := test-release
 
-BIN_DIR       := .bin
-KUBECONFORM   := $(BIN_DIR)/kubeconform
-KUBECONFORM_URL := https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
+BIN_DIR := .bin
 
-HELM_UNITTEST_VERSION := 1.1.2
+# Tool pins. Each *_CHECKSUMS_SHA256 is the sha256 of that release's published
+# checksums file; scripts/fetch-verified.sh checks the file against it, then the
+# downloaded asset against the file. Bump the version and the hash together:
+#   curl -fsSL <checksums-url> | sha256sum
+OS   := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
+
+KUBECONFORM_VERSION          := v0.8.0
+KUBECONFORM_CHECKSUMS_SHA256 := 235fc6d8801ca0b6dba3ff3d49b8751e27c7ec92f4414fe052b283ec50cca0af
+KUBECONFORM_RELEASE          := https://github.com/yannh/kubeconform/releases/download/$(KUBECONFORM_VERSION)
+KUBECONFORM_DIR              := $(BIN_DIR)/kubeconform-$(KUBECONFORM_VERSION)
+KUBECONFORM                  := $(KUBECONFORM_DIR)/kubeconform
+
+HELM_UNITTEST_VERSION          := 1.1.2
+HELM_UNITTEST_CHECKSUMS_SHA256 := 978de67c89f5f92894bf56b8994dcb90dd659dece9bca9caa2a3a4f744cd0f6e
+HELM_UNITTEST_RELEASE          := https://github.com/helm-unittest/helm-unittest/releases/download/v$(HELM_UNITTEST_VERSION)
+HELM_UNITTEST_OS               := $(subst darwin,macos,$(OS))
+HELM_UNITTEST_ASSET            := helm-unittest-$(HELM_UNITTEST_OS)-$(ARCH)-$(HELM_UNITTEST_VERSION).tgz
+
 BASE                  ?= origin/main
 HELM_CHART            ?=
 HELM_UNITTEST_FILE    ?= tests/**/*.yaml
@@ -19,7 +35,7 @@ else
 UNITTEST_CHARTS := $(HELM_CHART)
 endif
 
-.PHONY: help lint template validate helm-unittest-plugin helm-unittest test check-version package clean $(CHARTS)
+.PHONY: help lint template kubeconform validate helm-unittest-plugin helm-unittest test check-version package clean $(CHARTS)
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -58,10 +74,17 @@ template: ## helm template every chart (same as CI's "Template Helm charts" step
 		fi; \
 	done
 
+# The versioned directory makes a version bump re-download; .bin/kubeconform is
+# a symlink to the current one so CI can put .bin/ on PATH.
 $(KUBECONFORM):
-	@mkdir -p $(BIN_DIR)
-	@echo "==> Installing kubeconform to $(KUBECONFORM)"
-	@curl -sSL $(KUBECONFORM_URL) | tar xz -C $(BIN_DIR) kubeconform
+	@echo "==> Installing kubeconform $(KUBECONFORM_VERSION) to $(KUBECONFORM_DIR) (checksum-verified)"
+	@scripts/fetch-verified.sh $(KUBECONFORM_RELEASE)/CHECKSUMS $(KUBECONFORM_CHECKSUMS_SHA256) \
+		$(KUBECONFORM_RELEASE)/kubeconform-$(OS)-$(ARCH).tar.gz $(KUBECONFORM_DIR)/kubeconform.tar.gz
+	@tar xzf $(KUBECONFORM_DIR)/kubeconform.tar.gz -C $(KUBECONFORM_DIR) kubeconform
+	@rm $(KUBECONFORM_DIR)/kubeconform.tar.gz
+	@ln -sfn kubeconform-$(KUBECONFORM_VERSION)/kubeconform $(BIN_DIR)/kubeconform
+
+kubeconform: $(KUBECONFORM) ## Install the pinned kubeconform into .bin/ (checksum-verified)
 
 validate: $(KUBECONFORM) ## Validate rendered manifests against Kubernetes schemas via kubeconform (same as CI)
 	@for c in $(CHARTS); do \
@@ -80,9 +103,25 @@ validate: $(KUBECONFORM) ## Validate rendered manifests against Kubernetes schem
 		fi; \
 	done
 
-helm-unittest-plugin: ## Install the helm-unittest plugin (pinned version below) if not already present
-	@helm plugin list 2>/dev/null | grep -q '^unittest' || \
-		helm plugin install https://github.com/helm-unittest/helm-unittest.git --version $(HELM_UNITTEST_VERSION) --verify=false
+# Unpacks the checksum-verified release tarball straight into Helm's plugin
+# directory instead of `helm plugin install`: the git install runs a hook that
+# downloads the binary itself, and the release ships no provenance for the
+# per-platform tarball. Skips (with a note on a version mismatch) when a
+# unittest plugin is already installed, since two would conflict.
+helm-unittest-plugin: ## Install the pinned helm-unittest plugin (checksum-verified) if none is installed
+	@installed=$$(helm plugin list 2>/dev/null | awk '$$1 == "unittest" { print $$2 }'); \
+	if [ -n "$$installed" ]; then \
+		[ "$$installed" = "$(HELM_UNITTEST_VERSION)" ] || \
+			echo "note: helm-unittest $$installed is installed; CI uses $(HELM_UNITTEST_VERSION)"; \
+	else \
+		dir="$$(helm env HELM_PLUGINS)/helm-unittest"; \
+		echo "==> Installing helm-unittest $(HELM_UNITTEST_VERSION) to $$dir (checksum-verified)"; \
+		scripts/fetch-verified.sh $(HELM_UNITTEST_RELEASE)/helm-unittest-checksum.sha $(HELM_UNITTEST_CHECKSUMS_SHA256) \
+			$(HELM_UNITTEST_RELEASE)/$(HELM_UNITTEST_ASSET) $(BIN_DIR)/$(HELM_UNITTEST_ASSET) && \
+		mkdir -p "$$dir" && tar xzf $(BIN_DIR)/$(HELM_UNITTEST_ASSET) -C "$$dir" && \
+		rm $(BIN_DIR)/$(HELM_UNITTEST_ASSET) && \
+		helm plugin list | grep -q '^unittest' || exit 1; \
+	fi
 
 helm-unittest: helm-unittest-plugin ## Run helm-unittest for every chart, or one via HELM_CHART=<name> (same as CI)
 	@for c in $(UNITTEST_CHARTS); do \

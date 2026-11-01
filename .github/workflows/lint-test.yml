@@ -9,12 +9,19 @@ on:
 permissions:
   contents: read
 
+env:
+  # One pinned Helm for both jobs (bump with the setup-helm pin below).
+  HELM_VERSION: v4.3.1
+
 jobs:
   lint-test:
     runs-on: ubuntu-latest
+    env:
+      # Keep the helm-unittest plugin under .bin/ so one cache covers both tools.
+      HELM_PLUGINS: ${{ github.workspace }}/.bin/helm-plugins
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0   # check-version-bump diffs against the PR base
 
@@ -23,15 +30,21 @@ jobs:
         run: scripts/check-version-bump.sh "origin/${{ github.base_ref }}"
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: ${{ env.HELM_VERSION }}
 
-      - name: Add Helm repos
-        run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
+      # Versions and checksums are pinned in the Makefile; the key changes with it.
+      - name: Cache tools
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .bin
+          key: tools-${{ runner.os }}-${{ hashFiles('Makefile', 'scripts/fetch-verified.sh') }}
 
-      - name: Install helm-unittest plugin
+      - name: Install tools (pinned, checksum-verified)
         run: |
-          helm plugin install https://github.com/helm-unittest/helm-unittest.git --version 1.1.2 --verify=false
+          make helm-unittest-plugin kubeconform
+          echo "$PWD/.bin" >> "$GITHUB_PATH"
 
       - name: Lint Helm charts
         run: |
@@ -64,14 +77,6 @@ jobs:
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/bank-sync-values.yaml
-
-      - name: Install kubeconform
-        run: |
-          # kubeval (previously used here) is archived upstream and its default
-          # schema host (kubernetesjsonschema.dev) is dead; kubeconform is its
-          # maintained successor.
-          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
-          sudo mv kubeconform /usr/local/bin
 
       - name: Validate rendered templates
         run: |
@@ -112,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
@@ -122,10 +127,12 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: ${{ env.HELM_VERSION }}
 
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
+        uses: helm/chart-releaser-action@a917fd15b20e8b64b94d9158ad54cd6345335584 # v1.6.0
         with:
           skip_existing: true
         env:
