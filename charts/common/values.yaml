@@ -12,19 +12,15 @@ nameOverride: ""
 ##
 fullnameOverride: ""
 
-## @param commonLabels Labels to add to all deployed objects
-##
-commonLabels: {}
-
-## @param commonAnnotations Annotations to add to all deployed objects
+## @param commonAnnotations Annotations added to the pod template
 ##
 commonAnnotations: {}
 
 deploy:
 
-  ## deploy image 
-  ## @param deploy.image.repository deploy image repository
-  ## @param deploy.image.tag deploy image tag (immutable tags are recommended)
+  ## deploy image
+  ## @param deploy.image.repository deploy image repository (required: the render fails without it)
+  ## @param deploy.image.tag deploy image tag (immutable tags are recommended; empty renders the repository alone)
   ## @param deploy.image.pullPolicy deploy image pull policy
   ##
   image:
@@ -130,7 +126,9 @@ deploy:
   args: []
     # - --auth=none
 
-  ## @param deploy.containerPorts Container ports configuration
+  ## @param deploy.containerPorts Container ports, keyed by port name (both forms are named, so probes can use `port: http`)
+  ## Scalar form `http: 8080`, or map form `http: {port: 8080, protocol: TCP}` (protocol defaults to TCP).
+  ## Keys must be IANA port names: lowercase letters, digits and "-", at most 15 characters.
   ##
   containerPorts: {}
     # http: 80

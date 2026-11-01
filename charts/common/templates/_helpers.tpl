@@ -37,6 +37,37 @@ If release name contains chart name it will be used as a full name.
 
 
 {{/*
+Service name: <namespace>-<fullname>, truncated to 63 characters (a Service name
+is a DNS-1035 label). The Ingress backend uses this too, so the two can't drift.
+*/}}
+{{- define "common.names.serviceName" -}}
+{{- printf "%s-%s" .Release.Namespace (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Container image: repository (required) and, when set, ":<tag>".
+*/}}
+{{- define "common.image" -}}
+{{- $repo := required "common: deploy.image.repository must be set" .Values.deploy.image.repository -}}
+{{- if .Values.deploy.image.tag -}}
+{{- printf "%s:%s" $repo (toString .Values.deploy.image.tag) -}}
+{{- else -}}
+{{- $repo -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Container port name: must be an IANA service name (lowercase letters, digits
+and "-", at most 15 characters, starting and ending alphanumeric).
+*/}}
+{{- define "common.portName" -}}
+{{- if not (regexMatch "^[a-z0-9]([a-z0-9-]{0,13}[a-z0-9])?$" . ) -}}
+{{- fail (printf "common: deploy.containerPorts key %q is not a valid port name (lowercase letters, digits and '-', at most 15 characters)" .) -}}
+{{- end -}}
+{{- . -}}
+{{- end -}}
+
+{{/*
 Standard labels
 */}}
 {{- define "common.labels.standard" -}}

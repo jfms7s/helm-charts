@@ -33,7 +33,7 @@ spec:
             pathType: {{ .pathType | default "Prefix" }}
             backend:
               service:
-                name: {{ $.Release.Namespace }}-{{ include "common.names.fullname" $ }}
+                name: {{ include "common.names.serviceName" $ }}
                 port:
                   {{- /* A Service port name ("http") goes in port.name, a number (or a quoted digit string) in port.number. */}}
                   {{- if and (kindIs "string" .port) (not (regexMatch "^[0-9]+$" (toString .port))) }}

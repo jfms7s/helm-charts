@@ -134,9 +134,10 @@ Kubernetes manifests. Each `tests[].it` case renders independently with that
 case's value inputs. Keep tests focused: one behavior per test, explicit value
 overrides via `set`, scoped assertions.
 
-Charts whose defaults refuse to render (required credentials or volumes:
-`firstdime-helm`, `meiun-helm`) load their CI fixture at suite level with
-`values: [../ci/test-values.yaml]`; new suites for those charts do the same.
+Charts whose defaults refuse to render (required image, credentials or volumes:
+`firstdime-helm`, `meiun-helm`, and `common`'s deployment suite) load their CI
+fixture at suite level with `values: [../ci/test-values.yaml]`; new suites for
+those templates do the same.
 
 ### Test File Structure
 

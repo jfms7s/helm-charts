@@ -89,12 +89,12 @@ make help    # the individual targets (lint, template, validate, helm-unittest, 
 ### By hand
 
 ```bash
-helm lint charts/common
-helm template my-release charts/common
+helm lint charts/common -f charts/common/ci/test-values.yaml
+helm template my-release charts/common -f charts/common/ci/test-values.yaml
 helm package charts/common
 ```
 
-`firstdime-helm`, `meiun-helm` and `padel-score-helm` fail to render on their defaults by design (required credentials and volumes); add `-f charts/<chart>/ci/test-values.yaml`.
+`common`, `firstdime-helm`, `meiun-helm` and `padel-score-helm` fail to render on their defaults by design (required image, credentials and volumes); add `-f charts/<chart>/ci/test-values.yaml`.
 
 ### Unit Testing
 

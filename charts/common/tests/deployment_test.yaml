@@ -2,6 +2,8 @@
 suite: deployment
 templates:
   - templates/deployment.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders with chart defaults
     asserts:
@@ -18,7 +20,7 @@ tests:
           value: 1
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ":"
+          value: "nginx:1.27"
       - equal:
           path: spec.template.spec.containers[0].imagePullPolicy
           value: IfNotPresent
@@ -43,6 +45,73 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].image
           value: "nginx:1.27"
+
+  - it: fails when deploy.image.repository is empty
+    set:
+      deploy.image.repository: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "common: deploy.image.repository must be set"
+
+  - it: renders the repository alone when deploy.image.tag is empty
+    set:
+      deploy.image.tag: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: nginx
+
+  - it: names scalar-form container ports after their key
+    set:
+      deploy.containerPorts:
+        http: 8080
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+  - it: defaults protocol to TCP for map-form container ports
+    set:
+      deploy.containerPorts:
+        metrics:
+          port: 9090
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+
+  - it: keeps an explicit map-form protocol
+    set:
+      deploy.containerPorts:
+        dns:
+          port: 53
+          protocol: UDP
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].protocol
+          value: UDP
+
+  - it: fails on a container port key that is not a valid port name
+    set:
+      deploy.containerPorts:
+        Bad_Name: 8080
+    asserts:
+      - failedTemplate:
+          errorPattern: "deploy.containerPorts key \"Bad_Name\" is not a valid port name"
+
+  - it: fails on a container port key longer than 15 characters
+    set:
+      deploy.containerPorts:
+        a-very-long-port-name: 8080
+    asserts:
+      - failedTemplate:
+          errorPattern: "is not a valid port name"
 
   - it: applies standard and component labels to the pod template and matchLabels
     asserts:
@@ -76,6 +145,7 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].ports
           content:
+            name: http
             containerPort: 80
             protocol: TCP
       - contains:
