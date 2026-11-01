@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   lint-test:
     runs-on: ubuntu-latest
@@ -98,3 +101,32 @@ jobs:
           helm unittest charts/ticket-live-event-scanner-helm --file 'tests/**/*.yaml'
           helm unittest charts/eng-metrics-lab-helm --file 'tests/**/*.yaml'
           helm unittest charts/firstdime-helm --file 'tests/**/*.yaml'
+
+  # Publishes every chart whose Chart.yaml version has no release yet, only
+  # after lint-test passed on the same push to main. Never runs on PRs.
+  release:
+    needs: lint-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.6.0
+        with:
+          skip_existing: true
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

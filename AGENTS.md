@@ -137,4 +137,6 @@ Any change to what a chart publishes (`templates/`, `values.yaml`, `Chart.yaml`,
 `make check-version` (`scripts/check-version-bump.sh`, `BASE=origin/main` by default) fails naming each chart whose content changed without a higher version; the `lint-test` workflow runs it on every pull request. It is not part of `make test` because it needs a base ref.
 
 
-Charts are automatically released via GitHub Actions when version tags are pushed.
+Charts are released by the `release` job in `.github/workflows/lint-test.yml` ("Lint and Test Charts"). It runs only on a push to `main` and only after the `lint-test` job (lint, template, kubeconform, helm-unittest) passed in the same run. chart-releaser (`skip_existing: true`) then packages every chart whose `Chart.yaml` version has no GitHub Release yet, publishes it as a GitHub Release and adds it to the `gh-pages` `index.yaml`. A published version is permanent. Pull requests run `lint-test` (plus the version-bump check) and never the release job.
+
+If CI cannot run (runner outage), re-run it and merge only once `lint-test` is green; never hand-publish to `gh-pages` or Releases. If a release job fails after merge, fix forward: the next green push to `main` publishes any version still missing.
