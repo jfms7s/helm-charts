@@ -50,7 +50,6 @@ jobs:
         run: |
           helm lint -f charts/common/ci/test-values.yaml charts/common
           helm lint -f charts/common/ci/test-values.yaml -f charts/common/ci/ingress-values.yaml charts/common
-          helm lint charts/affine-helm
           helm lint charts/data-lab-helm
           helm lint charts/patchmon-helm
           helm lint charts/tompero-helm
@@ -66,7 +65,6 @@ jobs:
         run: |
           helm template test-release charts/common --values charts/common/ci/test-values.yaml
           helm template test-release charts/common --values charts/common/ci/test-values.yaml --values charts/common/ci/ingress-values.yaml
-          helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml
           helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml
@@ -82,7 +80,6 @@ jobs:
         run: |
           helm template test-release charts/common --values charts/common/ci/test-values.yaml | kubeconform -summary
           helm template test-release charts/common --values charts/common/ci/test-values.yaml --values charts/common/ci/ingress-values.yaml | kubeconform -summary
-          helm template test-release charts/affine-helm --values charts/affine-helm/values.yaml | kubeconform -summary
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml | kubeconform -summary
           helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml | kubeconform -summary
           helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml | kubeconform -summary
@@ -97,7 +94,6 @@ jobs:
       - name: Run helm-unittest
         run: |
           helm unittest charts/common --file 'tests/**/*.yaml'
-          helm unittest charts/affine-helm --file 'tests/**/*.yaml'
           helm unittest charts/data-lab-helm --file 'tests/**/*.yaml'
           helm unittest charts/patchmon-helm --file 'tests/**/*.yaml'
           helm unittest charts/tompero-helm --file 'tests/**/*.yaml'

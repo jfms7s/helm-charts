@@ -1,6 +1,6 @@
 ---
 name: compose-to-chart
-description: Create a new Helm chart in this repo from an application's docker-compose.yml, or update an existing chart when upstream's compose file changes. Use when the user says "build/create a chart for <repo>", "same as affine/patchmon, build a chart for X", or "update the <x>-helm chart from upstream".
+description: Create a new Helm chart in this repo from an application's docker-compose.yml, or update an existing chart when upstream's compose file changes. Use when the user says "build/create a chart for <repo>", "same as patchmon, build a chart for X", or "update the <x>-helm chart from upstream".
 user-invocable: true
 ---
 
@@ -8,10 +8,9 @@ user-invocable: true
 
 Converts a `docker-compose.yml` (usually from an upstream project's repo)
 into a Helm chart under `charts/<app>-helm/` that matches the conventions
-already established by `charts/affine-helm` and `charts/patchmon-helm`, or
-updates an existing chart when upstream's compose file has drifted. Read
-both of those charts first if this is your first time using this skill —
-they are the canonical reference, more authoritative than any summary here.
+already established by `charts/patchmon-helm`, or updates an existing
+chart when upstream's compose file has drifted. Read that chart first if
+this is your first time using this skill — it is the canonical reference, more authoritative than any summary here.
 
 $ARGUMENTS is either a path/URL to a `docker-compose.yml` (create mode) or
 the name of an existing `charts/*-helm` directory to refresh (update mode).
@@ -49,7 +48,7 @@ If ambiguous, ask.
 ## `_helpers.tpl` — copy this pattern verbatim, renaming the prefix
 
 Every chart in this repo defines the same three helpers, prefixed with the
-chart name (`affine-helm.*`, `patchmon-helm.*`). Copy
+chart name (`patchmon-helm.*`). Copy
 `charts/patchmon-helm/templates/_helpers.tpl` and rename:
 
 - `<chart>.chart` — the `helm.sh/chart` label value.
@@ -70,8 +69,8 @@ does `{{ .Values.x.y | default "CHANGE_ME" }}` — see "Secrets" below for why.
 Go service-by-service. For each one, decide: does it need persistent state
 (→ Deployment + Service, `strategy: Recreate` if it owns a volume) or is it
 stateless (→ Deployment + Service, default `RollingUpdate`)? This repo never
-uses StatefulSets even for the databases — matches how affine-helm and
-patchmon-helm already do it, keep it consistent.
+uses StatefulSets even for the databases — matches how
+patchmon-helm already does it, keep it consistent.
 
 | Compose concept | Helm/K8s translation |
 |---|---|
@@ -82,7 +81,7 @@ patchmon-helm already do it, keep it consistent.
 | `depends_on: condition: service_healthy` | Not directly portable — express the same ordering guarantee via that dependency's own liveness/readiness probes; don't add init containers unless the app truly crash-loops without one |
 | `healthcheck.test: ["CMD", "pg_isready", ...]` | `exec` probe running the same command. `CMD-SHELL "a && b"` → `["sh", "-c", "a && b"]` |
 | `healthcheck.interval/timeout/retries` | `periodSeconds` / `timeoutSeconds` / `failureThreshold`. If probe needs a container env var (e.g. a password), it's available — exec probes run inside the container's own environment |
-| `volumes:` (named volume) | `values.yaml`: `<component>.persistence.volume: {}`; template does `{{- if .Values.x.persistence.volume }}{{ toYaml ... }}{{- else }}emptyDir: {}{{- end }}`. Never default to a specific storage class — see affine-helm's README note on why |
+| `volumes:` (named volume) | `values.yaml`: `<component>.persistence.volume: {}`; template does `{{- if .Values.x.persistence.volume }}{{ toYaml ... }}{{- else }}emptyDir: {}{{- end }}`. Never default to a specific storage class: the right backend (NFS, hostPath, a PVC, cloud block storage, ...) is environment-specific, so leave it to the deployer |
 | `restart: unless-stopped` | Deployment pod spec `restartPolicy: Always` (the only legal value for a Deployment anyway) |
 | `read_only: true` | container `securityContext.readOnlyRootFilesystem: true` |
 | `tmpfs: [/path:size=Nm]` | a `volumes: [{name, emptyDir: {medium: Memory, sizeLimit: Nm}}]` mounted at that path |

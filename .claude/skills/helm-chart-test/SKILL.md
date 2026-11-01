@@ -53,17 +53,16 @@ subdirectory components), so treat each chart as a single unit rather than
 running the "simple vs. complex" split from larger multi-component charts.
 
 - **Release name**: use `RELEASE-NAME` in assertions (helm-unittest's default),
-  matching how `common`, `affine-helm`, and `patchmon-helm` tests already do it.
+  matching how `common` and `patchmon-helm` tests already do it.
 - **Namespace**: `common`'s templates set `metadata.namespace` explicitly
-  (default renders as `NAMESPACE`); `affine-helm` and `patchmon-helm` templates
+  (default renders as `NAMESPACE`); `patchmon-helm` templates
   do not set it at all — don't assert a namespace for those.
 - **Secrets**: every chart resolves `CHANGE_ME`-default credentials through a
   `<chart>.<x>.<y>` helper (see `_helpers.tpl`) and base64-encodes them into a
   `Secret`. Test both the default (`CHANGE_ME`) and a custom value; compute the
   expected base64 with `printf '%s' "<value>" | base64` rather than guessing.
-- **Persistence volumes**: `postgres.persistence.volume`,
-  `redis.persistence.volume`, and (affine only) `persistence.config.volume` /
-  `persistence.storage.volume` default to `{}` → renders `emptyDir: {}`. Test
+- **Persistence volumes**: `postgres.persistence.volume`
+  and `redis.persistence.volume` default to `{}` → renders `emptyDir: {}`. Test
   both the default and a custom volume source (e.g. an `nfs` block) to cover
   the `{{- if .Values.x.persistence.volume }}...{{- else }}emptyDir: {}{{- end }}`
   branch.
@@ -72,7 +71,7 @@ running the "simple vs. complex" split from larger multi-component charts.
   `deploy.serviceAccount.create` (common, default `false`) gate whole documents.
   Always test both branches with `hasDocuments: { count: 0 }` for the disabled
   case.
-- **Labels**: `affine-helm` and `patchmon-helm` labels come from
+- **Labels**: `patchmon-helm` labels come from
   `<chart>.labels` / `<chart>.selectorLabels`, called as
   `(dict "context" $ "name" "<component>" "component" "<role>")` — pass both
   when asserting the full label set, but remember `selectorLabels` only has
