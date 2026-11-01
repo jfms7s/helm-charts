@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Keeps CI pins fresh: Actions (by SHA) and the tool versions in the Makefile and lint-test.yml. Chart image defaults are not covered yet. Nothing automerges.",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "dependencyDashboard": true,
+  "automerge": false,
+  "minimumReleaseAge": "14 days",
+  "enabledManagers": ["github-actions", "custom.regex"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "kubeconform version in the Makefile",
+      "managerFilePatterns": ["/^Makefile$/"],
+      "matchStrings": ["KUBECONFORM_VERSION\\s*:=\\s*(?<currentValue>v\\S+)"],
+      "depNameTemplate": "yannh/kubeconform",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "helm-unittest plugin version in the Makefile",
+      "managerFilePatterns": ["/^Makefile$/"],
+      "matchStrings": ["HELM_UNITTEST_VERSION\\s*:=\\s*(?<currentValue>\\S+)"],
+      "depNameTemplate": "helm-unittest/helm-unittest",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Helm version used by setup-helm in the workflows",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": ["HELM_VERSION:\\s*(?<currentValue>v\\S+)"],
+      "depNameTemplate": "helm/helm",
+      "datasourceTemplate": "github-releases"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "One PR for Action bumps",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "description": "One PR for tool bumps",
+      "matchManagers": ["custom.regex"],
+      "groupName": "CI tools"
+    },
+    {
+      "description": "The Makefile pins a sha256 of each tool's checksums file; a version bump needs the new hash or CI fails on purpose",
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": ["yannh/kubeconform", "helm-unittest/helm-unittest"],
+      "prBodyNotes": [
+        "**Update the checksum pin too.** CI fails until the matching `*_CHECKSUMS_SHA256` in the `Makefile` is set to the sha256 of the new release's checksums file: `curl -fsSL https://github.com/yannh/kubeconform/releases/download/<version>/CHECKSUMS | sha256sum` or `curl -fsSL https://github.com/helm-unittest/helm-unittest/releases/download/v<version>/helm-unittest-checksum.sha | sha256sum`."
+      ]
+    }
+  ]
+}
