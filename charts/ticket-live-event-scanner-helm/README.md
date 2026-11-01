@@ -54,7 +54,7 @@ below.
 | `emailNotifier.image.*` | Email notifier image | `ghcr.io/jfms7s/ticket-live-event-scanner-email-notifier:latest` |
 | `emailNotifier.resources` | Email notifier container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
 | `webUiApi.image.*` | Web UI API image | `ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api:latest` |
-| `webUiApi.corsOrigin` | Allowed frontend origin(s) for the API | `*` |
+| `webUiApi.corsOrigin` | Allowed frontend origin(s) for the API (`CORS_ORIGIN`). Empty: `https://<first ingress host>` with the ingress on, else `*` | `""` |
 | `webUiApi.resources` | Web UI API container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
 | `webUiFrontend.image.*` | Web UI frontend image | `ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-frontend:latest` |
 | `webUiFrontend.replicas` | Web UI frontend replica count | `1` |
@@ -110,6 +110,26 @@ configurable via `values.yaml`): multiple replicas would consume the same
 JetStream consumer group and duplicate rows in Turso. Use a
 PodDisruptionBudget if you need stronger availability guarantees instead of
 scaling out.
+
+## Security
+
+web-ui-api has no authentication, and some of its calls have side effects
+(marking an event purchased sends email and calendar invites). With the
+ingress off it is reachable only in-cluster. Routing `/api` through the
+ingress (an `ingress.hosts[].paths[]` entry with
+`service: <release>-ticket-scanner-web-ui-api`) publishes it to anyone who
+can reach that host, so protect it there, e.g. with a Traefik forward-auth
+or basic-auth middleware:
+
+```yaml
+ingress:
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: <namespace>-<middleware>@kubernetescrd
+```
+
+`webUiApi.corsOrigin` defaults to the ingress origin when the ingress is on,
+so other sites cannot read API responses from a visitor's browser; CORS is
+not authentication and does not stop direct requests.
 
 ## Deployment
 

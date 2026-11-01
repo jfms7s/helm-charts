@@ -18,7 +18,7 @@ tests:
             app.kubernetes.io/component: api
             app.kubernetes.io/part-of: ticket-scanner
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: ticket-live-event-scanner-helm-0.4.1
+            helm.sh/chart: ticket-live-event-scanner-helm-0.5.0
       - equal:
           path: spec.replicas
           value: 1
@@ -113,3 +113,35 @@ tests:
           content:
             name: CORS_ORIGIN
             value: "https://ticket-scanner.example.com"
+
+  - it: defaults CORS_ORIGIN to the first ingress host when the ingress is on
+    set:
+      ingress.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CORS_ORIGIN
+            value: "https://ticket-scanner.example.local"
+
+  - it: lets an explicit corsOrigin win over the ingress-derived origin
+    set:
+      ingress.enabled: true
+      webUiApi.corsOrigin: "https://other.example.com"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CORS_ORIGIN
+            value: "https://other.example.com"
+
+  - it: falls back to "*" with the ingress on but no host
+    set:
+      ingress.enabled: true
+      ingress.hosts: []
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CORS_ORIGIN
+            value: "*"
