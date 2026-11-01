@@ -116,28 +116,30 @@ Owner decision, 2026-10-09:
 ## Development Commands
 
 ```bash
-# Lint a chart
-helm lint charts/affine-helm
-helm lint charts/firstdime-helm
-helm lint charts/patchmon-helm
-helm lint charts/common
+# The gate: every check CI's lint-test job runs (helm lint, helm template,
+# kubeconform, helm-unittest) on every chart under charts/. Paste its tail into PRs.
+make test
 
-# Template a chart
-helm template my-release charts/affine-helm
-helm template my-release charts/firstdime-helm
-helm template my-release charts/patchmon-helm
+# The same steps one at a time
+make lint
+make template
+make validate                                    # kubeconform on the rendered manifests
+make helm-unittest                               # every chart
+make helm-unittest HELM_CHART=firstdime-helm     # one chart
+make helm-unittest HELM_CHART=firstdime-helm HELM_UNITTEST_FILE=tests/api-deployment_test.yaml
+make check-version                               # version-bump check CI runs on PRs
+
+# By hand, one chart that renders on its defaults
+helm lint charts/common
 helm template my-release charts/common
 
-# Package a chart
-helm package charts/affine-helm
-helm package charts/firstdime-helm
-helm package charts/patchmon-helm
-helm package charts/common
-
-# Run helm-unittest tests (rendered-manifest assertions, see charts/*/tests/)
-make helm-unittest
-make helm-unittest HELM_CHART=firstdime-helm
+# firstdime-helm, meiun-helm and padel-score-helm refuse to render on their
+# defaults by design (required-credential and volume guards): pass their CI values
+helm lint charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml
+helm template my-release charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml
 ```
+
+Without the `-f`, `helm lint` on those charts reports a misleading first error (`unable to parse YAML`): it treats the chart's `fail` as INFO and keeps rendering. The `make` targets already pass each chart's `ci/` values (see the per-chart cases in the `Makefile`).
 
 See the [Makefile](Makefile) (`make help`) for the same checks CI runs, including `kubeconform` schema validation and `helm-unittest`. Use the `helm-chart-test` skill (`.claude/skills/helm-chart-test/SKILL.md`) to add or expand test coverage for a chart.
 
