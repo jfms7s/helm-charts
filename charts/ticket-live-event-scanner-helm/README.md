@@ -84,6 +84,14 @@ turso:
         key: auth_token
 ```
 
+A credential given as `value` is stored in a chart-owned Secret,
+`<release>-ticket-scanner-credentials` (one key per credential, e.g. `TURSO_AUTH_TOKEN`), and the
+containers read it through `secretKeyRef`, so it never appears in a
+Deployment or CronJob spec. The Secret is rendered only while at least one
+credential uses `value`. Pods that read credentials carry a
+`checksum/credentials` annotation, so changing a `value` rolls them.
+
+
 ### Persistent storage
 
 NATS doesn't ship a default storage backend for its JetStream data, since

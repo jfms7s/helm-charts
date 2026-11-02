@@ -49,12 +49,18 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: SMTP_USERNAME
-            value: "sender@example.com"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-ticket-scanner-credentials
+                key: SMTP_USERNAME
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: SMTP_PASSWORD
-            value: "test-smtp-password-not-real"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-ticket-scanner-credentials
+                key: SMTP_PASSWORD
       - contains:
           path: spec.template.spec.containers[0].env
           content:

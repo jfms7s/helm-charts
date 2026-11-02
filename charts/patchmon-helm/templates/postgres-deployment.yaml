@@ -16,6 +16,7 @@ spec:
     metadata:
       labels:
         {{- include "patchmon-helm.podLabels" (dict "context" $ "name" "postgres" "component" "database") | nindent 8 }}
+      {{- with include "patchmon-helm.credentialsChecksum" $ }}{{ . | nindent 6 }}{{ end }}
     spec:
       containers:
         - name: patchmon-postgres
@@ -45,7 +46,7 @@ spec:
             - name: POSTGRES_USER
               value: {{ .Values.postgres.user }}
             - name: POSTGRES_PASSWORD
-              {{- include "patchmon-helm.credentialEnv" .Values.postgres.password | nindent 14 }}
+              {{- include "patchmon-helm.credentialEnv" (dict "ctx" $ "key" "POSTGRES_PASSWORD") | nindent 14 }}
           livenessProbe:
             exec:
               command:

@@ -76,6 +76,14 @@ postgres:
         key: postgres-password
 ```
 
+A credential given as `value` is stored in a chart-owned Secret,
+`<release>-patchmon-credentials` (one key per credential, e.g. `POSTGRES_PASSWORD`), and the
+containers read it through `secretKeyRef`, so it never appears in a
+Deployment spec. The Secret is rendered only while at least one
+credential uses `value`. Pods that read credentials carry a
+`checksum/credentials` annotation, so changing a `value` rolls them.
+
+
 ### Persistent storage
 
 Neither Postgres nor Redis ship a default storage backend, since the right

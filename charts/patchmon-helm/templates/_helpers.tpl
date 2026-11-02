@@ -38,19 +38,76 @@ app.kubernetes.io/instance: {{ .context.Release.Name }}
 {{- end -}}
 
 {{/*
-Render an env var's value/valueFrom body from a {value, valueFrom} map, e.g.
-{{- include "patchmon-helm.credentialEnv" .Values.postgres.password | nindent N }}
-valueFrom (a standard corev1 EnvVarSource body, e.g. secretKeyRef) takes
-precedence over value when both are set. value defaults to "CHANGE_ME",
-since Argo CD does not support Helm's `lookup` function, so -- unlike a
-plain `helm install` -- these can't be safely auto-generated and persisted
-across syncs; callers must pin one explicitly.
+Every credential the chart consumes, as Secret key -> its {value, valueFrom}
+map. Fills the dict passed as .out; pass (dict "ctx" $ "out" (dict)).
+*/}}
+{{- define "patchmon-helm.credentials" -}}
+{{- $v := .ctx.Values -}}
+{{- $_ := set .out "POSTGRES_PASSWORD" ($v.postgres.password | default dict) -}}
+{{- $_ := set .out "REDIS_PASSWORD" ($v.redis.password | default dict) -}}
+{{- $_ := set .out "JWT_SECRET" ($v.server.jwtSecret | default dict) -}}
+{{- $_ := set .out "SESSION_SECRET" ($v.server.sessionSecret | default dict) -}}
+{{- $_ := set .out "AI_ENCRYPTION_KEY" ($v.server.aiEncryptionKey | default dict) -}}
+{{- end -}}
+
+{{/*
+Name of the chart-owned Secret that holds every credential given as value.
+*/}}
+{{- define "patchmon-helm.credentialsSecretName" -}}
+{{- printf "%s-patchmon-credentials" .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+The chart Secret's data: one base64 key per credential given as value (no
+valueFrom), sorted. Renders nothing when every credential uses valueFrom.
+*/}}
+{{- define "patchmon-helm.credentialsSecretData" -}}
+{{- $creds := dict -}}
+{{- include "patchmon-helm.credentials" (dict "ctx" . "out" $creds) -}}
+{{- range $key := keys $creds | sortAlpha -}}
+{{- $cred := get $creds $key -}}
+{{- if not $cred.valueFrom }}
+{{ $key }}: {{ $cred.value | default "CHANGE_ME" | toString | b64enc | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Pod-template annotation that rolls a workload when a credential given as
+value changes (the env var points at the chart Secret, so the pod spec itself
+would not change). Renders nothing when no credential is given as value.
+Include with nindent at the pod template's metadata level.
+*/}}
+{{- define "patchmon-helm.credentialsChecksum" -}}
+{{- with include "patchmon-helm.credentialsSecretData" . -}}
+annotations:
+  checksum/credentials: {{ sha256sum . }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render an env var's valueFrom body for one credential, by its Secret key, e.g.
+{{- include "patchmon-helm.credentialEnv" (dict "ctx" $ "key" "POSTGRES_PASSWORD") | nindent N }}
+A credential's own valueFrom (a standard corev1 EnvVarSource body, e.g.
+secretKeyRef) is passed through; a credential given as value is read from the
+chart Secret, so it never appears in a workload spec. Never emits both value
+and valueFrom on one EnvVar. Credentials are never generated: Argo CD has no
+`lookup`, so a generated value would rotate on every sync.
 */}}
 {{- define "patchmon-helm.credentialEnv" -}}
-{{- if .valueFrom -}}
-valueFrom: {{- toYaml .valueFrom | nindent 2 }}
+{{- $creds := dict -}}
+{{- include "patchmon-helm.credentials" (dict "ctx" .ctx "out" $creds) -}}
+{{- if not (hasKey $creds .key) -}}
+{{- fail (printf "patchmon-helm: unknown credential key %s" .key) -}}
+{{- end -}}
+{{- $cred := get $creds .key -}}
+{{- if $cred.valueFrom -}}
+valueFrom: {{- toYaml $cred.valueFrom | nindent 2 }}
 {{- else -}}
-value: {{ .value | default "CHANGE_ME" | quote }}
+valueFrom:
+  secretKeyRef:
+    name: {{ include "patchmon-helm.credentialsSecretName" .ctx }}
+    key: {{ .key }}
 {{- end -}}
 {{- end -}}
 

@@ -16,6 +16,7 @@ spec:
     metadata:
       labels:
         {{- include "patchmon-helm.podLabels" (dict "context" $ "name" "redis" "component" "cache") | nindent 8 }}
+      {{- with include "patchmon-helm.credentialsChecksum" $ }}{{ . | nindent 6 }}{{ end }}
     spec:
       containers:
         - name: patchmon-redis
@@ -51,10 +52,10 @@ spec:
               EOF
           env:
             - name: REDIS_PASSWORD
-              {{- include "patchmon-helm.credentialEnv" .Values.redis.password | nindent 14 }}
+              {{- include "patchmon-helm.credentialEnv" (dict "ctx" $ "key" "REDIS_PASSWORD") | nindent 14 }}
             # redis-cli reads its password from REDISCLI_AUTH (the probes).
             - name: REDISCLI_AUTH
-              {{- include "patchmon-helm.credentialEnv" .Values.redis.password | nindent 14 }}
+              {{- include "patchmon-helm.credentialEnv" (dict "ctx" $ "key" "REDIS_PASSWORD") | nindent 14 }}
           livenessProbe:
             exec:
               command:

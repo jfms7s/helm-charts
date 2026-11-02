@@ -44,7 +44,10 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: REDIS_PASSWORD
-            value: "test-redis-password"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-credentials
+                key: REDIS_PASSWORD
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.exec.command
           value: [redis-cli, ping]
@@ -55,7 +58,10 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: REDISCLI_AUTH
-            value: "test-redis-password"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-credentials
+                key: REDIS_PASSWORD
       - equal:
           path: spec.template.spec.containers[0].resources
           value:

@@ -120,10 +120,15 @@ cache password, JWT/session secrets, encryption keys, ...) must:
    that `valueFrom` (a standard EnvVarSource body, e.g. `secretKeyRef`) is the
    recommended path and wins when both are set. If upstream's env.example
    suggests a generation command (e.g. `openssl rand -hex 64`), include it.
-2. Be rendered into the container's `env` through the chart's
-   `<chart>.credentialEnv` helper (emits `valueFrom` when set, else `value`).
-   The consumer (helm-argo-cd) passes `secretKeyRef`s, so no chart-owned
-   Secret is needed.
+2. Be listed in the chart's `<chart>.credentials` helper (Secret key ->
+   values map) and rendered into the container's `env` through
+   `<chart>.credentialEnv` with `(dict "ctx" $ "key" "<KEY>")`: it passes a
+   `valueFrom` through, and otherwise emits a `secretKeyRef` to the
+   chart-owned `<release>-<app>-credentials` Secret
+   (`templates/credentials-secret.yaml`), which holds every credential given
+   as `value`. Never inline a credential as `env[].value`. Pod templates that
+   read one include `<chart>.credentialsChecksum` so a changed value rolls
+   them. Copy all of it from `patchmon-helm`.
 3. Be guarded at render time: add `<chart>.requiredCredential` and a
    `<chart>.validate` that calls it for every credential, and `include`
    `validate` on the first line of every template that consumes one. The
