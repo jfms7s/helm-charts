@@ -16,10 +16,11 @@ cache, and guacd (in-browser RDP) sidecar. Modeled on upstream's
 helm install my-release .
 ```
 
-Set `postgres.password.value`, `redis.password.value`,
-`server.jwtSecret.value`, `server.sessionSecret.value`, and
-`server.aiEncryptionKey.value` (or the matching `.valueFrom`) explicitly
-before installing — see the note below.
+Set `postgres.password`, `redis.password`, `server.jwtSecret`,
+`server.sessionSecret` and `server.aiEncryptionKey` (each as `.value` or
+`.valueFrom`) before installing. The chart refuses to render while any of
+them is empty or the `CHANGE_ME` placeholder without a `valueFrom` (since
+0.6.0); see the note below.
 
 ## Configuration
 

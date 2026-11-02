@@ -2,6 +2,8 @@
 suite: web-ui-frontend-deployment
 templates:
   - templates/web-ui-frontend-deployment.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders with chart defaults
     asserts:
@@ -18,7 +20,7 @@ tests:
             app.kubernetes.io/component: frontend
             app.kubernetes.io/part-of: ticket-scanner
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: ticket-live-event-scanner-helm-0.6.0
+            helm.sh/chart: ticket-live-event-scanner-helm-0.7.0
       - equal:
           path: spec.replicas
           value: 1

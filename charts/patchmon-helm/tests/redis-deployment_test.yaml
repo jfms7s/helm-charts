@@ -2,6 +2,8 @@
 suite: redis-deployment
 templates:
   - templates/redis-deployment.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders with chart defaults
     asserts:
@@ -18,7 +20,7 @@ tests:
             app.kubernetes.io/component: cache
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.5.0
+            helm.sh/chart: patchmon-helm-0.6.0
       - equal:
           path: spec.strategy.type
           value: Recreate
@@ -35,7 +37,7 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: REDIS_PASSWORD
-            value: "CHANGE_ME"
+            value: "test-redis-password"
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.exec.command
           value:
@@ -115,3 +117,31 @@ tests:
           content:
             name: redis-data
             mountPath: /data
+
+  # Credential guard (<chart>.validate): this template refuses to render alone
+  # with a placeholder credential, and renders with valueFrom only.
+  - it: redis-deployment.yaml refuses to render with a placeholder credential
+    set:
+      server.jwtSecret.value: "CHANGE_ME"
+    asserts:
+      - failedTemplate:
+          errorPattern: "server.jwtSecret must be set"
+  - it: redis-deployment.yaml renders with every credential given as valueFrom only
+    set:
+      server.jwtSecret.value: ""
+      server.jwtSecret.valueFrom.secretKeyRef.name: s
+      server.jwtSecret.valueFrom.secretKeyRef.key: jwtsecret
+      server.sessionSecret.value: ""
+      server.sessionSecret.valueFrom.secretKeyRef.name: s
+      server.sessionSecret.valueFrom.secretKeyRef.key: sessionsecret
+      server.aiEncryptionKey.value: ""
+      server.aiEncryptionKey.valueFrom.secretKeyRef.name: s
+      server.aiEncryptionKey.valueFrom.secretKeyRef.key: aiencryptionkey
+      postgres.password.value: ""
+      postgres.password.valueFrom.secretKeyRef.name: s
+      postgres.password.valueFrom.secretKeyRef.key: password
+      redis.password.value: ""
+      redis.password.valueFrom.secretKeyRef.name: s
+      redis.password.valueFrom.secretKeyRef.key: password
+    asserts:
+      - notFailedTemplate: {}

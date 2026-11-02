@@ -22,10 +22,11 @@ manifests.
 helm install my-release .
 ```
 
-Set `turso.databaseUrl.value`, `turso.authToken.value`, `telegram.botToken.value`,
-`telegram.chatId.value`, `smtp.username.value`, and `smtp.password.value`
-(or the matching `.valueFrom`) explicitly before installing — see the note
-below.
+Set `turso.databaseUrl`, `turso.authToken`, `telegram.botToken`,
+`telegram.chatId`, `smtp.username` and `smtp.password` (each as `.value` or
+`.valueFrom`), plus `smtp.from` and `smtp.to`, before installing. The chart
+refuses to render while any of them is empty or the `CHANGE_ME` placeholder
+without a `valueFrom` (since 0.7.0); see the note below.
 
 ## Configuration
 

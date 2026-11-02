@@ -2,6 +2,8 @@
 suite: guacd-deployment
 templates:
   - templates/guacd-deployment.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders with chart defaults since guacd is enabled by default
     asserts:
@@ -18,7 +20,7 @@ tests:
             app.kubernetes.io/component: rdp-proxy
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.5.0
+            helm.sh/chart: patchmon-helm-0.6.0
       - equal:
           path: spec.template.spec.containers[0].image
           value: guacamole/guacd:latest

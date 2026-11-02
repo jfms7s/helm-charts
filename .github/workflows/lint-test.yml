@@ -51,11 +51,11 @@ jobs:
           helm lint -f charts/common/ci/test-values.yaml charts/common
           helm lint -f charts/common/ci/test-values.yaml -f charts/common/ci/ingress-values.yaml charts/common
           helm lint charts/data-lab-helm
-          helm lint charts/patchmon-helm
+          helm lint -f charts/patchmon-helm/ci/test-values.yaml charts/patchmon-helm
           helm lint charts/tompero-helm
           helm lint -f charts/padel-score-helm/ci/test-values.yaml charts/padel-score-helm
           helm lint -f charts/meiun-helm/ci/test-values.yaml charts/meiun-helm
-          helm lint charts/ticket-live-event-scanner-helm
+          helm lint -f charts/ticket-live-event-scanner-helm/ci/test-values.yaml charts/ticket-live-event-scanner-helm
           helm lint charts/eng-metrics-lab-helm
           helm lint -f charts/firstdime-helm/ci/test-values.yaml charts/firstdime-helm
           helm lint -f charts/firstdime-helm/ci/test-values.yaml -f charts/firstdime-helm/ci/frankfurter-values.yaml charts/firstdime-helm
@@ -66,11 +66,11 @@ jobs:
           helm template test-release charts/common --values charts/common/ci/test-values.yaml
           helm template test-release charts/common --values charts/common/ci/test-values.yaml --values charts/common/ci/ingress-values.yaml
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml
-          helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml
+          helm template test-release charts/patchmon-helm --values charts/patchmon-helm/ci/test-values.yaml
           helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml
           helm template test-release charts/padel-score-helm --values charts/padel-score-helm/ci/test-values.yaml
           helm template test-release charts/meiun-helm --values charts/meiun-helm/ci/test-values.yaml
-          helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml
+          helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/ci/test-values.yaml
           helm template test-release charts/eng-metrics-lab-helm --values charts/eng-metrics-lab-helm/values.yaml
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml
@@ -81,11 +81,11 @@ jobs:
           helm template test-release charts/common --values charts/common/ci/test-values.yaml | kubeconform -summary
           helm template test-release charts/common --values charts/common/ci/test-values.yaml --values charts/common/ci/ingress-values.yaml | kubeconform -summary
           helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml | kubeconform -summary
-          helm template test-release charts/patchmon-helm --values charts/patchmon-helm/values.yaml | kubeconform -summary
+          helm template test-release charts/patchmon-helm --values charts/patchmon-helm/ci/test-values.yaml | kubeconform -summary
           helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml | kubeconform -summary
           helm template test-release charts/padel-score-helm --values charts/padel-score-helm/ci/test-values.yaml | kubeconform -summary
           helm template test-release charts/meiun-helm --values charts/meiun-helm/ci/test-values.yaml | kubeconform -summary
-          helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/values.yaml | kubeconform -summary
+          helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/ci/test-values.yaml | kubeconform -summary
           helm template test-release charts/eng-metrics-lab-helm --values charts/eng-metrics-lab-helm/values.yaml | kubeconform -summary
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml | kubeconform -summary
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml | kubeconform -summary

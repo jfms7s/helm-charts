@@ -2,6 +2,8 @@
 suite: pvc
 templates:
   - templates/pvc.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders no claim by default
     asserts:

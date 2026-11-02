@@ -2,6 +2,8 @@
 suite: scraper-cronjob
 templates:
   - templates/scraper-cronjob.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders with chart defaults
     asserts:
@@ -18,7 +20,7 @@ tests:
             app.kubernetes.io/component: scraper
             app.kubernetes.io/part-of: ticket-scanner
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: ticket-live-event-scanner-helm-0.6.0
+            helm.sh/chart: ticket-live-event-scanner-helm-0.7.0
       - equal:
           path: spec.schedule
           value: "0 * * * *"
@@ -57,12 +59,12 @@ tests:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
           content:
             name: TURSO_DATABASE_URL
-            value: "CHANGE_ME"
+            value: "http://test-libsql:8080"
       - contains:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
           content:
             name: TURSO_AUTH_TOKEN
-            value: "CHANGE_ME"
+            value: "test-auth-token-not-real"
       - contains:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
           content:

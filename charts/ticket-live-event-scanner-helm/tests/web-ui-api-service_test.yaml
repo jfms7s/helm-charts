@@ -2,6 +2,8 @@
 suite: web-ui-api-service
 templates:
   - templates/web-ui-api-service.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders the web-ui-api Service
     asserts:

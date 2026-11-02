@@ -8,6 +8,8 @@ templates:
   - templates/postgres-deployment.yaml
   - templates/redis-deployment.yaml
   - templates/guacd-deployment.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: server-deployment.yaml pod template has no chart label
     template: templates/server-deployment.yaml

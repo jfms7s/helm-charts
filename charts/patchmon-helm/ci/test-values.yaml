@@ -1,0 +1,18 @@
+# Test values for CI: obvious dummy credentials so the chart renders. The chart
+# refuses to render while any credential is empty or CHANGE_ME without a
+# valueFrom. Used by the Makefile, .github/workflows/lint-test.yml and the
+# helm-unittest suites (values: [../ci/test-values.yaml]). Never put a real
+# credential here.
+server:
+  jwtSecret:
+    value: "test-jwt-secret-not-real"
+  sessionSecret:
+    value: "test-session-secret-not-real"
+  aiEncryptionKey:
+    value: "test-ai-encryption-key-not-real"
+postgres:
+  password:
+    value: "test-postgres-password"
+redis:
+  password:
+    value: "test-redis-password"

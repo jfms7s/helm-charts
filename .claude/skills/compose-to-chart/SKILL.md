@@ -99,16 +99,27 @@ value once and have it persist across syncs — every sync would silently
 rotate it, breaking auth or losing data. Every credential (DB password,
 cache password, JWT/session secrets, encryption keys, ...) must:
 
-1. Have a values.yaml key defaulting to the literal string `"CHANGE_ME"`,
-   with a comment explaining the Argo CD constraint (copy the wording from
-   `values.yaml` in either existing chart) and, if upstream's env.example
+1. Have a values.yaml key in the `{value, valueFrom}` shape: `value: "CHANGE_ME"`
+   and `valueFrom: {}`, with a comment explaining the Argo CD constraint and
+   that `valueFrom` (a standard EnvVarSource body, e.g. `secretKeyRef`) is the
+   recommended path and wins when both are set. If upstream's env.example
    suggests a generation command (e.g. `openssl rand -hex 64`), include it.
-2. Get a `<chart>.<x>.<y>` helper in `_helpers.tpl` that resolves it with
-   `| default "CHANGE_ME"`.
-3. Be rendered into a `Secret` (`type: Opaque`, `data:` with `| b64enc`),
-   never inlined as plaintext `env.value` in a Deployment.
-4. Be documented in the chart README's "Secrets" section, listed alongside
-   every other credential the caller must override before installing.
+2. Be rendered into the container's `env` through the chart's
+   `<chart>.credentialEnv` helper (emits `valueFrom` when set, else `value`).
+   The consumer (helm-argo-cd) passes `secretKeyRef`s, so no chart-owned
+   Secret is needed.
+3. Be guarded at render time: add `<chart>.requiredCredential` and a
+   `<chart>.validate` that calls it for every credential, and `include`
+   `validate` on the first line of every template that consumes one. The
+   render must fail while a credential is empty, null or `CHANGE_ME` without
+   a `valueFrom`. Copy the helpers from `patchmon-helm`'s `_helpers.tpl`
+   (plain scalars such as an email address use `requiredScalar`, see
+   `ticket-live-event-scanner-helm`).
+4. Get dummy values in `ci/test-values.yaml` (obvious non-secrets), loaded by
+   every helm-unittest suite (`values: [../ci/test-values.yaml]`), plus
+   `failedTemplate` tests for `CHANGE_ME`, `""` and `null` per credential.
+5. Be listed in the chart README's install section, which says the chart
+   refuses to render until every credential is set.
 
 ## Ingress, resources, securityContext (top-level)
 
