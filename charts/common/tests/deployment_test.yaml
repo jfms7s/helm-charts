@@ -445,3 +445,23 @@ tests:
               operator: Equal
               value: ci
               effect: NoSchedule
+
+  # Pod template labels must not change with the chart release, or every
+  # common version bump restarts every consumer's pod.
+  - it: keeps chart-version labels off the pod template
+    asserts:
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - exists:
+          path: metadata.labels["app.kubernetes.io/version"]
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+      - equal:
+          path: spec.template.metadata.labels
+          value:
+            app.kubernetes.io/name: common
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/component: common

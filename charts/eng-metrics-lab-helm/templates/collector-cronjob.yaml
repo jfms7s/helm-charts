@@ -19,7 +19,7 @@ spec:
       template:
         metadata:
           labels:
-            {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "collector" "component" "collector") | nindent 12 }}
+            {{- include "eng-metrics-lab-helm.podLabels" (dict "context" $ "name" "collector" "component" "collector") | nindent 12 }}
         spec:
           restartPolicy: Never
           {{- include "eng-metrics-lab-helm.collectorPodSpec" . | nindent 10 }}

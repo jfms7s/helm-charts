@@ -28,7 +28,7 @@ spec:
     metadata:
       namespace: {{ .Release.Namespace | quote }}
       name: {{ include "common.names.fullname" . | quote }}
-      labels: {{- include "common.labels.standard" . | nindent 8 }}
+      labels: {{- include "common.labels.pod" . | nindent 8 }}
         app.kubernetes.io/component: {{ include "common.names.name" . | quote }}
       annotations: {{- .Values.commonAnnotations | toYaml | nindent 8 }}
     spec:

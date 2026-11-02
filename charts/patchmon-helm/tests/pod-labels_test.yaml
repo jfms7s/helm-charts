@@ -1,0 +1,63 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+# Pod templates never carry helm.sh/chart (or any other chart-version-derived
+# label): a chart release that does not change a workload's spec must not
+# restart its pods. Top-level metadata keeps the full label set.
+suite: pod-labels
+templates:
+  - templates/server-deployment.yaml
+  - templates/postgres-deployment.yaml
+  - templates/redis-deployment.yaml
+  - templates/guacd-deployment.yaml
+tests:
+  - it: server-deployment.yaml pod template has no chart label
+    template: templates/server-deployment.yaml
+    asserts:
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+  - it: postgres-deployment.yaml pod template has no chart label
+    template: templates/postgres-deployment.yaml
+    asserts:
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+  - it: redis-deployment.yaml pod template has no chart label
+    template: templates/redis-deployment.yaml
+    asserts:
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
+  - it: guacd-deployment.yaml pod template has no chart label
+    template: templates/guacd-deployment.yaml
+    asserts:
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - notExists:
+          path: spec.template.metadata.labels["app.kubernetes.io/version"]
+      - isSubset:
+          path: spec.template.metadata.labels
+          content:
+            app.kubernetes.io/instance: RELEASE-NAME
