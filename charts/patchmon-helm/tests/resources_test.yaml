@@ -1,0 +1,45 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+# Every container renders explicit CPU and memory requests by default and no
+# CPU limit (a limit alone makes Kubernetes copy it into the request: guacd
+# once reserved a full core while idle).
+suite: resources
+templates:
+  - templates/server-deployment.yaml
+  - templates/postgres-deployment.yaml
+  - templates/redis-deployment.yaml
+  - templates/guacd-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: server has explicit requests and no CPU limit
+    template: templates/server-deployment.yaml
+    asserts:
+      - exists: {path: "spec.template.spec.containers[0].resources.requests.cpu"}
+      - exists: {path: "spec.template.spec.containers[0].resources.requests.memory"}
+      - exists: {path: "spec.template.spec.containers[0].resources.limits.memory"}
+      - notExists: {path: "spec.template.spec.containers[0].resources.limits.cpu"}
+  - it: postgres has explicit requests and no CPU limit
+    template: templates/postgres-deployment.yaml
+    asserts:
+      - exists: {path: "spec.template.spec.containers[0].resources.requests.cpu"}
+      - exists: {path: "spec.template.spec.containers[0].resources.requests.memory"}
+      - exists: {path: "spec.template.spec.containers[0].resources.limits.memory"}
+      - notExists: {path: "spec.template.spec.containers[0].resources.limits.cpu"}
+  - it: redis has explicit requests and no CPU limit
+    template: templates/redis-deployment.yaml
+    asserts:
+      - exists: {path: "spec.template.spec.containers[0].resources.requests.cpu"}
+      - exists: {path: "spec.template.spec.containers[0].resources.requests.memory"}
+      - exists: {path: "spec.template.spec.containers[0].resources.limits.memory"}
+      - notExists: {path: "spec.template.spec.containers[0].resources.limits.cpu"}
+  - it: guacd has explicit requests and no CPU limit
+    template: templates/guacd-deployment.yaml
+    asserts:
+      - exists: {path: "spec.template.spec.containers[0].resources.requests.cpu"}
+      - exists: {path: "spec.template.spec.containers[0].resources.requests.memory"}
+      - exists: {path: "spec.template.spec.containers[0].resources.limits.memory"}
+      - notExists: {path: "spec.template.spec.containers[0].resources.limits.cpu"}
+  - it: guacd requests 25m CPU, not a full core
+    template: templates/guacd-deployment.yaml
+    asserts:
+      - equal: {path: "spec.template.spec.containers[0].resources.requests.cpu", value: 25m}

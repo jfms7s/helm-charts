@@ -34,20 +34,21 @@ them is empty or the `CHANGE_ME` placeholder without a `valueFrom` (since
 | `postgres.image.*` | Postgres image | `postgres:17-alpine` |
 | `postgres.db` / `postgres.user` | Postgres database/user | `patchmon_db` / `patchmon_user` |
 | `postgres.password` | Postgres password, a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
-| `postgres.resources` | Postgres container resources | `{}` |
+| `postgres.resources` | Postgres container resources | `requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 512Mi}` |
 | `postgres.persistence.volume` | Volume source (excl. `name`) for the Postgres data dir | `{}` (emptyDir) |
 | `postgres.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-patchmon-postgres-data` (RWO, kept on uninstall/prune); point `postgres.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
 | `postgres.persistence.subPath` | Subdirectory of the volume to mount as the Postgres data dir (PGDATA) (keeps ext4's `lost+found` out of it on block-backed PVCs) | `""` |
 | `redis.image.*` | Redis image | `redis:7-alpine` |
 | `redis.password` | Redis password, a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
-| `redis.resources` | Redis container resources | `{}` |
+| `redis.resources` | Redis container resources | `requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}` |
 | `redis.persistence.volume` | Volume source (excl. `name`) for the Redis data dir | `{}` (emptyDir) |
 | `redis.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-patchmon-redis-data` (RWO, kept on uninstall/prune); point `redis.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
 | `redis.persistence.subPath` | Subdirectory of the volume to mount as the Redis data dir (keeps ext4's `lost+found` out of it on block-backed PVCs) | `""` |
 | `guacd.enabled` | Deploy the guacd sidecar (in-browser RDP to Windows hosts) | `true` |
 | `guacd.image.*` | guacd image | `guacamole/guacd:latest` |
-| `guacd.resources` | guacd container resources | `limits: {cpu: "1", memory: 512Mi}` |
-| `resources` / `securityContext` / `podSecurityContext` | PatchMon server container/pod settings | `{}` |
+| `guacd.resources` | guacd container resources | `requests: {cpu: 25m, memory: 64Mi}, limits: {memory: 512Mi}` |
+| `resources` | PatchMon server container resources | `requests: {cpu: 100m, memory: 256Mi}, limits: {memory: 1Gi}` |
+| `securityContext` / `podSecurityContext` | PatchMon server container/pod settings | `{}` |
 | `ingress.enabled` / `ingress.className` / `ingress.hosts` / `ingress.tls` | Ingress for the PatchMon server | disabled |
 
 ### Secrets
