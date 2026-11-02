@@ -2,6 +2,8 @@
 suite: scraper-rolebinding
 templates:
   - templates/scraper-rolebinding.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders the scraper RoleBinding, wiring the Role to the ServiceAccount
     asserts:

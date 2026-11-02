@@ -2,6 +2,8 @@
 suite: scraper-role
 templates:
   - templates/scraper-role.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders an empty scraper Role
     asserts:

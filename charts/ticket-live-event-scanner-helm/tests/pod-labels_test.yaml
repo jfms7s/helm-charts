@@ -10,6 +10,8 @@ templates:
   - templates/web-ui-api-deployment.yaml
   - templates/web-ui-frontend-deployment.yaml
   - templates/scraper-cronjob.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: nats-deployment.yaml pod template has no chart label
     template: templates/nats-deployment.yaml

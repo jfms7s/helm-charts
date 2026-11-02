@@ -2,6 +2,8 @@
 suite: guacd-service
 templates:
   - templates/guacd-service.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders the guacd Service since guacd is enabled by default
     asserts:

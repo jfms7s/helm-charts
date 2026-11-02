@@ -2,6 +2,8 @@
 suite: server-deployment
 templates:
   - templates/server-deployment.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: renders with chart defaults
     asserts:
@@ -18,7 +20,7 @@ tests:
             app.kubernetes.io/component: server
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.5.0
+            helm.sh/chart: patchmon-helm-0.6.0
       - equal:
           path: spec.replicas
           value: 1
@@ -39,12 +41,12 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: JWT_SECRET
-            value: "CHANGE_ME"
+            value: "test-jwt-secret-not-real"
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: POSTGRES_PASSWORD
-            value: "CHANGE_ME"
+            value: "test-postgres-password"
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -59,7 +61,7 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: REDIS_PASSWORD
-            value: "CHANGE_ME"
+            value: "test-redis-password"
       - contains:
           path: spec.template.spec.containers[0].env
           content:

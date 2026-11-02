@@ -124,8 +124,8 @@ make check-version                               # version-bump check CI runs on
 helm lint charts/data-lab-helm
 helm template my-release charts/data-lab-helm
 
-# common, firstdime-helm, meiun-helm and padel-score-helm refuse to render on
-# their defaults by design (required image, credential and volume guards): pass
+# common, firstdime-helm, meiun-helm, padel-score-helm, patchmon-helm and
+# ticket-live-event-scanner-helm refuse to render on their defaults by design (required image, credential and volume guards): pass
 # their CI values
 helm lint charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml
 helm template my-release charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml

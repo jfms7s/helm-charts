@@ -1,3 +1,4 @@
+{{- include "ticket-live-event-scanner-helm.validate" . }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:

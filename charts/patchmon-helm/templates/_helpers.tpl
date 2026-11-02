@@ -53,3 +53,31 @@ valueFrom: {{- toYaml .valueFrom | nindent 2 }}
 value: {{ .value | default "CHANGE_ME" | quote }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Render-time guard for one credential in the {value, valueFrom} shape: fails
+unless valueFrom is set or value is non-empty and not the CHANGE_ME
+placeholder. A null or missing key counts as unset (this repo is public, so a
+placeholder secret is a known secret). Pass
+(dict "credentialName" "server.jwtSecret" "credential" .Values.server.jwtSecret).
+*/}}
+{{- define "patchmon-helm.requiredCredential" -}}
+{{- $cred := .credential | default dict -}}
+{{- $value := trim (toString ($cred.value | default "")) -}}
+{{- if and (or (eq $value "") (eq $value "CHANGE_ME")) (not $cred.valueFrom) -}}
+  {{- fail (printf "patchmon-helm: %s must be set (value or valueFrom); the CHANGE_ME placeholder is not accepted" .credentialName) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Every required credential, checked at the top of each template that consumes
+one, so no template renders on its own with a placeholder. Renders nothing.
+*/}}
+{{- define "patchmon-helm.validate" -}}
+{{- $ := . -}}
+{{- include "patchmon-helm.requiredCredential" (dict "credentialName" "server.jwtSecret" "credential" $.Values.server.jwtSecret) }}
+{{- include "patchmon-helm.requiredCredential" (dict "credentialName" "server.sessionSecret" "credential" $.Values.server.sessionSecret) }}
+{{- include "patchmon-helm.requiredCredential" (dict "credentialName" "server.aiEncryptionKey" "credential" $.Values.server.aiEncryptionKey) }}
+{{- include "patchmon-helm.requiredCredential" (dict "credentialName" "postgres.password" "credential" $.Values.postgres.password) }}
+{{- include "patchmon-helm.requiredCredential" (dict "credentialName" "redis.password" "credential" $.Values.redis.password) }}
+{{- end -}}

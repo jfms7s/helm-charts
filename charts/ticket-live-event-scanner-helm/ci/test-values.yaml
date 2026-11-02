@@ -1,0 +1,22 @@
+# Test values for CI: obvious dummy credentials so the chart renders. The chart
+# refuses to render while any credential (or smtp.from/smtp.to) is empty or
+# CHANGE_ME without a valueFrom. Used by the Makefile,
+# .github/workflows/lint-test.yml and the helm-unittest suites
+# (values: [../ci/test-values.yaml]). Never put a real credential here.
+turso:
+  databaseUrl:
+    value: "http://test-libsql:8080"
+  authToken:
+    value: "test-auth-token-not-real"
+telegram:
+  botToken:
+    value: "test-bot-token-not-real"
+  chatId:
+    value: "123456"
+smtp:
+  username:
+    value: "sender@example.com"
+  password:
+    value: "test-smtp-password-not-real"
+  from: "sender@example.com"
+  to: "recipient@example.com"

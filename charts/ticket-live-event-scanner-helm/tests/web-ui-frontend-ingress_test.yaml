@@ -2,6 +2,8 @@
 suite: web-ui-frontend-ingress
 templates:
   - templates/web-ui-frontend-ingress.yaml
+values:
+  - ../ci/test-values.yaml
 tests:
   - it: does not render when disabled by default
     asserts:

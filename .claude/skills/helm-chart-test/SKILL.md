@@ -134,7 +134,8 @@ case's value inputs. Keep tests focused: one behavior per test, explicit value
 overrides via `set`, scoped assertions.
 
 Charts whose defaults refuse to render (required image, credentials or volumes:
-`firstdime-helm`, `meiun-helm`, and `common`'s deployment suite) load their CI
+`firstdime-helm`, `meiun-helm`, `patchmon-helm`, `ticket-live-event-scanner-helm`,
+and `common`'s deployment suite) load their CI
 fixture at suite level with `values: [../ci/test-values.yaml]`; new suites for
 those templates do the same.
 

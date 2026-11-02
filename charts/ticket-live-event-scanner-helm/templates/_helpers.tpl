@@ -69,3 +69,44 @@ from); else "*" (the API is then reachable only in-cluster).
 *
 {{- end -}}
 {{- end -}}
+
+{{/*
+Render-time guard for one credential in the {value, valueFrom} shape: fails
+unless valueFrom is set or value is non-empty and not the CHANGE_ME
+placeholder. A null or missing key counts as unset (this repo is public, so a
+placeholder secret is a known secret). Pass
+(dict "credentialName" "server.jwtSecret" "credential" .Values.server.jwtSecret).
+*/}}
+{{- define "ticket-live-event-scanner-helm.requiredCredential" -}}
+{{- $cred := .credential | default dict -}}
+{{- $value := trim (toString ($cred.value | default "")) -}}
+{{- if and (or (eq $value "") (eq $value "CHANGE_ME")) (not $cred.valueFrom) -}}
+  {{- fail (printf "ticket-live-event-scanner-helm: %s must be set (value or valueFrom); the CHANGE_ME placeholder is not accepted" .credentialName) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Same guard for a plain scalar value. Pass (dict "name" "smtp.from" "value" .Values.smtp.from).
+*/}}
+{{- define "ticket-live-event-scanner-helm.requiredScalar" -}}
+{{- $value := trim (toString (.value | default "")) -}}
+{{- if or (eq $value "") (eq $value "CHANGE_ME") -}}
+  {{- fail (printf "ticket-live-event-scanner-helm: %s must be set; the CHANGE_ME placeholder is not accepted" .name) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Every required credential, checked at the top of each template that consumes
+one, so no template renders on its own with a placeholder. Renders nothing.
+*/}}
+{{- define "ticket-live-event-scanner-helm.validate" -}}
+{{- $ := . -}}
+{{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "turso.databaseUrl" "credential" $.Values.turso.databaseUrl) }}
+{{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "turso.authToken" "credential" $.Values.turso.authToken) }}
+{{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "telegram.botToken" "credential" $.Values.telegram.botToken) }}
+{{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "telegram.chatId" "credential" $.Values.telegram.chatId) }}
+{{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "smtp.username" "credential" $.Values.smtp.username) }}
+{{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "smtp.password" "credential" $.Values.smtp.password) }}
+{{- include "ticket-live-event-scanner-helm.requiredScalar" (dict "name" "smtp.from" "value" $.Values.smtp.from) }}
+{{- include "ticket-live-event-scanner-helm.requiredScalar" (dict "name" "smtp.to" "value" $.Values.smtp.to) }}
+{{- end -}}
