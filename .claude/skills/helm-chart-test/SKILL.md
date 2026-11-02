@@ -48,8 +48,8 @@ chart/component can't be determined from local context.
 
 ## Repo Conventions
 
-This repo is small (3 charts, all flat `templates/` directories — no
-subdirectory components), so treat each chart as a single unit rather than
+Every chart here has a flat `templates/` directory (no subdirectory
+components), so treat each chart as a single unit rather than
 running the "simple vs. complex" split from larger multi-component charts.
 
 - **Release name**: use `RELEASE-NAME` in assertions (helm-unittest's default),
@@ -57,10 +57,13 @@ running the "simple vs. complex" split from larger multi-component charts.
 - **Namespace**: `common`'s templates set `metadata.namespace` explicitly
   (default renders as `NAMESPACE`); `patchmon-helm` templates
   do not set it at all — don't assert a namespace for those.
-- **Secrets**: every chart resolves `CHANGE_ME`-default credentials through a
-  `<chart>.<x>.<y>` helper (see `_helpers.tpl`) and base64-encodes them into a
-  `Secret`. Test both the default (`CHANGE_ME`) and a custom value; compute the
-  expected base64 with `printf '%s' "<value>" | base64` rather than guessing.
+- **Credentials**: no chart renders a Secret. Each credential is a
+  `{value, valueFrom}` pair rendered straight into the container `env` by
+  `<chart>.credentialEnv` (`valueFrom` wins when set). Test the `value` form
+  (from the chart's `ci/test-values.yaml`) and the `valueFrom` form
+  (`secretKeyRef`). Charts with a render guard (`<chart>.validate`) also need
+  a `failedTemplate` test per credential for `CHANGE_ME`, `""` and `null`,
+  and suites load `../ci/test-values.yaml` at suite level so they render.
 - **Persistence volumes**: `postgres.persistence.volume`
   and `redis.persistence.volume` default to `{}` → renders `emptyDir: {}`. Test
   both the default and a custom volume source (e.g. an `nfs` block) to cover
@@ -71,13 +74,16 @@ running the "simple vs. complex" split from larger multi-component charts.
   `deploy.serviceAccount.create` (common, default `false`) gate whole documents.
   Always test both branches with `hasDocuments: { count: 0 }` for the disabled
   case.
-- **Labels**: `patchmon-helm` labels come from
-  `<chart>.labels` / `<chart>.selectorLabels`, called as
+- **Labels**: app-chart labels come from
+  `<chart>.labels` (top-level metadata), `<chart>.podLabels` (pod templates:
+  no `helm.sh/chart`; each chart's `tests/pod-labels_test.yaml` asserts that)
+  and `<chart>.selectorLabels`, called as
   `(dict "context" $ "name" "<component>" "component" "<role>")` — pass both
   when asserting the full label set, but remember `selectorLabels` only has
   `name` + `instance` (selectors are immutable, so never add chart-version keys
   there — see `compose-to-chart`'s `_helpers.tpl` section for why). `common`
-  uses its own `common.labels.standard` / `common.labels.matchLabels` helpers
+  uses its own `common.labels.standard` / `common.labels.pod` /
+  `common.labels.matchLabels` helpers
   instead (no per-component dict).
 - **Ports**: `common`'s `deploy.containerPorts` / `service.ports` accept either
   a bare int or a `{port, protocol, targetPort}` map — test both forms in the

@@ -8,9 +8,20 @@ user-invocable: true
 
 Converts a `docker-compose.yml` (usually from an upstream project's repo)
 into a Helm chart under `charts/<app>-helm/` that matches the conventions
-already established by `charts/patchmon-helm`, or updates an existing
-chart when upstream's compose file has drifted. Read that chart first if
-this is your first time using this skill — it is the canonical reference, more authoritative than any summary here.
+the charts in this repo share, or updates an existing chart when upstream's
+compose file has drifted. Two charts to read first:
+
+- `charts/firstdime-helm` is the reference for everything a mature chart
+  has: helpers, render-time guards, the `persistence.{volume,claim,subPath}`
+  shape (`values.yaml` sqld block, `templates/pvc.yaml`), the pod hardening
+  baseline (`templates/nats-deployment.yaml`) and the extension points
+  (`extraEnv`, `extraArgs`, `imagePullSecrets`).
+- `charts/patchmon-helm` is the worked example of an upstream
+  docker-compose translation, and has the current form of the credential
+  guard helpers.
+
+Where this summary and those charts disagree, the charts win; fix the summary.
+Charts are deployed by Argo CD only: read AGENTS.md "Constraints".
 
 $ARGUMENTS is either a path/URL to a `docker-compose.yml` (create mode) or
 the name of an existing `charts/*-helm` directory to refresh (update mode).
@@ -47,7 +58,7 @@ If ambiguous, ask.
 
 ## `_helpers.tpl` — copy this pattern verbatim, renaming the prefix
 
-Every chart in this repo defines the same three helpers, prefixed with the
+Every chart in this repo defines the same core helpers, prefixed with the
 chart name (`patchmon-helm.*`). Copy
 `charts/patchmon-helm/templates/_helpers.tpl` and rename:
 
@@ -59,16 +70,21 @@ chart name (`patchmon-helm.*`). Copy
   chart-version-derived keys here: Deployment `matchLabels` and Service
   `selector` are immutable after creation, so a version bump in the full
   label set would break `helm upgrade` if selectors used it too.
-
-For every secret-backed value (passwords, tokens, keys), add a resolver
-helper (`<chart>.postgres.password`, `<chart>.server.jwtSecret`, ...) that
-does `{{ .Values.x.y | default "CHANGE_ME" }}` — see "Secrets" below for why.
+- `<chart>.podLabels` — `<chart>.labels` minus `helm.sh/chart`. Use it on
+  every pod template (Deployment, Job, CronJob `jobTemplate`); top-level
+  `metadata.labels` use `<chart>.labels`. A chart-version label on a pod
+  template restarts every pod on every chart release.
+- `<chart>.credentialEnv`, `<chart>.requiredCredential`, `<chart>.validate`
+  — credentials, see "Secrets" below.
 
 ## Translating compose services
 
-Go service-by-service. For each one, decide: does it need persistent state
-(→ Deployment + Service, `strategy: Recreate` if it owns a volume) or is it
-stateless (→ Deployment + Service, default `RollingUpdate`)? This repo never
+Go service-by-service: each becomes a Deployment + Service. Use
+`strategy: Recreate` when the workload must never run two copies at once:
+it owns an RWO volume or a SQLite file, or it is a singleton (a scheduler,
+an outbox relay, anything that acts twice if two copies run; firstdime's
+worker is `Recreate` for that reason, not for a volume). Otherwise keep the
+default `RollingUpdate`. This repo never
 uses StatefulSets even for the databases — matches how
 patchmon-helm already does it, keep it consistent.
 
@@ -81,7 +97,7 @@ patchmon-helm already does it, keep it consistent.
 | `depends_on: condition: service_healthy` | Not directly portable — express the same ordering guarantee via that dependency's own liveness/readiness probes; don't add init containers unless the app truly crash-loops without one |
 | `healthcheck.test: ["CMD", "pg_isready", ...]` | `exec` probe running the same command. `CMD-SHELL "a && b"` → `["sh", "-c", "a && b"]` |
 | `healthcheck.interval/timeout/retries` | `periodSeconds` / `timeoutSeconds` / `failureThreshold`. If probe needs a container env var (e.g. a password), it's available — exec probes run inside the container's own environment |
-| `volumes:` (named volume) | `values.yaml`: `<component>.persistence.volume: {}`; template does `{{- if .Values.x.persistence.volume }}{{ toYaml ... }}{{- else }}emptyDir: {}{{- end }}`. Never default to a specific storage class: the right backend (NFS, hostPath, a PVC, cloud block storage, ...) is environment-specific, so leave it to the deployer |
+| `volumes:` (named volume) | `values.yaml`: `<component>.persistence.{volume, claim, subPath}` as in firstdime-helm: `volume: {}` is a full volume source (`{{- if .Values.x.persistence.volume }}{{ toYaml ... }}{{- else }}emptyDir: {}{{- end }}`), `claim.{storageClassName,size}` optionally has the chart create a kept PVC (`helm.sh/resource-policy: keep` + Argo `Prune=false,Delete=false`), `subPath` mounts a subdirectory. Never default to a specific storage class: the right backend is environment-specific, so leave it to the deployer |
 | `restart: unless-stopped` | Deployment pod spec `restartPolicy: Always` (the only legal value for a Deployment anyway) |
 | `read_only: true` | container `securityContext.readOnlyRootFilesystem: true` |
 | `tmpfs: [/path:size=Nm]` | a `volumes: [{name, emptyDir: {medium: Memory, sizeLimit: Nm}}]` mounted at that path |
@@ -126,17 +142,19 @@ cache password, JWT/session secrets, encryption keys, ...) must:
 Copy the top-level `ingress:` block shape verbatim from `values.yaml` in
 either existing chart (`enabled`/`className`/`annotations`/`hosts`/`tls`),
 and the corresponding `*-ingress.yaml` template — only the backend service
-name and default port change. Same for the top-level `resources: {}`,
-`securityContext: {}`, `podSecurityContext: {}` on the main app component —
-empty by default, commented-out examples in values.yaml, so the caller opts
-in rather than the chart imposing limits nobody asked for.
+name and default port change. Give every container explicit CPU and memory
+`requests` and a memory-only limit by default (no CPU limits; a limit
+without a request makes Kubernetes copy the limit into the request), as
+patchmon-helm does. Hardening (`securityContext`, `podSecurityContext`)
+follows firstdime-helm's baseline where the image allows it.
 
 ## Chart README.md
 
 Mirror `charts/patchmon-helm/README.md`'s structure: prereqs, install
-command, a full parameter table (one row per `values.yaml` leaf, defaults
-matching exactly), then prose sections for anything non-obvious — secrets
-and the Argo CD caveat, persistence and the volume-source shape, any
+command (saying the chart refuses to render until every credential is set),
+a full parameter table (one row per `values.yaml` leaf, defaults matching
+exactly), then prose sections for anything non-obvious — credentials
+(`value`/`valueFrom`) and the Argo CD caveat, persistence and the volume-source shape, any
 security hardening inherited from compose (like patchmon's guacd), and
 "Deployment" (what resources get created) / "Uninstalling".
 
@@ -152,8 +170,12 @@ the new one alongside it, don't restructure:
    the chart's own README.
 3. `.github/workflows/lint-test.yml` — add one line each to the "Lint Helm
    charts", "Template Helm charts", "Validate rendered templates", and
-   "Run helm-unittest" steps.
-4. `Makefile` — nothing to do; its targets glob `charts/*` automatically.
+   "Run helm-unittest" steps (with `-f charts/<chart>/ci/test-values.yaml`
+   when the chart has one).
+4. `Makefile` — its targets glob `charts/*` and pick up
+   `ci/test-values.yaml` automatically; any other `ci/*-values.yaml`
+   fixture needs a per-chart case in the `lint`, `template` and `validate`
+   loops (as `common` and `firstdime-helm` have).
 5. `charts/<app>-helm/tests/` — use the `helm-chart-test` skill to add
    helm-unittest coverage for the new or changed templates before calling the
    chart done.

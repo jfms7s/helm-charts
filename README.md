@@ -29,7 +29,7 @@ Deploys [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-
 Deploys eng-metrics-lab, a code-quality reporting stack: a small Postgres, a PostSync migrate Job, a nightly GitHub collector CronJob and a nightly `pg_dump` backup CronJob to NFS. See [charts/eng-metrics-lab-helm/README.md](charts/eng-metrics-lab-helm/README.md).
 
 ### data-lab-helm
-Shared infrastructure for the Spark and Flink learning labs: `spark`/`flink` namespaces with scoped RBAC and an NFS-backed MinIO object store that both a local Spark driver and in-cluster executors reach over `s3a://`. See [charts/data-lab-helm/README.md](charts/data-lab-helm/README.md).
+Shared infrastructure for the Spark and Flink learning labs: `spark`/`flink` namespaces with scoped RBAC. The object store both a local Spark driver and in-cluster executors reach over `s3a://` (RustFS) is provisioned by helm-argo-cd and terraform-provision, not this chart. See [charts/data-lab-helm/README.md](charts/data-lab-helm/README.md).
 
 ## Installation
 
