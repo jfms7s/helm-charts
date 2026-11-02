@@ -1,0 +1,12 @@
+# CI-only: turns on every off-by-default branch so kubeconform -strict sees it
+# (layered on values.yaml by the Makefile's validate loop).
+imagePullSecrets:
+  - name: regcred
+hotspots:
+  repos:
+    - replica-sync
+nodeSelector:
+  kubernetes.io/arch: arm64
+tolerations:
+  - key: example
+    operator: Exists

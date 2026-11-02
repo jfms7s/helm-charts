@@ -1,0 +1,16 @@
+# CI-only: turns on every off-by-default branch so kubeconform -strict sees it
+# (layered on ci/test-values.yaml by the Makefile's validate loop).
+imagePullSecrets:
+  - name: regcred
+server:
+  extraEnv:
+    - name: LOG_LEVEL
+      value: debug
+  persistence:
+    subPath: data
+ingress:
+  enabled: true
+  className: traefik
+  tls:
+    - secretName: padel-score-tls
+      hosts: [padel-score.example.local]

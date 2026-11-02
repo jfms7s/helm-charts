@@ -124,7 +124,7 @@ make test
 # The same steps one at a time
 make lint
 make template
-make validate                                    # kubeconform on the rendered manifests
+make validate                                    # kubeconform -strict (cluster k8s version) on every render: values + each ci/*-values.yaml
 make helm-unittest                               # every chart
 make helm-unittest HELM_CHART=firstdime-helm     # one chart
 make helm-unittest HELM_CHART=firstdime-helm HELM_UNITTEST_FILE=tests/api-deployment_test.yaml

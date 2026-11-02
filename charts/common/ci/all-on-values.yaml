@@ -1,0 +1,66 @@
+# CI-only: turns on every off-by-default branch so kubeconform -strict sees it
+# (layered on ci/test-values.yaml by the Makefile's validate loop).
+deploy:
+  strategy:
+    type: Recreate
+  serviceAccount:
+    create: true
+    annotations:
+      example.com/role: test
+  containerPorts:
+    http: 8080
+    metrics:
+      port: 9090
+      protocol: TCP
+  persistentVolumeClaims:
+    - name: test-data
+      storageClassName: standard
+      size: 1Gi
+  volumes:
+    - name: test-data
+      persistentVolumeClaim:
+        claimName: test-data
+  volumeMounts:
+    - name: test-data
+      mountPath: /data
+      subPath: data
+  initContainers:
+    - name: init
+      image: busybox:1.36
+      command: ["sh", "-c", "true"]
+  env:
+    - name: EXAMPLE
+      value: "1"
+  livenessProbe:
+    httpGet: {path: /health, port: http}
+  readinessProbe:
+    httpGet: {path: /ready, port: http}
+  startupProbe:
+    tcpSocket: {port: 8080}
+  nodeSelector:
+    kubernetes.io/arch: arm64
+  tolerations:
+    - key: example
+      operator: Exists
+service:
+  ports:
+    http: 80
+    metrics:
+      port: 9090
+      targetPort: metrics
+      protocol: TCP
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: a.example.local
+      paths:
+        - path: /
+          pathType: Prefix
+          port: http
+        - path: /metrics
+          pathType: Prefix
+          port: 9090
+  tls:
+    - secretName: a-example-tls
+      hosts: [a.example.local]

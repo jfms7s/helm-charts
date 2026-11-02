@@ -76,20 +76,10 @@ jobs:
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml
           helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/bank-sync-values.yaml
 
+      # Every render (default + each ci/*-values.yaml fixture), kubeconform
+      # -strict against the cluster's Kubernetes version: see the Makefile.
       - name: Validate rendered templates
-        run: |
-          helm template test-release charts/common --values charts/common/ci/test-values.yaml | kubeconform -summary
-          helm template test-release charts/common --values charts/common/ci/test-values.yaml --values charts/common/ci/ingress-values.yaml | kubeconform -summary
-          helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml | kubeconform -summary
-          helm template test-release charts/patchmon-helm --values charts/patchmon-helm/ci/test-values.yaml | kubeconform -summary
-          helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml | kubeconform -summary
-          helm template test-release charts/padel-score-helm --values charts/padel-score-helm/ci/test-values.yaml | kubeconform -summary
-          helm template test-release charts/meiun-helm --values charts/meiun-helm/ci/test-values.yaml | kubeconform -summary
-          helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/ci/test-values.yaml | kubeconform -summary
-          helm template test-release charts/eng-metrics-lab-helm --values charts/eng-metrics-lab-helm/values.yaml | kubeconform -summary
-          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml | kubeconform -summary
-          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml | kubeconform -summary
-          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/bank-sync-values.yaml | kubeconform -summary
+        run: make validate
 
       - name: Run helm-unittest
         run: |
