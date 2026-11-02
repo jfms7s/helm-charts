@@ -22,13 +22,15 @@ spec:
           image: {{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}
           imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
           # The password goes to redis-server as config on stdin, never on a
-          # command line (argv is readable from the process list). It is
-          # double-quoted with \ and " escaped, so any value works.
+          # command line (argv is readable from the process list). Every byte
+          # is written as a \xHH escape inside a double-quoted string, so any
+          # value (newlines included) reaches Redis unchanged. Needs sh, od,
+          # tr and sed in the image (the official redis images have them).
           command:
             - sh
             - -c
             - |
-              pw=$(printf '%s' "$REDIS_PASSWORD" | sed 's/[\\"]/\\&/g')
+              pw=$(printf '%s' "$REDIS_PASSWORD" | od -An -v -tx1 | tr -d ' \n' | sed 's/../\\x&/g')
               exec redis-server - <<EOF
               requirepass "$pw"
               EOF

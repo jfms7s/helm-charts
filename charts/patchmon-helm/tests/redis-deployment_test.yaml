@@ -36,7 +36,7 @@ tests:
             - sh
             - -c
             - |
-              pw=$(printf '%s' "$REDIS_PASSWORD" | sed 's/[\\"]/\\&/g')
+              pw=$(printf '%s' "$REDIS_PASSWORD" | od -An -v -tx1 | tr -d ' \n' | sed 's/../\\x&/g')
               exec redis-server - <<EOF
               requirepass "$pw"
               EOF
@@ -176,3 +176,11 @@ tests:
       - notContains:
           path: spec.template.spec.containers[0].livenessProbe.exec.command
           content: -a
+      - notContains:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          content: -a
+      # Hex-escaped, so a newline or quote in the password cannot break the
+      # config line (checked against redis:7-alpine in podman).
+      - matchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: od -An -v -tx1 .*\\x&

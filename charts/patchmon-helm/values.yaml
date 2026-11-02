@@ -76,11 +76,13 @@ postgres:
     subPath: ""
 
 redis:
+  # A custom image needs sh, od, tr and sed besides redis-server and
+  # redis-cli (the password is fed to redis-server by a shell script).
   image:
     repository: redis
     tag: "7-alpine"
     pullPolicy: IfNotPresent
-  # Password for Redis (started with --requirepass), as a standard
+  # Password for Redis (passed to redis-server as config on stdin), as a standard
   # Kubernetes EnvVarSource. Same shape/rationale as postgres.password above.
   password:
     value: "CHANGE_ME"
