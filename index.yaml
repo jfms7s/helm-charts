@@ -437,6 +437,26 @@ entries:
   data-lab-helm:
   - apiVersion: v2
     appVersion: "1"
+    created: "2026-11-02T22:39:37.580047479Z"
+    description: Shared infrastructure for the Spark and Flink learning labs — namespaces
+      and engine RBAC
+    digest: 417af439c974e85d3ce314498c86ea870af57d7b0010af600000235d5d9d7813
+    keywords:
+    - spark
+    - flink
+    - lab
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: data-lab-helm
+    sources:
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/data-lab-helm-0.2.1/data-lab-helm-0.2.1.tgz
+    version: 0.2.1
+  - apiVersion: v2
+    appVersion: "1"
     created: "2026-09-01T00:44:31.134234109Z"
     description: Shared infrastructure for the Spark and Flink learning labs — namespaces
       and engine RBAC
@@ -744,6 +764,27 @@ entries:
   patchmon-helm:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-11-02T22:39:38.181565474Z"
+    description: A Helm chart for PatchMon, a Linux patch management platform
+    digest: fb55ceba9edb8ce2e08a249dd2992d1cf31f7d9e6664e26a58cf742567a9efca
+    home: https://patchmon.net/
+    keywords:
+    - patchmon
+    - patch-management
+    - monitoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: patchmon-helm
+    sources:
+    - https://github.com/PatchMon/PatchMon
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.6.2/patchmon-helm-0.6.2.tgz
+    version: 0.6.2
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-11-02T18:30:35.098033749Z"
     description: A Helm chart for PatchMon, a Linux patch management platform
     digest: 0391e39281dea2ffd79243c35c4a3f17c77fd6f6e8a779495e9165183c864b12
@@ -890,6 +931,27 @@ entries:
     - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.1.0/patchmon-helm-0.1.0.tgz
     version: 0.1.0
   ticket-live-event-scanner-helm:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-11-02T22:39:38.433165242Z"
+    description: A Helm chart for Ticket Live Event Scanner, a scraper/notifier pipeline
+      for ticketline.pt event listings
+    digest: c34cf5ff5db419c1ad7276c2081ce85728f26b28d22802ca6cf22deb11605a0f
+    keywords:
+    - ticket-scanner
+    - scraper
+    - notifications
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: ticket-live-event-scanner-helm
+    sources:
+    - https://github.com/jfms7s/ticket-live-event-scanner
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.7.1/ticket-live-event-scanner-helm-0.7.1.tgz
+    version: 0.7.1
   - apiVersion: v2
     appVersion: latest
     created: "2026-11-02T18:24:54.660791967Z"
@@ -1101,4 +1163,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-02T18:37:01.417235083Z"
+generated: "2026-11-02T22:39:38.433318138Z"
