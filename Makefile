@@ -25,6 +25,12 @@ HELM_UNITTEST_RELEASE          := https://github.com/helm-unittest/helm-unittest
 HELM_UNITTEST_OS               := $(subst darwin,macos,$(OS))
 HELM_UNITTEST_ASSET            := helm-unittest-$(HELM_UNITTEST_OS)-$(ARCH)-$(HELM_UNITTEST_VERSION).tgz
 
+# The cluster's Kubernetes version (ansible-management group_vars/k3s_cluster.yml
+# k3s_version, v1.36.5+k3s1 on 2026-11-02): kubeconform validates against its
+# schemas. -strict rejects unknown fields (a misspelled `selectr:` fails).
+K8S_VERSION      := 1.36.5
+KUBECONFORM_FLAGS := -strict -kubernetes-version $(K8S_VERSION) -summary
+
 BASE                  ?= origin/main
 HELM_CHART            ?=
 HELM_UNITTEST_FILE    ?= tests/**/*.yaml
@@ -86,21 +92,12 @@ $(KUBECONFORM):
 
 kubeconform: $(KUBECONFORM) ## Install the pinned kubeconform into .bin/ (checksum-verified)
 
-validate: $(KUBECONFORM) ## Validate rendered manifests against Kubernetes schemas via kubeconform (same as CI)
-	@for c in $(CHARTS); do \
-		echo "==> kubeconform $(CHARTS_DIR)/$$c"; \
-		if [ "$$c" = "common" ]; then \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml | $(KUBECONFORM) -summary || exit 1; \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/ingress-values.yaml | $(KUBECONFORM) -summary || exit 1; \
-		elif [ "$$c" = "firstdime-helm" ]; then \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml | $(KUBECONFORM) -summary || exit 1; \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/frankfurter-values.yaml | $(KUBECONFORM) -summary || exit 1; \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/bank-sync-values.yaml | $(KUBECONFORM) -summary || exit 1; \
-		elif [ -f $(CHARTS_DIR)/$$c/ci/test-values.yaml ]; then \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml | $(KUBECONFORM) -summary || exit 1; \
-		else \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/values.yaml | $(KUBECONFORM) -summary || exit 1; \
-		fi; \
+validate: $(KUBECONFORM) ## kubeconform -strict every chart render (default + each ci/*-values.yaml fixture) against the cluster's Kubernetes version (same as CI)
+	@set -o pipefail; for c in $(CHARTS); do \
+		scripts/chart-values-sets.sh $(CHARTS_DIR)/$$c | while read -r files; do \
+			echo "==> kubeconform $(CHARTS_DIR)/$$c $$files"; \
+			helm template $(RELEASE) $(CHARTS_DIR)/$$c $$files | $(KUBECONFORM) $(KUBECONFORM_FLAGS) || exit 1; \
+		done || exit 1; \
 	done
 
 # Unpacks the checksum-verified release tarball straight into Helm's plugin

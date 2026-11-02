@@ -1,0 +1,26 @@
+# CI-only: turns on every off-by-default branch so kubeconform -strict sees it
+# (layered on ci/test-values.yaml by the Makefile's validate loop).
+server:
+  extraEnv:
+    - name: LOG_LEVEL
+      value: debug
+postgres:
+  persistence:
+    claim: {storageClassName: standard, size: 2Gi}
+    volume:
+      persistentVolumeClaim:
+        claimName: test-release-patchmon-postgres-data
+    subPath: data
+redis:
+  persistence:
+    claim: {storageClassName: standard, size: 1Gi}
+    volume:
+      persistentVolumeClaim:
+        claimName: test-release-patchmon-redis-data
+    subPath: data
+ingress:
+  enabled: true
+  className: traefik
+  tls:
+    - secretName: patchmon-tls
+      hosts: [patchmon.example.local]
