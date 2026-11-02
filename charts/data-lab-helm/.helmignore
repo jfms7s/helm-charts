@@ -21,3 +21,8 @@
 .idea/
 *.tmproj
 .vscode/
+# Unit tests are not part of the packaged chart
+tests/
+# Local secret values files (never packaged)
+values-secrets*.y*ml
+*.secret.y*ml
