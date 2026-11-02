@@ -14,7 +14,7 @@ spec:
     metadata:
       labels:
         {{- include "patchmon-helm.podLabels" (dict "context" $ "name" "server" "component" "server") | nindent 8 }}
-      {{- with include "patchmon-helm.credentialsChecksum" $ }}{{ . | nindent 6 }}{{ end }}
+      {{- with include "patchmon-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "AI_ENCRYPTION_KEY" "JWT_SECRET" "POSTGRES_PASSWORD" "REDIS_PASSWORD" "SESSION_SECRET")) }}{{ . | nindent 6 }}{{ end }}
     spec:
       containers:
         - name: patchmon-server

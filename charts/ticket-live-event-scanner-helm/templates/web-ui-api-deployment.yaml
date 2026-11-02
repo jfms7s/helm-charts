@@ -20,7 +20,7 @@ spec:
     metadata:
       labels:
         {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "web-ui-api" "component" "api") | nindent 8 }}
-      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" $ }}{{ . | nindent 6 }}{{ end }}
+      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "TURSO_AUTH_TOKEN" "TURSO_DATABASE_URL")) }}{{ . | nindent 6 }}{{ end }}
     spec:
       securityContext:
         {{- include "ticket-live-event-scanner-helm.podSecurityContext" . | nindent 8 }}

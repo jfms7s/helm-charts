@@ -58,25 +58,44 @@ Name of the chart-owned Secret that holds every credential given as value.
 {{- end -}}
 
 {{/*
-The chart Secret's data: one base64 key per credential given as value (no
-valueFrom), sorted. Renders nothing when every credential uses valueFrom.
+One credential value as the string the app receives. YAML numbers arrive as
+float64, so an integral one (a Telegram chat ID, say) is printed as an
+integer instead of in exponent form.
+*/}}
+{{- define "patchmon-helm.credentialString" -}}
+{{- $v := . | default "CHANGE_ME" -}}
+{{- if and (kindIs "float64" $v) (eq $v (float64 (int64 $v))) -}}
+{{- printf "%d" (int64 $v) -}}
+{{- else -}}
+{{- toString $v -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Secret data: one base64 key per credential given as value (no valueFrom),
+sorted. Pass (dict "ctx" $) for every credential, or add "keys" (a list of
+Secret keys) for just those. Renders nothing when none of them uses value.
 */}}
 {{- define "patchmon-helm.credentialsSecretData" -}}
 {{- $creds := dict -}}
-{{- include "patchmon-helm.credentials" (dict "ctx" . "out" $creds) -}}
+{{- include "patchmon-helm.credentials" (dict "ctx" .ctx "out" $creds) -}}
+{{- $only := .keys | default (keys $creds) -}}
 {{- range $key := keys $creds | sortAlpha -}}
 {{- $cred := get $creds $key -}}
-{{- if not $cred.valueFrom }}
-{{ $key }}: {{ $cred.value | default "CHANGE_ME" | toString | b64enc | quote }}
+{{- if and (has $key $only) (not $cred.valueFrom) }}
+{{ $key }}: {{ include "patchmon-helm.credentialString" $cred.value | b64enc | quote }}
 {{- end -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
-Pod-template annotation that rolls a workload when a credential given as
-value changes (the env var points at the chart Secret, so the pod spec itself
-would not change). Renders nothing when no credential is given as value.
-Include with nindent at the pod template's metadata level.
+Pod-template annotation that rolls a workload when one of the credentials it
+reads changes while given as value (its env var points at the chart Secret,
+so the pod spec itself would not change). Pass (dict "ctx" $ "keys" (list
+...)) with the Secret keys the workload reads. Renders nothing when none of
+them uses value. The hash is unsalted: like any hash of a secret it can be
+brute-forced offline, so give value credentials high entropy (or use
+valueFrom).
 */}}
 {{- define "patchmon-helm.credentialsChecksum" -}}
 {{- with include "patchmon-helm.credentialsSecretData" . -}}
