@@ -166,3 +166,15 @@ tests:
       redis.password.valueFrom.secretKeyRef.key: password
     asserts:
       - notFailedTemplate: {}
+
+  - it: hardens the postgres container (no escalation, RuntimeDefault seccomp, minimal capabilities)
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop: [ALL]
+              add: [CHOWN, DAC_OVERRIDE, FOWNER, SETUID, SETGID]

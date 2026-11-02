@@ -21,6 +21,21 @@ spec:
         - name: patchmon-redis
           image: {{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}
           imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+          # redis-server runs as root here (the command below replaces the
+          # image's entrypoint, which would chown /data and switch users).
+          # CHOWN, SETUID and SETGID are kept for that entrypoint's sake if
+          # the command is ever removed; every other capability is dropped.
+          securityContext:
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - SETUID
+                - SETGID
           # The password goes to redis-server as config on stdin, never on a
           # command line (argv is readable from the process list). Every byte
           # is written as a \xHH escape inside a double-quoted string, so any
