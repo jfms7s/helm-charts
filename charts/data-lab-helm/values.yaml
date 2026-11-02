@@ -1,21 +1,5 @@
 # Default values for data-lab-helm.
 
-## @section Common parameters
-
-## @param nameOverride Partially override the chart name in resource names
-## @param fullnameOverride Fully override the release-derived name
-##
-nameOverride: ""
-fullnameOverride: ""
-
-## @param storageClass StorageClass for the RustFS PVC (the cluster's NFS class)
-## data-lab-helm itself no longer provisions any storage -- this value is
-## unused by anything in this chart today, kept only because it's still
-## referenced from helm-argo-cd's data-lab.yaml valuesObject for symmetry
-## with the RustFS source's own storageclass.name.
-##
-storageClass: nfs-client
-
 ## @section Engine namespaces + RBAC
 
 spark:

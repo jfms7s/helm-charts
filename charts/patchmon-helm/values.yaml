@@ -143,5 +143,6 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-          port: 3000
+          # The backend is the server Service's `http` port; a `port` key
+          # here is ignored.
   tls: []

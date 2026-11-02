@@ -60,7 +60,7 @@ without a `valueFrom` (since 0.7.0); see the note below.
 | `webUiFrontend.image.*` | Web UI frontend image | `ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-frontend:latest` |
 | `webUiFrontend.replicas` | Web UI frontend replica count | `1` |
 | `webUiFrontend.resources` | Web UI frontend container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
-| `ingress.enabled` / `ingress.className` / `ingress.hosts` / `ingress.tls` | Ingress for the web UI frontend | disabled |
+| `ingress.enabled` / `ingress.className` / `ingress.hosts` / `ingress.tls` | Ingress for the web UI frontend; a path's `service` routes it to another Service, always on that Service's port named `http` (a path's `port` key is ignored) | disabled |
 
 ### Secrets
 
@@ -106,11 +106,12 @@ event dedup, is lost on pod restart).
 
 ### web-ui-api replica count
 
-`webUiApi` is intentionally hardcoded to 1 replica in the template (not
-configurable via `values.yaml`): multiple replicas would consume the same
-JetStream consumer group and duplicate rows in Turso. Use a
-PodDisruptionBudget if you need stronger availability guarantees instead of
-scaling out.
+`webUiApi` is hardcoded to 1 replica in the template (not configurable via
+`values.yaml`) because multi-replica operation is untested. Its JetStream
+consumers are durable pull consumers with explicit ack, so two pods (as
+during a rolling update) split the messages between them rather than both
+processing each one; a message redelivered after its ack wait is recorded
+once per delivery sequence.
 
 ## Security
 

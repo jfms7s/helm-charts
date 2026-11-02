@@ -34,8 +34,10 @@ spec:
             backend:
               service:
                 name: {{ $.Release.Name }}-patchmon-server
+                # By name: the Service's only port is `http`. A path's
+                # `port` value is ignored.
                 port:
-                  number: {{ .port | default 3000 }}
+                  name: http
           {{- end }}
     {{- end }}
 {{- end }}

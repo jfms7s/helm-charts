@@ -183,5 +183,7 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-          port: 80
+          # Optional: `service: <name>` routes the path to another Service
+          # (e.g. <release>-ticket-scanner-web-ui-api for /api). The backend
+          # is that Service's port named `http`; a `port` key is ignored.
   tls: []
