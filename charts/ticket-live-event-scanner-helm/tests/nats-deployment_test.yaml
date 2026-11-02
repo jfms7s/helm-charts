@@ -36,12 +36,6 @@ tests:
           path: spec.template.spec.containers[0].image
           value: nats:2-alpine
       - equal:
-          path: spec.template.spec.containers[0].securityContext
-          value:
-            runAsNonRoot: true
-            runAsUser: 1000
-            allowPrivilegeEscalation: false
-      - equal:
           path: spec.template.spec.containers[0].args
           value:
             - -js
@@ -120,3 +114,5 @@ tests:
           value:
             - name: data
               mountPath: /data
+            - name: tmp
+              mountPath: /tmp

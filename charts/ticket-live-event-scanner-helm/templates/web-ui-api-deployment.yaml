@@ -21,14 +21,18 @@ spec:
       labels:
         {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "web-ui-api" "component" "api") | nindent 8 }}
     spec:
+      securityContext:
+        {{- include "ticket-live-event-scanner-helm.podSecurityContext" . | nindent 8 }}
+      automountServiceAccountToken: false
       containers:
         - name: web-ui-api
           image: {{ .Values.webUiApi.image.repository }}:{{ .Values.webUiApi.image.tag }}
           imagePullPolicy: {{ .Values.webUiApi.image.pullPolicy }}
           securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            allowPrivilegeEscalation: false
+            {{- include "ticket-live-event-scanner-helm.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - name: http
               containerPort: 8080
@@ -58,3 +62,6 @@ spec:
             initialDelaySeconds: 2
             periodSeconds: 5
       restartPolicy: Always
+      volumes:
+        - name: tmp
+          emptyDir: {}

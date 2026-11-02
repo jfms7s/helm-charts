@@ -21,6 +21,24 @@ spec:
         - name: patchmon-postgres
           image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
           imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          # The official image starts as root: its docker-entrypoint.sh chowns
+          # and chmods the data directory (CHOWN, FOWNER, DAC_OVERRIDE to read
+          # a 0700 directory it does not own yet) and then drops to the
+          # postgres user with su-exec (SETUID, SETGID). Every other
+          # capability is dropped.
+          securityContext:
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - FOWNER
+                - SETUID
+                - SETGID
           env:
             - name: POSTGRES_DB
               value: {{ .Values.postgres.db }}

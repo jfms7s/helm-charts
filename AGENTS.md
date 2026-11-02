@@ -85,6 +85,7 @@ Application-specific chart for deploying [Ticket Live Event Scanner](https://git
 - Web UI API deployment + Service
 - Web UI frontend deployment + Service
 - Ingress configuration
+- Security hardening: every pod non-root (uid/gid 1000), read-only root filesystem, dropped capabilities, no service account token
 
 ### common
 Generic chart for one single-container application per release, consumed from helm-argo-cd. **Its scope is frozen** (see "Choosing a composition model"). Provides:

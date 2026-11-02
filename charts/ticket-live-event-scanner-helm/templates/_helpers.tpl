@@ -110,3 +110,30 @@ one, so no template renders on its own with a placeholder. Renders nothing.
 {{- include "ticket-live-event-scanner-helm.requiredScalar" (dict "name" "smtp.from" "value" $.Values.smtp.from) }}
 {{- include "ticket-live-event-scanner-helm.requiredScalar" (dict "name" "smtp.to" "value" $.Values.smtp.to) }}
 {{- end -}}
+
+{{/*
+Pod securityContext shared by every workload: non-root uid/gid 1000 (the
+images' user), fsGroup so mounted volumes are group-writable, and the
+runtime's default seccomp profile.
+*/}}
+{{- define "ticket-live-event-scanner-helm.podSecurityContext" -}}
+runAsNonRoot: true
+runAsUser: 1000
+runAsGroup: 1000
+fsGroup: 1000
+seccompProfile:
+  type: RuntimeDefault
+{{- end -}}
+
+{{/*
+Container securityContext shared by every container: read-only root
+filesystem (each container gets a /tmp emptyDir for the health file and
+temp files), no privilege escalation, no capabilities.
+*/}}
+{{- define "ticket-live-event-scanner-helm.containerSecurityContext" -}}
+allowPrivilegeEscalation: false
+readOnlyRootFilesystem: true
+capabilities:
+  drop:
+    - ALL
+{{- end -}}

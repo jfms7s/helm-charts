@@ -184,3 +184,15 @@ tests:
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
           pattern: od -An -v -tx1 .*\\x&
+
+  - it: hardens the redis container (no escalation, RuntimeDefault seccomp, minimal capabilities)
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop: [ALL]
+              add: [CHOWN, SETUID, SETGID]

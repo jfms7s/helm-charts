@@ -141,6 +141,11 @@ telegram-notifier, a Deployment for email-notifier, a Deployment + Service
 for web-ui-api, and a Deployment + Service (+ optional Ingress) for
 web-ui-frontend.
 
+Every pod runs as uid/gid 1000 (`fsGroup` 1000) with the `RuntimeDefault`
+seccomp profile and no service account token; every container has a
+read-only root filesystem, no capabilities, no privilege escalation and a
+`/tmp` emptyDir (the notifiers' health file lives there).
+
 ## Uninstalling
 
 ```bash
