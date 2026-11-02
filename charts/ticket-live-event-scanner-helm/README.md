@@ -5,7 +5,7 @@ a scraper/notifier pipeline that watches ticketline.pt event listings, pushes
 Telegram alerts, and emails a calendar invite (.ics) when an event is marked
 purchased, along with its in-cluster NATS (JetStream) message bus. Modeled on
 upstream's own
-[deploy/k8s](https://github.com/jfms7s/ticket-live-event-scanner/tree/main/deploy/k8s)
+[deploy/k8s](https://github.com/jfms7s/ticket-live-event-scanner/tree/master/deploy/k8s)
 manifests.
 
 ## Prerequisites
