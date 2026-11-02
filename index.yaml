@@ -835,6 +835,27 @@ entries:
   patchmon-helm:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-11-02T22:55:11.947149026Z"
+    description: A Helm chart for PatchMon, a Linux patch management platform
+    digest: f54962bdbd2b2aff041d0302af24d0ac8c39b0e321f855bf68476b4cdb5183c7
+    home: https://patchmon.net/
+    keywords:
+    - patchmon
+    - patch-management
+    - monitoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: patchmon-helm
+    sources:
+    - https://github.com/PatchMon/PatchMon
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.6.4/patchmon-helm-0.6.4.tgz
+    version: 0.6.4
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-11-02T22:48:43.470753428Z"
     description: A Helm chart for PatchMon, a Linux patch management platform
     digest: 204456e2e8a0b672187acf079b37700ac8c02532316524f5505fb6d600544103
@@ -1023,6 +1044,27 @@ entries:
     - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.1.0/patchmon-helm-0.1.0.tgz
     version: 0.1.0
   ticket-live-event-scanner-helm:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-11-02T22:55:12.115233725Z"
+    description: A Helm chart for Ticket Live Event Scanner, a scraper/notifier pipeline
+      for ticketline.pt event listings
+    digest: 4b133bbf7c8038d95c309423fe18d0cf5144e4c81704d082e29c4f90bf3932a2
+    keywords:
+    - ticket-scanner
+    - scraper
+    - notifications
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: ticket-live-event-scanner-helm
+    sources:
+    - https://github.com/jfms7s/ticket-live-event-scanner
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.7.3/ticket-live-event-scanner-helm-0.7.3.tgz
+    version: 0.7.3
   - apiVersion: v2
     appVersion: latest
     created: "2026-11-02T22:48:43.675862482Z"
@@ -1276,4 +1318,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-02T22:48:43.676060096Z"
+generated: "2026-11-02T22:55:12.115370398Z"
