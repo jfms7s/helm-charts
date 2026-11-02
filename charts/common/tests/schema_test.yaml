@@ -1,0 +1,99 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+# values.schema.json: unknown keys under deploy, deploy.image, service and
+# ingress fail the render; every key the templates read is accepted.
+suite: schema
+templates:
+  - templates/deployment.yaml
+  - templates/service.yaml
+  - templates/ingress.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: rejects an unknown deploy key (extraVolumes)
+    template: templates/deployment.yaml
+    set:
+      deploy.extraVolumes:
+        - name: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "extraVolumes"
+  - it: rejects a misspelled deploy key (volumeMount)
+    template: templates/deployment.yaml
+    set:
+      deploy.volumeMount:
+        - name: x
+          mountPath: /x
+    asserts:
+      - failedTemplate:
+          errorPattern: "volumeMount"
+  - it: rejects an unknown deploy.image key
+    template: templates/deployment.yaml
+    set:
+      deploy.image.digest: sha256:abc
+    asserts:
+      - failedTemplate:
+          errorPattern: "digest"
+  - it: rejects an unknown ingress key (pathType at the wrong level)
+    template: templates/ingress.yaml
+    set:
+      ingress.pathType: Prefix
+    asserts:
+      - failedTemplate:
+          errorPattern: "pathType"
+  - it: rejects an unknown service key
+    template: templates/service.yaml
+    set:
+      service.selector:
+        app: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "selector"
+  - it: still accepts the ignored service.enabled that existing consumers set
+    template: templates/service.yaml
+    set:
+      service.enabled: true
+    asserts:
+      - notFailedTemplate: {}
+  - it: accepts the integer and map forms of containerPorts and service.ports
+    template: templates/deployment.yaml
+    set:
+      deploy.containerPorts:
+        http: 8080
+        metrics:
+          port: 9090
+          protocol: TCP
+      service.ports:
+        http: 80
+        metrics:
+          port: 9090
+          targetPort: metrics
+          protocol: TCP
+    asserts:
+      - notFailedTemplate: {}
+      - lengthEqual:
+          path: spec.template.spec.containers[0].ports
+          count: 2
+  - it: accepts a named and a numbered ingress port
+    template: templates/ingress.yaml
+    set:
+      ingress.enabled: true
+      ingress.hosts:
+        - host: a.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+              port: http
+            - path: /metrics
+              pathType: Prefix
+              port: 9090
+    asserts:
+      - notFailedTemplate: {}
+      - equal:
+          path: spec.rules[0].http.paths[1].backend.service.port.number
+          value: 9090
+  - it: rejects a port that is neither a number nor a map
+    template: templates/deployment.yaml
+    set:
+      deploy.containerPorts.http: [8080]
+    asserts:
+      - failedTemplate: {}
