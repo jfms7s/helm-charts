@@ -41,43 +41,29 @@ else
 UNITTEST_CHARTS := $(HELM_CHART)
 endif
 
-.PHONY: help lint template kubeconform validate helm-unittest-plugin helm-unittest test check-version package clean $(CHARTS)
+.PHONY: help lint template kubeconform validate helm-unittest-plugin helm-unittest test check-version package clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-lint: ## helm lint every chart (same as CI's "Lint Helm charts" step)
+# lint, template and validate render each chart once per values set that
+# scripts/chart-values-sets.sh discovers (base values, then each
+# ci/*-values.yaml fixture layered on it): adding a chart or a fixture needs no
+# edit here or in CI.
+lint: ## helm lint every chart with each of its values sets (same as CI)
 	@for c in $(CHARTS); do \
-		echo "==> helm lint $(CHARTS_DIR)/$$c"; \
-		if [ "$$c" = "common" ]; then \
-			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
-			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml -f $(CHARTS_DIR)/$$c/ci/ingress-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
-		elif [ "$$c" = "firstdime-helm" ]; then \
-			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
-			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml -f $(CHARTS_DIR)/$$c/ci/frankfurter-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
-			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml -f $(CHARTS_DIR)/$$c/ci/bank-sync-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
-		elif [ -f $(CHARTS_DIR)/$$c/ci/test-values.yaml ]; then \
-			helm lint -f $(CHARTS_DIR)/$$c/ci/test-values.yaml $(CHARTS_DIR)/$$c || exit 1; \
-		else \
-			helm lint $(CHARTS_DIR)/$$c || exit 1; \
-		fi; \
+		scripts/chart-values-sets.sh $(CHARTS_DIR)/$$c | while read -r files; do \
+			echo "==> helm lint $(CHARTS_DIR)/$$c $$files"; \
+			helm lint $$files $(CHARTS_DIR)/$$c || exit 1; \
+		done || exit 1; \
 	done
 
-template: ## helm template every chart (same as CI's "Template Helm charts" step)
+template: ## helm template every chart with each of its values sets (same as CI)
 	@for c in $(CHARTS); do \
-		echo "==> helm template $(CHARTS_DIR)/$$c"; \
-		if [ "$$c" = "common" ]; then \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml > /dev/null || exit 1; \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/ingress-values.yaml > /dev/null || exit 1; \
-		elif [ "$$c" = "firstdime-helm" ]; then \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml > /dev/null || exit 1; \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/frankfurter-values.yaml > /dev/null || exit 1; \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml --values $(CHARTS_DIR)/$$c/ci/bank-sync-values.yaml > /dev/null || exit 1; \
-		elif [ -f $(CHARTS_DIR)/$$c/ci/test-values.yaml ]; then \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/ci/test-values.yaml > /dev/null || exit 1; \
-		else \
-			helm template $(RELEASE) $(CHARTS_DIR)/$$c --values $(CHARTS_DIR)/$$c/values.yaml > /dev/null || exit 1; \
-		fi; \
+		scripts/chart-values-sets.sh $(CHARTS_DIR)/$$c | while read -r files; do \
+			echo "==> helm template $(CHARTS_DIR)/$$c $$files"; \
+			helm template $(RELEASE) $(CHARTS_DIR)/$$c $$files > /dev/null || exit 1; \
+		done || exit 1; \
 	done
 
 # The versioned directory makes a version bump re-download; .bin/kubeconform is

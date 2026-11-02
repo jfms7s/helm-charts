@@ -46,52 +46,21 @@ jobs:
           make helm-unittest-plugin kubeconform
           echo "$PWD/.bin" >> "$GITHUB_PATH"
 
+      # The same targets as `make test`: the Makefile discovers charts and their
+      # ci/*-values.yaml fixtures, so adding either needs no edit here.
       - name: Lint Helm charts
-        run: |
-          helm lint -f charts/common/ci/test-values.yaml charts/common
-          helm lint -f charts/common/ci/test-values.yaml -f charts/common/ci/ingress-values.yaml charts/common
-          helm lint charts/data-lab-helm
-          helm lint -f charts/patchmon-helm/ci/test-values.yaml charts/patchmon-helm
-          helm lint charts/tompero-helm
-          helm lint -f charts/padel-score-helm/ci/test-values.yaml charts/padel-score-helm
-          helm lint -f charts/meiun-helm/ci/test-values.yaml charts/meiun-helm
-          helm lint -f charts/ticket-live-event-scanner-helm/ci/test-values.yaml charts/ticket-live-event-scanner-helm
-          helm lint charts/eng-metrics-lab-helm
-          helm lint -f charts/firstdime-helm/ci/test-values.yaml charts/firstdime-helm
-          helm lint -f charts/firstdime-helm/ci/test-values.yaml -f charts/firstdime-helm/ci/frankfurter-values.yaml charts/firstdime-helm
-          helm lint -f charts/firstdime-helm/ci/test-values.yaml -f charts/firstdime-helm/ci/bank-sync-values.yaml charts/firstdime-helm
+        run: make lint
 
       - name: Template Helm charts
-        run: |
-          helm template test-release charts/common --values charts/common/ci/test-values.yaml
-          helm template test-release charts/common --values charts/common/ci/test-values.yaml --values charts/common/ci/ingress-values.yaml
-          helm template test-release charts/data-lab-helm --values charts/data-lab-helm/values.yaml
-          helm template test-release charts/patchmon-helm --values charts/patchmon-helm/ci/test-values.yaml
-          helm template test-release charts/tompero-helm --values charts/tompero-helm/values.yaml
-          helm template test-release charts/padel-score-helm --values charts/padel-score-helm/ci/test-values.yaml
-          helm template test-release charts/meiun-helm --values charts/meiun-helm/ci/test-values.yaml
-          helm template test-release charts/ticket-live-event-scanner-helm --values charts/ticket-live-event-scanner-helm/ci/test-values.yaml
-          helm template test-release charts/eng-metrics-lab-helm --values charts/eng-metrics-lab-helm/values.yaml
-          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml
-          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/frankfurter-values.yaml
-          helm template test-release charts/firstdime-helm --values charts/firstdime-helm/ci/test-values.yaml --values charts/firstdime-helm/ci/bank-sync-values.yaml
+        run: make template
 
-      # Every render (default + each ci/*-values.yaml fixture), kubeconform
-      # -strict against the cluster's Kubernetes version: see the Makefile.
+      # Every render kubeconform -strict against the cluster's Kubernetes
+      # version: see the Makefile.
       - name: Validate rendered templates
         run: make validate
 
       - name: Run helm-unittest
-        run: |
-          helm unittest charts/common --file 'tests/**/*.yaml'
-          helm unittest charts/data-lab-helm --file 'tests/**/*.yaml'
-          helm unittest charts/patchmon-helm --file 'tests/**/*.yaml'
-          helm unittest charts/tompero-helm --file 'tests/**/*.yaml'
-          helm unittest charts/padel-score-helm --file 'tests/**/*.yaml'
-          helm unittest charts/meiun-helm --file 'tests/**/*.yaml'
-          helm unittest charts/ticket-live-event-scanner-helm --file 'tests/**/*.yaml'
-          helm unittest charts/eng-metrics-lab-helm --file 'tests/**/*.yaml'
-          helm unittest charts/firstdime-helm --file 'tests/**/*.yaml'
+        run: make helm-unittest
 
   # Publishes every chart whose Chart.yaml version has no release yet, only
   # after lint-test passed on the same push to main. Never runs on PRs.
