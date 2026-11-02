@@ -21,6 +21,8 @@ helm install my-release .
 
 The following table lists the configurable parameters of the common chart and their default values.
 
+Since 0.10.0 the chart ships a `values.schema.json`: an unknown key under `deploy`, `deploy.image`, `deploy.serviceAccount`, `service` or `ingress` (a typo such as `deploy.volumeMount` or `deploy.extraVolumes`) fails the render instead of being silently ignored. Kubernetes-shaped values (`resources`, probes, `volumes`, `env`, ...) are passed through as-is and not checked inside. `service.enabled` is accepted but ignored (the Service is always rendered); drop it from your values.
+
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `nameOverride` | String to partially override common.names.name | `""` |

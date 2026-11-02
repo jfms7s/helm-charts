@@ -1,0 +1,377 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "common chart values",
+  "description": "Unknown keys under deploy, deploy.image, deploy.serviceAccount, service and ingress fail the render, so a mistyped key is an error instead of a silently dropped setting. Kubernetes-shaped values (resources, probes, volumes, env, ...) are passed through verbatim and checked by the API server, not here.",
+  "type": "object",
+  "properties": {
+    "nameOverride": {
+      "type": "string"
+    },
+    "fullnameOverride": {
+      "type": "string"
+    },
+    "commonAnnotations": {
+      "type": "object",
+      "description": "Annotations added to the pod template"
+    },
+    "deploy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "pullPolicy": {
+              "type": "string",
+              "enum": [
+                "Always",
+                "IfNotPresent",
+                "Never"
+              ]
+            }
+          }
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "strategy": {
+          "type": "object",
+          "description": "Deployment update strategy, rendered verbatim"
+        },
+        "resources": {
+          "type": "object",
+          "description": "Container resources, rendered verbatim"
+        },
+        "securityContext": {
+          "type": "object",
+          "description": "Container security context, rendered verbatim"
+        },
+        "podSecurityContext": {
+          "type": "object",
+          "description": "Pod security context, rendered verbatim"
+        },
+        "serviceAccount": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "create": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "annotations": {
+              "type": "object"
+            }
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "description": "Node selector, rendered verbatim"
+        },
+        "affinity": {
+          "type": "object",
+          "description": "Affinity, rendered verbatim"
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Tolerations, rendered verbatim"
+        },
+        "volumes": {
+          "type": "array",
+          "description": "Pod volumes, rendered verbatim"
+        },
+        "volumeMounts": {
+          "type": "array",
+          "description": "Container volume mounts, rendered verbatim"
+        },
+        "persistentVolumeClaims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "storageClassName": {
+                "type": "string"
+              },
+              "size": {
+                "type": "string"
+              },
+              "accessModes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "initContainers": {
+          "type": "array",
+          "description": "Init containers, rendered verbatim"
+        },
+        "env": {
+          "type": "array",
+          "description": "Container env, rendered verbatim"
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "containerPorts": {
+          "type": "object",
+          "description": "Keyed by port name: an integer port or {port, protocol}",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "port"
+                ],
+                "properties": {
+                  "port": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^[0-9]+$"
+                      }
+                    ]
+                  },
+                  "protocol": {
+                    "type": "string",
+                    "enum": [
+                      "TCP",
+                      "UDP",
+                      "SCTP"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "livenessProbe": {
+          "type": "object",
+          "description": "Rendered verbatim"
+        },
+        "readinessProbe": {
+          "type": "object",
+          "description": "Rendered verbatim"
+        },
+        "startupProbe": {
+          "type": "object",
+          "description": "Rendered verbatim"
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ClusterIP",
+            "NodePort",
+            "LoadBalancer",
+            "ExternalName"
+          ]
+        },
+        "ports": {
+          "type": "object",
+          "description": "Keyed by port name: an integer port or {port, targetPort, protocol}",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  }
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "port"
+                ],
+                "properties": {
+                  "port": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      {
+                        "type": "string",
+                        "pattern": "^[0-9]+$"
+                      }
+                    ]
+                  },
+                  "targetPort": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 65535
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    ]
+                  },
+                  "protocol": {
+                    "type": "string",
+                    "enum": [
+                      "TCP",
+                      "UDP",
+                      "SCTP"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "annotations": {
+          "type": "object"
+        },
+        "labels": {
+          "type": "object"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Deprecated and ignored: the Service is always rendered. Accepted only so existing consumers that set it keep rendering; drop it from your values."
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "className": {
+          "type": "string"
+        },
+        "annotations": {
+          "type": "object"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "pathType": {
+                      "type": "string",
+                      "enum": [
+                        "Prefix",
+                        "Exact",
+                        "ImplementationSpecific"
+                      ]
+                    },
+                    "port": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 65535
+                        },
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "secretName": {
+                "type": "string"
+              },
+              "hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
