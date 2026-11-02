@@ -4,6 +4,9 @@ templates:
   - templates/scraper-cronjob.yaml
 values:
   - ../ci/test-values.yaml
+# Pin the chart version so a version bump needs no test edit.
+chart:
+  version: 0.0.0-test
 tests:
   - it: renders with chart defaults
     asserts:
@@ -20,7 +23,7 @@ tests:
             app.kubernetes.io/component: scraper
             app.kubernetes.io/part-of: ticket-scanner
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: ticket-live-event-scanner-helm-0.7.0
+            helm.sh/chart: ticket-live-event-scanner-helm-0.0.0-test
       - equal:
           path: spec.schedule
           value: "0 * * * *"
