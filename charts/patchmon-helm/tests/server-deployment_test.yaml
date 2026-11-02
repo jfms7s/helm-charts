@@ -20,7 +20,7 @@ tests:
             app.kubernetes.io/component: server
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.6.0
+            helm.sh/chart: patchmon-helm-0.6.1
       - equal:
           path: spec.replicas
           value: 1
@@ -78,7 +78,9 @@ tests:
           value: http
       - equal:
           path: spec.template.spec.containers[0].resources
-          value: {}
+          value:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 1Gi}
       - equal:
           path: spec.template.spec.containers[0].securityContext
           value: {}

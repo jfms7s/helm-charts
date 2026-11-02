@@ -20,7 +20,7 @@ tests:
             app.kubernetes.io/component: database
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.6.0
+            helm.sh/chart: patchmon-helm-0.6.1
       - equal:
           path: spec.strategy.type
           value: Recreate
@@ -52,7 +52,9 @@ tests:
             - patchmon_db
       - equal:
           path: spec.template.spec.containers[0].resources
-          value: {}
+          value:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 512Mi}
       - contains:
           path: spec.template.spec.volumes
           content:

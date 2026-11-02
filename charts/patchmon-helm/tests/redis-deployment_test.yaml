@@ -20,7 +20,7 @@ tests:
             app.kubernetes.io/component: cache
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.6.0
+            helm.sh/chart: patchmon-helm-0.6.1
       - equal:
           path: spec.strategy.type
           value: Recreate
@@ -46,7 +46,9 @@ tests:
             - redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping
       - equal:
           path: spec.template.spec.containers[0].resources
-          value: {}
+          value:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 128Mi}
       - contains:
           path: spec.template.spec.volumes
           content:

@@ -20,7 +20,7 @@ tests:
             app.kubernetes.io/component: rdp-proxy
             app.kubernetes.io/part-of: patchmon
             app.kubernetes.io/managed-by: Helm
-            helm.sh/chart: patchmon-helm-0.6.0
+            helm.sh/chart: patchmon-helm-0.6.1
       - equal:
           path: spec.template.spec.containers[0].image
           value: guacamole/guacd:latest
@@ -39,10 +39,10 @@ tests:
               drop:
                 - ALL
       - equal:
-          path: spec.template.spec.containers[0].resources.limits
+          path: spec.template.spec.containers[0].resources
           value:
-            cpu: "1"
-            memory: 512Mi
+            requests: {cpu: 25m, memory: 64Mi}
+            limits: {memory: 512Mi}
       - equal:
           path: spec.template.spec.containers[0].volumeMounts[0]
           value:

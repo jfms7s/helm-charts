@@ -49,7 +49,11 @@ postgres:
   password:
     value: "CHANGE_ME"
     valueFrom: {}
-  resources: {}
+  # Explicit requests (homelab practice: memory limits, no CPU limits). Without
+  # requests a container runs BestEffort and is first in line for the OOM killer.
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 512Mi}
   # Volume source for the Postgres data directory. Each value is the full
   # body of a Kubernetes volume source (excluding `name`) -- nfs, hostPath,
   # persistentVolumeClaim, etc. Left empty (emptyDir, non-persistent) by
@@ -81,7 +85,11 @@ redis:
   password:
     value: "CHANGE_ME"
     valueFrom: {}
-  resources: {}
+  # Explicit requests (homelab practice: memory limits, no CPU limits). Without
+  # requests a container runs BestEffort and is first in line for the OOM killer.
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 128Mi}
   # Volume source for the Redis data directory. Same shape as
   # postgres.persistence.volume above; defaults to emptyDir when unset.
   persistence:
@@ -104,18 +112,19 @@ guacd:
     repository: guacamole/guacd
     tag: latest
     pullPolicy: IfNotPresent
+  # guacd idles until someone opens an RDP session: a small explicit request
+  # (a limit alone makes Kubernetes copy it into the request, i.e. 1 CPU).
   resources:
-    limits:
-      cpu: "1"
-      memory: 512Mi
+    requests: {cpu: 25m, memory: 64Mi}
+    limits: {memory: 512Mi}
 
-resources: {}
-  # limits:
-  #   cpu: 1000m
-  #   memory: 1Gi
-  # requests:
-  #   cpu: 250m
-  #   memory: 512Mi
+# PatchMon server container resources (memory limit, no CPU limit).
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
 
 securityContext: {}
   # runAsNonRoot: true
