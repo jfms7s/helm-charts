@@ -263,6 +263,15 @@ entries:
     version: 0.1.0
   common:
   - apiVersion: v2
+    created: "2026-11-02T18:16:38.393118987Z"
+    description: A Helm chart for Kubernetes
+    digest: b6560b85a49d74c715d194cdbe6ef9f56248d253d5870d68751887c4c11dfc4d
+    name: common
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/common-0.9.0/common-0.9.0.tgz
+    version: 0.9.0
+  - apiVersion: v2
     created: "2026-11-01T10:59:06.26427772Z"
     description: A Helm chart for Kubernetes
     digest: 33d38a4bd193da30e59b0503a038a9afa568617dcc29228e7ed94f5812547c70
@@ -461,6 +470,27 @@ entries:
   eng-metrics-lab-helm:
   - apiVersion: v2
     appVersion: 0.4.0
+    created: "2026-11-02T18:16:38.617498099Z"
+    description: A Helm chart for the eng-metrics-lab code-quality reporting stack
+      (Postgres, schema migration, nightly GitHub collector, weekly hotspots and backup)
+      on Kubernetes
+    digest: a960cda181d1b0daa604cdc493726ebb02c1c6d718e21b70487d8162c0883ed7
+    keywords:
+    - eng-metrics-lab
+    - code-quality
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: eng-metrics-lab-helm
+    sources:
+    - https://github.com/jfms7s/eng-metrics-lab
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/eng-metrics-lab-helm-0.3.0/eng-metrics-lab-helm-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: 0.4.0
     created: "2026-10-20T22:58:34.954340501Z"
     description: A Helm chart for the eng-metrics-lab code-quality reporting stack
       (Postgres, schema migration, nightly GitHub collector, weekly hotspots and backup)
@@ -641,6 +671,27 @@ entries:
   padel-score-helm:
   - apiVersion: v2
     appVersion: v0.2.0
+    created: "2026-11-02T18:16:38.907016019Z"
+    description: A Helm chart for padel-score, a padel match scorer with live spectator
+      links
+    digest: 73481e19ef1f4c81062708b5e6edbddf5805f7423f3c467ebeeadf9f6ba8369c
+    keywords:
+    - padel-score
+    - padel
+    - scoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: padel-score-helm
+    sources:
+    - https://github.com/jfms7s/padel-score
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/padel-score-helm-0.3.0/padel-score-helm-0.3.0.tgz
+    version: 0.3.0
+  - apiVersion: v2
+    appVersion: v0.2.0
     created: "2026-10-25T18:30:27.463617713Z"
     description: A Helm chart for padel-score, a padel match scorer with live spectator
       links
@@ -682,6 +733,27 @@ entries:
     - https://github.com/jfms7s/helm-charts/releases/download/padel-score-helm-0.1.0/padel-score-helm-0.1.0.tgz
     version: 0.1.0
   patchmon-helm:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-11-02T18:16:39.15026049Z"
+    description: A Helm chart for PatchMon, a Linux patch management platform
+    digest: 41fe87767898a1127afa1bcc55471ee01cbedca699f5f6a5164f9bc8ecf7d9a0
+    home: https://patchmon.net/
+    keywords:
+    - patchmon
+    - patch-management
+    - monitoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: patchmon-helm
+    sources:
+    - https://github.com/PatchMon/PatchMon
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.5.0/patchmon-helm-0.5.0.tgz
+    version: 0.5.0
   - apiVersion: v2
     appVersion: latest
     created: "2026-10-10T23:32:55.646794406Z"
@@ -767,6 +839,27 @@ entries:
     - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.1.0/patchmon-helm-0.1.0.tgz
     version: 0.1.0
   ticket-live-event-scanner-helm:
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-11-02T18:16:39.389251868Z"
+    description: A Helm chart for Ticket Live Event Scanner, a scraper/notifier pipeline
+      for ticketline.pt event listings
+    digest: 8fb773f0227fb712bc8820c64b45f1346565092448a985f91266582304c054b3
+    keywords:
+    - ticket-scanner
+    - scraper
+    - notifications
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: ticket-live-event-scanner-helm
+    sources:
+    - https://github.com/jfms7s/ticket-live-event-scanner
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.6.0/ticket-live-event-scanner-helm-0.6.0.tgz
+    version: 0.6.0
   - apiVersion: v2
     appVersion: latest
     created: "2026-11-01T11:02:13.1279992Z"
@@ -936,4 +1029,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-01T11:02:13.128628897Z"
+generated: "2026-11-02T18:16:39.38941242Z"
