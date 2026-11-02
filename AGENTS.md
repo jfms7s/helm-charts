@@ -24,7 +24,7 @@ helm-charts/
 ### data-lab-helm
 Shared infrastructure for the Spark and Flink learning labs (the exercise scripts live in the obsidian-vault repo). Includes:
 - `spark` / `flink` namespaces, each with a ServiceAccount + scoped namespaced Role
-- Single-node MinIO (Deployment + Service + PVC + Secret + bucket-creation hook Job), PVC-backed on the NFS StorageClass, reached over `s3a://` (datasets are seeded by the vault's exercise scripts, not this chart)
+- Nothing else: the object store the labs reach over `s3a://` (RustFS) and its buckets are provisioned by helm-argo-cd's data-lab Application and terraform-provision, not this chart
 
 ### firstdime-helm
 Application-specific chart for deploying [First Dime](https://github.com/jfms7s/firstdime) (Number One Dime), a personal finance application. Includes:
@@ -93,6 +93,16 @@ Generic chart for one single-container application per release, consumed from he
 - Optional Ingress
 - Optional PersistentVolumeClaims
 - ServiceAccount management
+
+## Constraints
+
+These charts have one deployer and one consumer, and the templates assume both:
+
+- **Deployed by Argo CD through helm-argo-cd**, never by `helm install`: multi-source Applications render each chart with a `valuesObject`, at a pinned chart version. A chart release changes nothing in the cluster until helm-argo-cd bumps that pin.
+- **No Helm `lookup`, no Helm-only hooks.** Argo CD renders with `helm template`, so `lookup` returns nothing and `helm.sh/hook` annotations become Argo hooks with different semantics. Use Argo hooks (`argocd.argoproj.io/hook`, as eng-metrics-lab's migrate Job does). This is also why credentials are never auto-generated.
+- **`argocd.argoproj.io/*` annotations are intentional** (sync waves, `Prune=false,Delete=false` on kept PVCs): keep them.
+- **Credentials use the `{value, valueFrom}` shape**, rendered by each chart's `credentialEnv` helper; helm-argo-cd passes `secretKeyRef`s. Charts with credentials refuse to render while one is empty or `CHANGE_ME` without a `valueFrom`.
+- **Pod templates carry no chart-version labels** (`<chart>.podLabels`, `common.labels.pod`), so a release that does not change a workload's spec does not restart it.
 
 ## Choosing a composition model
 
