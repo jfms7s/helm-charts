@@ -20,14 +20,18 @@ spec:
             {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "scraper" "component" "scraper") | nindent 12 }}
         spec:
           serviceAccountName: {{ .Release.Name }}-ticket-scanner-scraper
+          securityContext:
+            {{- include "ticket-live-event-scanner-helm.podSecurityContext" . | nindent 12 }}
+          automountServiceAccountToken: false
           containers:
             - name: scraper
               image: {{ .Values.scraper.image.repository }}:{{ .Values.scraper.image.tag }}
               imagePullPolicy: {{ .Values.scraper.image.pullPolicy }}
               securityContext:
-                runAsNonRoot: true
-                runAsUser: 1000
-                allowPrivilegeEscalation: false
+                {{- include "ticket-live-event-scanner-helm.containerSecurityContext" . | nindent 16 }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
               env:
                 - name: TICKETLINE_HUB_PAGES
                   value: {{ .Values.scraper.hubPages | quote }}
@@ -44,3 +48,6 @@ spec:
               resources:
                 {{- toYaml .Values.scraper.resources | nindent 16 }}
           restartPolicy: OnFailure
+          volumes:
+            - name: tmp
+              emptyDir: {}

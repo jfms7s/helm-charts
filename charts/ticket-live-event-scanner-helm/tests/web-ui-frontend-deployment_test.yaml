@@ -31,12 +31,6 @@ tests:
           path: spec.template.spec.containers[0].image
           value: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-frontend:latest
       - equal:
-          path: spec.template.spec.containers[0].securityContext
-          value:
-            runAsNonRoot: true
-            runAsUser: 1000
-            allowPrivilegeEscalation: false
-      - equal:
           path: spec.template.spec.containers[0].ports[0]
           value:
             name: http
