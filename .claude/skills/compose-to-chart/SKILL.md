@@ -168,15 +168,15 @@ the new one alongside it, don't restructure:
    under "Charts" describing what it deploys.
 2. `README.md` (repo root) — an entry under "Available Charts" linking to
    the chart's own README.
-3. `.github/workflows/lint-test.yml` — add one line each to the "Lint Helm
-   charts", "Template Helm charts", "Validate rendered templates", and
-   "Run helm-unittest" steps (with `-f charts/<chart>/ci/test-values.yaml`
-   when the chart has one).
-4. `Makefile` — its targets glob `charts/*` and pick up
-   `ci/test-values.yaml` automatically; any other `ci/*-values.yaml`
-   fixture needs a per-chart case in the `lint`, `template` and `validate`
-   loops (as `common` and `firstdime-helm` have).
-5. `charts/<app>-helm/tests/` — use the `helm-chart-test` skill to add
+3. `.github/workflows/lint-test.yml` and the `Makefile` — nothing to do.
+   CI runs the `make` targets, which glob `charts/*` and render each chart
+   by convention (`scripts/chart-values-sets.sh`): with `values.yaml`, or
+   with `ci/test-values.yaml` when it exists, then with each other
+   `ci/*-values.yaml` fixture layered on that base. A chart that refuses to
+   render on its defaults needs `ci/test-values.yaml`; add a
+   `ci/all-on-values.yaml` turning on every off-by-default branch so
+   kubeconform `-strict` checks it.
+4. `charts/<app>-helm/tests/` — use the `helm-chart-test` skill to add
    helm-unittest coverage for the new or changed templates before calling the
    chart done.
 

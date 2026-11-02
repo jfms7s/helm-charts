@@ -141,7 +141,7 @@ helm lint charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml
 helm template my-release charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml
 ```
 
-Without the `-f`, `helm lint` on those charts reports a misleading first error (`unable to parse YAML`): it treats the chart's `fail` as INFO and keeps rendering. The `make` targets already pass each chart's `ci/` values (see the per-chart cases in the `Makefile`).
+Without the `-f`, `helm lint` on those charts reports a misleading first error (`unable to parse YAML`): it treats the chart's `fail` as INFO and keeps rendering. The `make` targets (which CI runs) already pass each chart's `ci/` values: `scripts/chart-values-sets.sh` renders `ci/test-values.yaml` (else `values.yaml`), then each other `ci/*-values.yaml` layered on it, so a new chart or fixture needs no Makefile or CI edit.
 
 See the [Makefile](Makefile) (`make help`) for the same checks CI runs, including `kubeconform` schema validation and `helm-unittest`. Use the `helm-chart-test` skill (`.claude/skills/helm-chart-test/SKILL.md`) to add or expand test coverage for a chart.
 
