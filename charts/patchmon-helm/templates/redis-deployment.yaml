@@ -21,28 +21,36 @@ spec:
         - name: patchmon-redis
           image: {{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}
           imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+          # The password goes to redis-server as config on stdin, never on a
+          # command line (argv is readable from the process list). It is
+          # double-quoted with \ and " escaped, so any value works.
           command:
-            - redis-server
-            - --requirepass
-            - $(REDIS_PASSWORD)
+            - sh
+            - -c
+            - |
+              pw=$(printf '%s' "$REDIS_PASSWORD" | sed 's/[\\"]/\\&/g')
+              exec redis-server - <<EOF
+              requirepass "$pw"
+              EOF
           env:
             - name: REDIS_PASSWORD
+              {{- include "patchmon-helm.credentialEnv" .Values.redis.password | nindent 14 }}
+            # redis-cli reads its password from REDISCLI_AUTH (the probes).
+            - name: REDISCLI_AUTH
               {{- include "patchmon-helm.credentialEnv" .Values.redis.password | nindent 14 }}
           livenessProbe:
             exec:
               command:
-                - sh
-                - -c
-                - redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping
+                - redis-cli
+                - ping
             failureThreshold: 5
             periodSeconds: 10
             timeoutSeconds: 5
           readinessProbe:
             exec:
               command:
-                - sh
-                - -c
-                - redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping
+                - redis-cli
+                - ping
             failureThreshold: 3
             periodSeconds: 10
             timeoutSeconds: 5

@@ -33,9 +33,13 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].command
           value:
-            - redis-server
-            - --requirepass
-            - $(REDIS_PASSWORD)
+            - sh
+            - -c
+            - |
+              pw=$(printf '%s' "$REDIS_PASSWORD" | sed 's/[\\"]/\\&/g')
+              exec redis-server - <<EOF
+              requirepass "$pw"
+              EOF
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -43,10 +47,15 @@ tests:
             value: "test-redis-password"
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.exec.command
-          value:
-            - sh
-            - -c
-            - redis-cli --no-auth-warning -a "$REDIS_PASSWORD" ping
+          value: [redis-cli, ping]
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value: [redis-cli, ping]
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDISCLI_AUTH
+            value: "test-redis-password"
       - equal:
           path: spec.template.spec.containers[0].resources
           value:
@@ -94,6 +103,14 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: my-external-secret
+                key: MY_KEY
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REDISCLI_AUTH
             valueFrom:
               secretKeyRef:
                 name: my-external-secret
@@ -150,3 +167,12 @@ tests:
       redis.password.valueFrom.secretKeyRef.key: password
     asserts:
       - notFailedTemplate: {}
+
+  - it: keeps the redis password off every command line
+    asserts:
+      - notMatchRegex:
+          path: spec.template.spec.containers[0].command[2]
+          pattern: (--requirepass|\$\(REDIS_PASSWORD\))
+      - notContains:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          content: -a
