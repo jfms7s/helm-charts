@@ -1,6 +1,7 @@
 **/charts/*.tgz
 *.tgz
-*.secret.yml
+*.secret.y*ml
+values-secrets*.y*ml
 .vscode
 .bin/
 charts/*/tests/__snapshot__/

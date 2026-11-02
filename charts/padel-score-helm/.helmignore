@@ -24,3 +24,6 @@
 Chart.lock
 # Local .helmignore modifications
 tests/
+# Local secret values files (never packaged)
+values-secrets*.y*ml
+*.secret.y*ml
