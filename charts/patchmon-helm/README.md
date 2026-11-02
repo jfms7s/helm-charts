@@ -49,7 +49,7 @@ them is empty or the `CHANGE_ME` placeholder without a `valueFrom` (since
 | `guacd.resources` | guacd container resources | `requests: {cpu: 25m, memory: 64Mi}, limits: {memory: 512Mi}` |
 | `resources` | PatchMon server container resources | `requests: {cpu: 100m, memory: 256Mi}, limits: {memory: 1Gi}` |
 | `securityContext` / `podSecurityContext` | PatchMon server container/pod settings | `{}` |
-| `ingress.enabled` / `ingress.className` / `ingress.hosts` / `ingress.tls` | Ingress for the PatchMon server | disabled |
+| `ingress.enabled` / `ingress.className` / `ingress.hosts` / `ingress.tls` | Ingress for the PatchMon server; paths route to the server Service's `http` port (a path's `port` key is ignored) | disabled |
 
 ### Secrets
 

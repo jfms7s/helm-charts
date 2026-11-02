@@ -32,8 +32,8 @@ tests:
           path: spec.rules[0].http.paths[0].backend.service.name
           value: RELEASE-NAME-patchmon-server
       - equal:
-          path: spec.rules[0].http.paths[0].backend.service.port.number
-          value: 3000
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: http
       - notExists:
           path: spec.ingressClassName
       - notExists:
@@ -73,14 +73,17 @@ tests:
           path: spec.tls[0].hosts[0]
           value: patchmon.example.local
 
-  - it: falls back to the default backend port when a path omits it
+  - it: routes to the Service's http port and ignores a path's port
     set:
       ingress.enabled: true
       ingress.hosts:
         - host: patchmon.example.local
           paths:
             - path: /
+              port: 9999
     asserts:
       - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: http
+      - notExists:
           path: spec.rules[0].http.paths[0].backend.service.port.number
-          value: 3000
