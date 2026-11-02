@@ -94,7 +94,9 @@ scraper:
   # Comma-separated ticketline.pt hub page slugs the scraper re-checks for
   # new session IDs.
   hubPages: "auchan-live-academia-maia-98164,auchan-live-academia-aveiro-98167"
-  userAgent: "ticket-live-event-scanner/0.1 (personal project; contact: jfms7s@gmail.com)"
+  # HTTP User-Agent the scraper sends. Add your own contact (a URL or an
+  # address) so the site can reach whoever runs this install.
+  userAgent: "ticket-live-event-scanner (+https://github.com/jfms7s/ticket-live-event-scanner)"
   requestDelayMs: 1500
   resources:
     requests:
