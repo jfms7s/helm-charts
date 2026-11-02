@@ -31,26 +31,35 @@ Since 0.10.0 the chart ships a `values.schema.json`: an unknown key under `deplo
 | `deploy.image.repository` | Container image repository (required: the render fails without it) | `""` |
 | `deploy.image.tag` | Container image tag (empty renders the repository alone) | `""` |
 | `deploy.image.pullPolicy` | Container image pull policy | `IfNotPresent` |
+| `deploy.replicas` | Number of Deployment replicas | `1` |
 | `deploy.strategy` | Deployment update strategy, rendered verbatim; `type: Recreate` also renders `rollingUpdate: null` so a live RollingUpdate Deployment can be switched in place | `{}` (Kubernetes default, RollingUpdate) |
+| `deploy.resources` | Container resource requests and limits | `{}` |
+| `deploy.securityContext` | Container securityContext, rendered verbatim | `{}` |
+| `deploy.podSecurityContext` | Pod securityContext, rendered verbatim | `{}` |
+| `deploy.serviceAccount.create` | Create a ServiceAccount for the pod | `false` |
+| `deploy.serviceAccount.name` | ServiceAccount name (with `create`, defaults to the fullname; without it, an existing account to use) | `""` |
+| `deploy.serviceAccount.annotations` | Annotations on the created ServiceAccount | `{}` |
 | `deploy.nodeSelector` | Node labels the pod must match, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `{}` |
 | `deploy.affinity` | Pod/node affinity, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `{}` |
 | `deploy.tolerations` | Tolerations for tainted nodes, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `[]` |
-| `service.ports` | Service ports configuration | `{"http": 80}` |
-| `deploy.extraVolumes` | Additional volumes for the pod | `[]` |
-| `deploy.extraVolumeMounts` | Additional volume mounts for the container | `[]` |
+| `deploy.volumes` | Pod volumes, rendered verbatim | `[]` |
+| `deploy.volumeMounts` | Container volume mounts, rendered verbatim | `[]` |
 | `deploy.persistentVolumeClaims` | PVCs to create: `{name, storageClassName, size, accessModes}` (class and size required, accessModes defaults to `[ReadWriteOnce]`). Kept on uninstall/prune (`helm.sh/resource-policy: keep`, Argo CD `Prune=false,Delete=false`); reference one from `deploy.volumes` via `persistentVolumeClaim.claimName` | `[]` |
-| `ingress.enabled` | Enable ingress | `false` |
-| `ingress.className` | Ingress class name | `"traefik"` |
-| `ingress.pathType` | Ingress path type | `ImplementationSpecific` |
-| `ingress.annotations` | Ingress annotations | `{}` |
+| `deploy.initContainers` | Init containers, rendered verbatim | `[]` |
+| `deploy.env` | Container environment variables (`{name, value}` or `{name, valueFrom}`), rendered verbatim | `[]` |
+| `deploy.command` | Override the image's ENTRYPOINT (exec form) | `[]` |
+| `deploy.args` | Override the image's CMD (exec form) | `[]` |
+| `deploy.containerPorts` | Container ports keyed by IANA port name: scalar `http: 8080` or map `http: {port: 8080, protocol: TCP}` (protocol defaults to TCP) | `{}` |
+| `deploy.livenessProbe` / `deploy.readinessProbe` / `deploy.startupProbe` | Container probes, rendered verbatim | `{}` |
 | `service.type` | Service type | `ClusterIP` |
+| `service.ports` | Service ports: scalar `http: 80` or map `https: {port: 443, targetPort: 8443, protocol: TCP}` | `{"http": 80}` |
 | `service.annotations` | Service annotations | `{}` |
 | `service.labels` | Service labels | `{}` |
-| `ingress.enabled` | Enable ingress | `false` |
-| `ingress.className` | Ingress class name | `""` |
+| `ingress.enabled` | Render an Ingress | `false` |
+| `ingress.className` | IngressClass name (omitted when empty) | `""` |
 | `ingress.annotations` | Ingress annotations | `{}` |
-| `ingress.hosts` | Ingress host configuration; each path's `port` is a Service port name (`http`, rendered as `port.name`) or number (`8080`, rendered as `port.number`), default `80` | see values.yaml |
-| `ingress.tls` | TLS configuration | `[]` |
+| `ingress.hosts` | Ingress hosts, each `{host, paths}`; a path is `{path, pathType, port}`: `pathType` defaults to `Prefix`, and `port` is a Service port name (`http`, rendered as `port.name`) or number (`8080`, rendered as `port.number`), default `80` | `[{host: chart-example.local, paths: [{path: /, pathType: Prefix, port: http}]}]` |
+| `ingress.tls` | TLS configuration: `[{secretName, hosts}]` | `[]` |
 
 ### Example Configuration
 
@@ -60,11 +69,11 @@ deploy:
     repository: nginx
     tag: "1.21"
     pullPolicy: Always
-  extraVolumes:
+  volumes:
     - name: config
       configMap:
         name: my-config
-  extraVolumeMounts:
+  volumeMounts:
     - name: config
       mountPath: /etc/config
 
