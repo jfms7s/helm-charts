@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 8 }}
+        {{- include "eng-metrics-lab-helm.podLabels" (dict "context" $ "name" "postgres" "component" "database") | nindent 8 }}
     spec:
       automountServiceAccountToken: false
       {{- with (include "eng-metrics-lab-helm.placement" . | trim) }}

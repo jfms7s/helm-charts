@@ -79,6 +79,18 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | default "latest" | quote }}
 {{- end -}}
 
 {{/*
+Pod-template labels: the standard labels minus helm.sh/chart and
+app.kubernetes.io/version, which change with every chart release. Keeping them
+off the pod template means a common release that does not change an app's spec
+does not restart its pod.
+*/}}
+{{- define "common.labels.pod" -}}
+app.kubernetes.io/name: {{ include "common.names.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end -}}
+
+{{/*
 Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
 */}}
 {{- define "common.labels.matchLabels" -}}

@@ -14,7 +14,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 8 }}
+        {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 8 }}
     spec:
       containers:
         - name: nats

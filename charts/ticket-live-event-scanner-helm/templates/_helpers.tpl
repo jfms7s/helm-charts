@@ -9,12 +9,21 @@ Chart name and version, for the helm.sh/chart label.
 Standard labels for a component. Pass (dict "context" $ "name" "nats|scraper|telegram-notifier|web-ui-api|web-ui-frontend" "component" "message-bus|scraper|notifier|api|frontend").
 */}}
 {{- define "ticket-live-event-scanner-helm.labels" -}}
+{{ include "ticket-live-event-scanner-helm.podLabels" . }}
+helm.sh/chart: {{ include "ticket-live-event-scanner-helm.chart" .context }}
+{{- end -}}
+
+{{/*
+Pod-template labels: the standard labels minus helm.sh/chart, so a chart
+release that does not change a workload's spec does not restart its pods.
+Same arguments as ticket-live-event-scanner-helm.labels.
+*/}}
+{{- define "ticket-live-event-scanner-helm.podLabels" -}}
 app.kubernetes.io/name: {{ .name }}
 app.kubernetes.io/instance: {{ .context.Release.Name }}
 app.kubernetes.io/component: {{ .component }}
 app.kubernetes.io/part-of: ticket-scanner
 app.kubernetes.io/managed-by: {{ .context.Release.Service }}
-helm.sh/chart: {{ include "ticket-live-event-scanner-helm.chart" .context }}
 {{- end -}}
 
 {{/*

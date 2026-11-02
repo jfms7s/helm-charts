@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "padel-score-helm.labels" (dict "context" $ "name" "server" "component" "server") | nindent 8 }}
+        {{- include "padel-score-helm.podLabels" (dict "context" $ "name" "server" "component" "server") | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

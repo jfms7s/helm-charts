@@ -9,12 +9,21 @@ Chart name and version, for the helm.sh/chart label.
 Standard labels. Pass (dict "context" $ "name" "postgres|migrate|collector|backup" "component" "...").
 */}}
 {{- define "eng-metrics-lab-helm.labels" -}}
+{{ include "eng-metrics-lab-helm.podLabels" . }}
+helm.sh/chart: {{ include "eng-metrics-lab-helm.chart" .context }}
+{{- end -}}
+
+{{/*
+Pod-template labels: the standard labels minus helm.sh/chart, so a chart
+release that does not change a workload's spec does not restart its pods.
+Same arguments as eng-metrics-lab-helm.labels.
+*/}}
+{{- define "eng-metrics-lab-helm.podLabels" -}}
 app.kubernetes.io/name: {{ .name }}
 app.kubernetes.io/instance: {{ .context.Release.Name }}
 app.kubernetes.io/component: {{ .component }}
 app.kubernetes.io/part-of: eng-metrics-lab
 app.kubernetes.io/managed-by: {{ .context.Release.Service }}
-helm.sh/chart: {{ include "eng-metrics-lab-helm.chart" .context }}
 {{- end -}}
 
 {{/*

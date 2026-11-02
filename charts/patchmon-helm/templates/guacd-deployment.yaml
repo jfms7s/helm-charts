@@ -13,7 +13,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "patchmon-helm.labels" (dict "context" $ "name" "guacd" "component" "rdp-proxy") | nindent 8 }}
+        {{- include "patchmon-helm.podLabels" (dict "context" $ "name" "guacd" "component" "rdp-proxy") | nindent 8 }}
     spec:
       containers:
         - name: patchmon-guacd

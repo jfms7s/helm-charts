@@ -15,7 +15,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "migrate" "component" "migration") | nindent 8 }}
+        {{- include "eng-metrics-lab-helm.podLabels" (dict "context" $ "name" "migrate" "component" "migration") | nindent 8 }}
     spec:
       restartPolicy: Never
       {{- include "eng-metrics-lab-helm.collectorPodSpec" . | nindent 6 }}

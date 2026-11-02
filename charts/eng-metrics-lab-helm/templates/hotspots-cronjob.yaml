@@ -20,7 +20,7 @@ spec:
       template:
         metadata:
           labels:
-            {{- include "eng-metrics-lab-helm.labels" (dict "context" $ "name" "hotspots" "component" "hotspots") | nindent 12 }}
+            {{- include "eng-metrics-lab-helm.podLabels" (dict "context" $ "name" "hotspots" "component" "hotspots") | nindent 12 }}
         spec:
           restartPolicy: Never
           {{- include "eng-metrics-lab-helm.collectorPodSpec" . | nindent 10 }}
