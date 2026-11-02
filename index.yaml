@@ -735,6 +735,27 @@ entries:
   patchmon-helm:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-11-02T18:30:35.098033749Z"
+    description: A Helm chart for PatchMon, a Linux patch management platform
+    digest: 0391e39281dea2ffd79243c35c4a3f17c77fd6f6e8a779495e9165183c864b12
+    home: https://patchmon.net/
+    keywords:
+    - patchmon
+    - patch-management
+    - monitoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: patchmon-helm
+    sources:
+    - https://github.com/PatchMon/PatchMon
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.6.1/patchmon-helm-0.6.1.tgz
+    version: 0.6.1
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-11-02T18:24:54.482901859Z"
     description: A Helm chart for PatchMon, a Linux patch management platform
     digest: 5407e139261fa08f765bb000422afa1809e54dab09627ccfc601d43f1222ac8c
@@ -1071,4 +1092,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-02T18:24:54.660955711Z"
+generated: "2026-11-02T18:30:35.098177048Z"
