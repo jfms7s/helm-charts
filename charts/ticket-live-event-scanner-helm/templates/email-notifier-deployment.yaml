@@ -14,6 +14,7 @@ spec:
     metadata:
       labels:
         {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "email-notifier" "component" "notifier") | nindent 8 }}
+      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "SMTP_PASSWORD" "SMTP_USERNAME")) }}{{ . | nindent 6 }}{{ end }}
     spec:
       securityContext:
         {{- include "ticket-live-event-scanner-helm.podSecurityContext" . | nindent 8 }}
@@ -35,9 +36,9 @@ spec:
             - name: SMTP_PORT
               value: {{ .Values.smtp.port | quote }}
             - name: SMTP_USERNAME
-              {{- include "ticket-live-event-scanner-helm.credentialEnv" .Values.smtp.username | nindent 14 }}
+              {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "SMTP_USERNAME") | nindent 14 }}
             - name: SMTP_PASSWORD
-              {{- include "ticket-live-event-scanner-helm.credentialEnv" .Values.smtp.password | nindent 14 }}
+              {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "SMTP_PASSWORD") | nindent 14 }}
             - name: EMAIL_FROM
               value: {{ .Values.smtp.from | quote }}
             - name: EMAIL_TO

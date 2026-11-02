@@ -1,0 +1,5 @@
+# CI fixture: telegram.chatId as a YAML integer (Helm parses it as float64);
+# the credentials Secret must hold its digits, not exponent form.
+telegram:
+  chatId:
+    value: -1001234567890

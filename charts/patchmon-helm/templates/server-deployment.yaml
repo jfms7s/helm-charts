@@ -14,6 +14,7 @@ spec:
     metadata:
       labels:
         {{- include "patchmon-helm.podLabels" (dict "context" $ "name" "server" "component" "server") | nindent 8 }}
+      {{- with include "patchmon-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "AI_ENCRYPTION_KEY" "JWT_SECRET" "POSTGRES_PASSWORD" "REDIS_PASSWORD" "SESSION_SECRET")) }}{{ . | nindent 6 }}{{ end }}
     spec:
       containers:
         - name: patchmon-server
@@ -23,11 +24,11 @@ spec:
             - name: CORS_ORIGIN
               value: {{ .Values.server.corsOrigin | quote }}
             - name: JWT_SECRET
-              {{- include "patchmon-helm.credentialEnv" .Values.server.jwtSecret | nindent 14 }}
+              {{- include "patchmon-helm.credentialEnv" (dict "ctx" $ "key" "JWT_SECRET") | nindent 14 }}
             - name: SESSION_SECRET
-              {{- include "patchmon-helm.credentialEnv" .Values.server.sessionSecret | nindent 14 }}
+              {{- include "patchmon-helm.credentialEnv" (dict "ctx" $ "key" "SESSION_SECRET") | nindent 14 }}
             - name: AI_ENCRYPTION_KEY
-              {{- include "patchmon-helm.credentialEnv" .Values.server.aiEncryptionKey | nindent 14 }}
+              {{- include "patchmon-helm.credentialEnv" (dict "ctx" $ "key" "AI_ENCRYPTION_KEY") | nindent 14 }}
             - name: POSTGRES_HOST
               value: {{ .Release.Name }}-patchmon-postgres
             - name: POSTGRES_USER
@@ -35,7 +36,7 @@ spec:
             - name: POSTGRES_DB
               value: {{ .Values.postgres.db }}
             - name: POSTGRES_PASSWORD
-              {{- include "patchmon-helm.credentialEnv" .Values.postgres.password | nindent 14 }}
+              {{- include "patchmon-helm.credentialEnv" (dict "ctx" $ "key" "POSTGRES_PASSWORD") | nindent 14 }}
             - name: DATABASE_URL
               value: postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@{{ .Release.Name }}-patchmon-postgres:5432/{{ .Values.postgres.db }}
             - name: REDIS_HOST
@@ -45,7 +46,7 @@ spec:
             - name: REDIS_DB
               value: "0"
             - name: REDIS_PASSWORD
-              {{- include "patchmon-helm.credentialEnv" .Values.redis.password | nindent 14 }}
+              {{- include "patchmon-helm.credentialEnv" (dict "ctx" $ "key" "REDIS_PASSWORD") | nindent 14 }}
             {{- if .Values.guacd.enabled }}
             - name: GUACD_ADDRESS
               value: {{ .Release.Name }}-patchmon-guacd:4822

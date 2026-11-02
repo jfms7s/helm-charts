@@ -44,12 +44,18 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: JWT_SECRET
-            value: "test-jwt-secret-not-real"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-credentials
+                key: JWT_SECRET
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: POSTGRES_PASSWORD
-            value: "test-postgres-password"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-credentials
+                key: POSTGRES_PASSWORD
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -64,7 +70,10 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: REDIS_PASSWORD
-            value: "test-redis-password"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-credentials
+                key: REDIS_PASSWORD
       - contains:
           path: spec.template.spec.containers[0].env
           content:

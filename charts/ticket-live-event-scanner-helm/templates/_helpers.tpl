@@ -39,19 +39,96 @@ app.kubernetes.io/instance: {{ .context.Release.Name }}
 {{- end -}}
 
 {{/*
-Render an env var's value/valueFrom body from a {value, valueFrom} map, e.g.
-{{- include "ticket-live-event-scanner-helm.credentialEnv" .Values.turso.authToken | nindent N }}
-valueFrom (a standard corev1 EnvVarSource body, e.g. secretKeyRef) takes
-precedence over value when both are set. value defaults to "CHANGE_ME",
-since Argo CD does not support Helm's `lookup` function, so -- unlike a
-plain `helm install` -- these can't be safely auto-generated and persisted
-across syncs; callers must pin one explicitly.
+Every credential the chart consumes, as Secret key -> its {value, valueFrom}
+map. Fills the dict passed as .out; pass (dict "ctx" $ "out" (dict)).
+*/}}
+{{- define "ticket-live-event-scanner-helm.credentials" -}}
+{{- $v := .ctx.Values -}}
+{{- $_ := set .out "TURSO_DATABASE_URL" ($v.turso.databaseUrl | default dict) -}}
+{{- $_ := set .out "TURSO_AUTH_TOKEN" ($v.turso.authToken | default dict) -}}
+{{- $_ := set .out "TELEGRAM_BOT_TOKEN" ($v.telegram.botToken | default dict) -}}
+{{- $_ := set .out "TELEGRAM_CHAT_ID" ($v.telegram.chatId | default dict) -}}
+{{- $_ := set .out "SMTP_USERNAME" ($v.smtp.username | default dict) -}}
+{{- $_ := set .out "SMTP_PASSWORD" ($v.smtp.password | default dict) -}}
+{{- end -}}
+
+{{/*
+Name of the chart-owned Secret that holds every credential given as value.
+*/}}
+{{- define "ticket-live-event-scanner-helm.credentialsSecretName" -}}
+{{- printf "%s-ticket-scanner-credentials" .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+One credential value as the string the app receives. YAML numbers arrive as
+float64, so an integral one (a Telegram chat ID, say) is printed as an
+integer instead of in exponent form.
+*/}}
+{{- define "ticket-live-event-scanner-helm.credentialString" -}}
+{{- $v := . | default "CHANGE_ME" -}}
+{{- if and (kindIs "float64" $v) (eq $v (float64 (int64 $v))) -}}
+{{- printf "%d" (int64 $v) -}}
+{{- else -}}
+{{- toString $v -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Secret data: one base64 key per credential given as value (no valueFrom),
+sorted. Pass (dict "ctx" $) for every credential, or add "keys" (a list of
+Secret keys) for just those. Renders nothing when none of them uses value.
+*/}}
+{{- define "ticket-live-event-scanner-helm.credentialsSecretData" -}}
+{{- $creds := dict -}}
+{{- include "ticket-live-event-scanner-helm.credentials" (dict "ctx" .ctx "out" $creds) -}}
+{{- $only := .keys | default (keys $creds) -}}
+{{- range $key := keys $creds | sortAlpha -}}
+{{- $cred := get $creds $key -}}
+{{- if and (has $key $only) (not $cred.valueFrom) }}
+{{ $key }}: {{ include "ticket-live-event-scanner-helm.credentialString" $cred.value | b64enc | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Pod-template annotation that rolls a workload when one of the credentials it
+reads changes while given as value (its env var points at the chart Secret,
+so the pod spec itself would not change). Pass (dict "ctx" $ "keys" (list
+...)) with the Secret keys the workload reads. Renders nothing when none of
+them uses value. The hash is unsalted: like any hash of a secret it can be
+brute-forced offline, so give value credentials high entropy (or use
+valueFrom).
+*/}}
+{{- define "ticket-live-event-scanner-helm.credentialsChecksum" -}}
+{{- with include "ticket-live-event-scanner-helm.credentialsSecretData" . -}}
+annotations:
+  checksum/credentials: {{ sha256sum . }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render an env var's valueFrom body for one credential, by its Secret key, e.g.
+{{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TURSO_DATABASE_URL") | nindent N }}
+A credential's own valueFrom (a standard corev1 EnvVarSource body, e.g.
+secretKeyRef) is passed through; a credential given as value is read from the
+chart Secret, so it never appears in a workload spec. Never emits both value
+and valueFrom on one EnvVar. Credentials are never generated: Argo CD has no
+`lookup`, so a generated value would rotate on every sync.
 */}}
 {{- define "ticket-live-event-scanner-helm.credentialEnv" -}}
-{{- if .valueFrom -}}
-valueFrom: {{- toYaml .valueFrom | nindent 2 }}
+{{- $creds := dict -}}
+{{- include "ticket-live-event-scanner-helm.credentials" (dict "ctx" .ctx "out" $creds) -}}
+{{- if not (hasKey $creds .key) -}}
+{{- fail (printf "ticket-live-event-scanner-helm: unknown credential key %s" .key) -}}
+{{- end -}}
+{{- $cred := get $creds .key -}}
+{{- if $cred.valueFrom -}}
+valueFrom: {{- toYaml $cred.valueFrom | nindent 2 }}
 {{- else -}}
-value: {{ .value | default "CHANGE_ME" | quote }}
+valueFrom:
+  secretKeyRef:
+    name: {{ include "ticket-live-event-scanner-helm.credentialsSecretName" .ctx }}
+    key: {{ .key }}
 {{- end -}}
 {{- end -}}
 

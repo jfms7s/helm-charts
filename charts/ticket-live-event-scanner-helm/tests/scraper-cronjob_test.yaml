@@ -56,12 +56,18 @@ tests:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
           content:
             name: TURSO_DATABASE_URL
-            value: "http://test-libsql:8080"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-ticket-scanner-credentials
+                key: TURSO_DATABASE_URL
       - contains:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
           content:
             name: TURSO_AUTH_TOKEN
-            value: "test-auth-token-not-real"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-ticket-scanner-credentials
+                key: TURSO_AUTH_TOKEN
       - contains:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
           content:

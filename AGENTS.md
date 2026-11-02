@@ -102,7 +102,7 @@ These charts have one deployer and one consumer, and the templates assume both:
 - **Deployed by Argo CD through helm-argo-cd**, never by `helm install`: multi-source Applications render each chart with a `valuesObject`, at a pinned chart version. A chart release changes nothing in the cluster until helm-argo-cd bumps that pin.
 - **No Helm `lookup`, no Helm-only hooks.** Argo CD renders with `helm template`, so `lookup` returns nothing and `helm.sh/hook` annotations become Argo hooks with different semantics. Use Argo hooks (`argocd.argoproj.io/hook`, as eng-metrics-lab's migrate Job does). This is also why credentials are never auto-generated.
 - **`argocd.argoproj.io/*` annotations are intentional** (sync waves, `Prune=false,Delete=false` on kept PVCs): keep them.
-- **Credentials use the `{value, valueFrom}` shape**, rendered by each chart's `credentialEnv` helper; helm-argo-cd passes `secretKeyRef`s. Charts with credentials refuse to render while one is empty or `CHANGE_ME` without a `valueFrom`.
+- **Credentials use the `{value, valueFrom}` shape**, rendered by each chart's `credentialEnv` helper; helm-argo-cd passes `secretKeyRef`s. In patchmon-helm and ticket-live-event-scanner-helm a `value` goes into a chart-owned `<release>-<app>-credentials` Secret and the env var uses `secretKeyRef` (firstdime-helm still inlines it). Charts with credentials refuse to render while one is empty or `CHANGE_ME` without a `valueFrom`.
 - **Pod templates carry no chart-version labels** (`<chart>.podLabels`, `common.labels.pod`), so a release that does not change a workload's spec does not restart it.
 
 ## Choosing a composition model

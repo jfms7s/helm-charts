@@ -44,7 +44,10 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: POSTGRES_PASSWORD
-            value: "test-postgres-password"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-patchmon-credentials
+                key: POSTGRES_PASSWORD
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.exec.command
           value:
