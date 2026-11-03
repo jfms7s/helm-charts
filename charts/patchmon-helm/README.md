@@ -26,7 +26,7 @@ them is empty or the `CHANGE_ME` placeholder without a `valueFrom` (since
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `image.repository` / `image.tag` / `image.pullPolicy` | PatchMon server image | `ghcr.io/patchmon/patchmon-server:latest` |
+| `image.repository` / `image.tag` / `image.pullPolicy` | PatchMon server image | `ghcr.io/patchmon/patchmon-server:2.1.3` |
 | `replicas` | PatchMon server replica count | `1` |
 | `server.corsOrigin` | Allowed frontend origin(s), comma-separated | `http://localhost:3000` |
 | `server.jwtSecret` / `server.sessionSecret` / `server.aiEncryptionKey` | Server secrets, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
@@ -45,7 +45,7 @@ them is empty or the `CHANGE_ME` placeholder without a `valueFrom` (since
 | `redis.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-patchmon-redis-data` (RWO, kept on uninstall/prune); point `redis.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
 | `redis.persistence.subPath` | Subdirectory of the volume to mount as the Redis data dir (keeps ext4's `lost+found` out of it on block-backed PVCs) | `""` |
 | `guacd.enabled` | Deploy the guacd sidecar (in-browser RDP to Windows hosts) | `true` |
-| `guacd.image.*` | guacd image | `guacamole/guacd:latest` |
+| `guacd.image.*` | guacd image | `guacamole/guacd:1.6.0` |
 | `guacd.resources` | guacd container resources | `requests: {cpu: 25m, memory: 64Mi}, limits: {memory: 512Mi}` |
 | `resources` | PatchMon server container resources | `requests: {cpu: 100m, memory: 256Mi}, limits: {memory: 1Gi}` |
 | `securityContext` / `podSecurityContext` | PatchMon server container/pod settings | `{}` |
