@@ -473,6 +473,26 @@ entries:
   data-lab-helm:
   - apiVersion: v2
     appVersion: "1"
+    created: "2026-11-03T09:37:55.160477952Z"
+    description: Shared infrastructure for the Spark and Flink learning labs — namespaces
+      and engine RBAC
+    digest: 23b67204aa924870df0f3267fd3c80a9f5aaf4c7e4dacb2db8ecf59fbf8534e6
+    keywords:
+    - spark
+    - flink
+    - lab
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: data-lab-helm
+    sources:
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/data-lab-helm-0.3.1/data-lab-helm-0.3.1.tgz
+    version: 0.3.1
+  - apiVersion: v2
+    appVersion: "1"
     created: "2026-11-03T09:35:55.131384823Z"
     description: Shared infrastructure for the Spark and Flink learning labs — namespaces
       and engine RBAC
@@ -1595,4 +1615,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-03T09:35:55.131599947Z"
+generated: "2026-11-03T09:37:55.160612644Z"
