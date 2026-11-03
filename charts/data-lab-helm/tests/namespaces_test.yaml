@@ -48,3 +48,60 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: "data-lab-helm: podSecurity.enforce must be privileged, baseline or restricted (got \"strict\")"
+
+  - it: names the namespaces spark and flink with the chart's labels
+    asserts:
+      - isKind: {of: Namespace}
+      - equal: {path: metadata.name, value: spark}
+        documentIndex: 0
+      - equal: {path: metadata.name, value: flink}
+        documentIndex: 1
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/name: spark
+            app.kubernetes.io/component: namespace
+            app.kubernetes.io/part-of: data-lab
+        documentIndex: 0
+      - isSubset:
+          path: metadata.labels
+          content:
+            app.kubernetes.io/name: flink
+            app.kubernetes.io/component: namespace
+            app.kubernetes.io/part-of: data-lab
+        documentIndex: 1
+
+  - it: uses custom namespace names
+    set:
+      spark.namespace: spark-lab
+      flink.namespace: flink-lab
+    asserts:
+      - equal: {path: metadata.name, value: spark-lab}
+        documentIndex: 0
+      - equal: {path: metadata.name, value: flink-lab}
+        documentIndex: 1
+
+  - it: drops the spark namespace when spark is disabled
+    set:
+      spark.enabled: false
+    asserts:
+      - hasDocuments: {count: 1}
+      - equal: {path: metadata.name, value: flink}
+
+  - it: drops the flink namespace when flink is disabled
+    set:
+      flink.enabled: false
+    asserts:
+      - hasDocuments: {count: 1}
+      - equal: {path: metadata.name, value: spark}
+
+  # A Namespace takes everything in it when deleted: disabling an engine,
+  # renaming its namespace, uninstalling or deleting the Argo CD Application
+  # must leave the Namespace in place (removing it is a manual step).
+  - it: keeps both namespaces on uninstall, prune and Application deletion
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            helm.sh/resource-policy: keep
+            argocd.argoproj.io/sync-options: Prune=false,Delete=false

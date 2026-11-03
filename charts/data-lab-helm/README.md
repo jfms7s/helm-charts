@@ -52,3 +52,12 @@ Namespace carries `pod-security.kubernetes.io/enforce: baseline`: a leaked
 token or a lab job cannot start a privileged, host-namespace or `hostPath`
 pod. Pods already running are not evicted when the label is added; a
 non-compliant pod is rejected at its next creation.
+
+### Namespace deletion
+
+Both Namespaces carry `helm.sh/resource-policy: keep` and
+`argocd.argoproj.io/sync-options: Prune=false,Delete=false`: disabling an
+engine, renaming its namespace, `helm uninstall` or deleting the Argo CD
+Application leaves the Namespace (and its PVCs, Secrets and running jobs)
+in place. Argo CD then shows it as out of sync rather than pruning it.
+Deleting a lab Namespace is a manual `kubectl delete namespace <name>`.

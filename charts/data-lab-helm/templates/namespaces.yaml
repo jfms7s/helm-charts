@@ -3,6 +3,12 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Values.spark.namespace }}
+  # A Namespace takes everything in it when deleted. Disabling the engine,
+  # renaming the namespace, an uninstall or deleting the Argo CD Application
+  # leaves it in place; removing it is a deliberate manual step.
+  annotations:
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
   labels:
     {{- include "data-lab-helm.labels" (dict "context" $ "name" "spark" "component" "namespace") | nindent 4 }}
     {{- include "data-lab-helm.podSecurityLabels" $ | nindent 4 }}
@@ -13,6 +19,12 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Values.flink.namespace }}
+  # A Namespace takes everything in it when deleted. Disabling the engine,
+  # renaming the namespace, an uninstall or deleting the Argo CD Application
+  # leaves it in place; removing it is a deliberate manual step.
+  annotations:
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
   labels:
     {{- include "data-lab-helm.labels" (dict "context" $ "name" "flink" "component" "namespace") | nindent 4 }}
     {{- include "data-lab-helm.podSecurityLabels" $ | nindent 4 }}
