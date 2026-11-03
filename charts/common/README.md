@@ -119,6 +119,18 @@ deploy:
       subPath: data         # keeps ext4's lost+found out of the data dir
 ```
 
+## Resource names
+
+Consumers wire other apps to these names, so they are part of the chart's interface (unit tests pin them). `<fullname>` is `fullnameOverride` if set; else the release name when it already contains `nameOverride` (default `common`); else `<release>-<nameOverride>`. Every name is cut to 63 characters.
+
+| Object | Name | Example: namespace `tools`, `fullnameOverride: my-app` |
+|---|---|---|
+| Service | `<namespace>-<fullname>` | `tools-my-app`, DNS `tools-my-app.tools.svc` |
+| Ingress | `<fullname>`, backend is the Service above | `my-app` |
+| Deployment | `<fullname>` | `my-app` |
+| ServiceAccount (`deploy.serviceAccount.create`) | `deploy.serviceAccount.name`, else `<fullname>` | `my-app` |
+| PersistentVolumeClaim | each `deploy.persistentVolumeClaims[].name`, verbatim | |
+
 ## Deployment
 
 This chart creates the following Kubernetes resources:

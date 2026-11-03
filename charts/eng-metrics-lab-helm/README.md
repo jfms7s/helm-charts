@@ -12,6 +12,16 @@ Deploys eng-metrics-lab, a code-quality reporting stack built on `ghcr.io/jfms7s
 
 The quality-collector image has no USER and its inherited ENTRYPOINT/CMD are node's, so the chart must set `command: [quality-collector]`; it runs the migrate, collector and hotspots containers as uid 1000, read-only root, `HOME=/tmp` on an `emptyDir`. Postgres runs as uid 999.
 
+## Resource names
+
+Names carry no chart prefix (unit tests pin them). Consumers hard-code the Postgres Service: with release `eng-metrics-lab` in namespace `eng-metrics-lab`, the in-cluster DSN host is `eng-metrics-lab-postgres.eng-metrics-lab.svc:5432`.
+
+| Object | Name | Example |
+|---|---|---|
+| Service (Postgres, 5432) | `<release>-postgres` | `eng-metrics-lab-postgres` |
+| PVC (Postgres data, unless `postgres.persistence.claim.storageClassName` is cleared) | `<release>-postgres-data` | `eng-metrics-lab-postgres-data` |
+| PVC (backups, unless `backup.persistence.claim.storageClassName` is cleared) | `<release>-backup` | `eng-metrics-lab-backup` |
+
 ## Secret
 
 `existingSecret` (default `eng-metrics-lab-secrets`) must hold `POSTGRES_PASSWORD`, `QUALITY_WRITER_PASSWORD`, `QUALITY_COLLECTOR_PASSWORD`, `QUALITY_GRAFANA_PASSWORD` and `GITHUB_TOKEN`. The hotspots CronJob clones every repo in `hotspots.repos` with `GITHUB_TOKEN`, so the token needs *Contents: read* on the private ones. The chart never generates a secret. Passwords must be alphanumeric: connection URLs are built with Kubernetes `$(VAR)` expansion, unescaped. `GITHUB_TOKEN` may be absent: its `secretKeyRef` is `optional`, so the collector (and hotspots) starts and exits 2 naming the missing variable instead of the pod failing with `CreateContainerConfigError`.

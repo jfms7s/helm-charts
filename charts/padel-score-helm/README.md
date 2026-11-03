@@ -64,6 +64,18 @@ A Deployment (one replica, `Recreate` strategy, since SQLite allows a single
 writer) + Service (+ optional Ingress and PVC). Startup, liveness and readiness probes hit `GET /api/health` on port 8080
 (the startup probe allows up to 5 minutes).
 
+## Resource names
+
+Part of the chart's interface (unit tests pin them). With release `padel-score` in namespace `padel-score`:
+
+| Object | Name | Example |
+|---|---|---|
+| Service (port 8080) | `<release>-padel-score-server` | `padel-score-padel-score-server.padel-score.svc` |
+| Deployment / Ingress | `<release>-padel-score-server` | `padel-score-padel-score-server` |
+| PVC (when `server.persistence.claim.size` is set) | `<release>-padel-score-server-data` | `padel-score-padel-score-server-data` |
+
+A chart-made claim is not mounted automatically: point `server.persistence.volume.persistentVolumeClaim.claimName` at the name above.
+
 ## Uninstalling
 
 ```bash
