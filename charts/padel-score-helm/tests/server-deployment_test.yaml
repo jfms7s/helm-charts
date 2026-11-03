@@ -59,6 +59,9 @@ tests:
       - isKind:
           of: Deployment
       - equal:
+          path: spec.revisionHistoryLimit
+          value: 3
+      - equal:
           path: metadata.name
           value: RELEASE-NAME-padel-score-server
       - equal:

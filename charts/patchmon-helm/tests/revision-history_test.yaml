@@ -1,0 +1,28 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+# Each Deployment keeps 3 old ReplicaSets, not Kubernetes' default 10, in the
+# k3s datastore. Deployment spec, not pod template: changing it rolls nothing.
+suite: revision-history
+templates:
+  - templates/server-deployment.yaml
+  - templates/postgres-deployment.yaml
+  - templates/redis-deployment.yaml
+  - templates/guacd-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: server keeps 3 old ReplicaSets
+    template: templates/server-deployment.yaml
+    asserts:
+      - equal: {path: spec.revisionHistoryLimit, value: 3}
+  - it: postgres keeps 3 old ReplicaSets
+    template: templates/postgres-deployment.yaml
+    asserts:
+      - equal: {path: spec.revisionHistoryLimit, value: 3}
+  - it: redis keeps 3 old ReplicaSets
+    template: templates/redis-deployment.yaml
+    asserts:
+      - equal: {path: spec.revisionHistoryLimit, value: 3}
+  - it: guacd keeps 3 old ReplicaSets
+    template: templates/guacd-deployment.yaml
+    asserts:
+      - equal: {path: spec.revisionHistoryLimit, value: 3}

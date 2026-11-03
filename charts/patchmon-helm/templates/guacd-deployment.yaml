@@ -7,6 +7,9 @@ metadata:
     {{- include "patchmon-helm.labels" (dict "context" $ "name" "guacd" "component" "rdp-proxy") | nindent 4 }}
 spec:
   replicas: 1
+  # Keep 3 old ReplicaSets (default 10) in the datastore; not part of the
+  # pod template, so changing it rolls nothing.
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       {{- include "patchmon-helm.selectorLabels" (dict "context" $ "name" "guacd") | nindent 6 }}
@@ -30,21 +33,15 @@ spec:
               drop:
                 - ALL
           livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - nc -z localhost 4822 || exit 1
+            tcpSocket:
+              port: 4822
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - nc -z localhost 4822 || exit 1
+            tcpSocket:
+              port: 4822
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5

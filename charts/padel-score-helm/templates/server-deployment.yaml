@@ -8,6 +8,9 @@ spec:
   # One replica only: SQLite allows a single writer, so a second pod (or an
   # overlapping rollout) sharing the volume would corrupt it.
   replicas: 1
+  # Keep 3 old ReplicaSets (default 10) in the datastore; not part of the
+  # pod template, so changing it rolls nothing.
+  revisionHistoryLimit: 3
   strategy:
     type: Recreate
   selector:

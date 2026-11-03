@@ -7,6 +7,9 @@ metadata:
     {{- include "patchmon-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 4 }}
 spec:
   replicas: 1
+  # Keep 3 old ReplicaSets (default 10) in the datastore; not part of the
+  # pod template, so changing it rolls nothing.
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       {{- include "patchmon-helm.selectorLabels" (dict "context" $ "name" "postgres") | nindent 6 }}

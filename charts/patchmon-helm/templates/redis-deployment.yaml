@@ -7,6 +7,9 @@ metadata:
     {{- include "patchmon-helm.labels" (dict "context" $ "name" "redis" "component" "cache") | nindent 4 }}
 spec:
   replicas: 1
+  # Keep 3 old ReplicaSets (default 10) in the datastore; not part of the
+  # pod template, so changing it rolls nothing.
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       {{- include "patchmon-helm.selectorLabels" (dict "context" $ "name" "redis") | nindent 6 }}
@@ -62,7 +65,9 @@ spec:
                 - redis-cli
                 - ping
             failureThreshold: 5
-            periodSeconds: 10
+            # A ping every 30 s is enough to catch a wedged Redis; readiness
+            # keeps the 10 s period.
+            periodSeconds: 30
             timeoutSeconds: 5
           readinessProbe:
             exec:

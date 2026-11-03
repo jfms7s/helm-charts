@@ -77,3 +77,22 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].image
           value: my-registry/guacd:1.5.5
+
+  - it: probes guacd's port with a TCP check, not an exec of nc
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            tcpSocket: {port: 4822}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            tcpSocket: {port: 4822}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
