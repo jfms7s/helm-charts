@@ -1,0 +1,26 @@
+{{- if .Values.webUiApi.metrics.serviceMonitor.enabled }}
+# Prometheus scrapes web-ui-api's /metrics: the scraper's run health
+# (last run, failed, per-hub consecutive empty runs), derived from the run
+# log. The alert rules live with the cluster's Prometheus, not here.
+# Needs the Prometheus Operator CRDs (kube-prometheus-stack).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-web-ui-api
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "web-ui-api" "component" "api") | nindent 4 }}
+    {{- with .Values.webUiApi.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "ticket-live-event-scanner-helm.selectorLabels" (dict "context" $ "name" "web-ui-api") | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.webUiApi.metrics.serviceMonitor.interval }}
+{{- end }}

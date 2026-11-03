@@ -48,6 +48,8 @@ without a `valueFrom` (since 0.7.0); see the note below.
 | `scraper.hubPages` | Comma-separated ticketline.pt hub page slugs to re-check for new session IDs | `auchan-live-academia-maia-98164,auchan-live-academia-aveiro-98167` |
 | `scraper.userAgent` | HTTP User-Agent sent by the scraper; add your own contact to it | `ticket-live-event-scanner (+https://github.com/jfms7s/ticket-live-event-scanner)` |
 | `scraper.requestDelayMs` | Delay between scrape requests, in milliseconds | `1500` |
+| `scraper.digest.enabled` | Weekly Telegram digest CronJob (`scraper --digest`, app >= v0.6.0): one summary to the chat; never retried | `false` |
+| `scraper.digest.schedule` / `scraper.digest.timeZone` | Digest schedule and its IANA time zone (`spec.timeZone`) | `0 19 * * 0` / `Europe/Lisbon` (Sunday 19:00) |
 | `scraper.resources` | Scraper container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
 | `telegramNotifier.image.*` | Telegram notifier image | `ghcr.io/jfms7s/ticket-live-event-scanner-telegram-notifier:latest` |
 | `telegramNotifier.resources` | Telegram notifier container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
@@ -58,6 +60,7 @@ without a `valueFrom` (since 0.7.0); see the note below.
 | `emailNotifier.resources` | Email notifier container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
 | `webUiApi.image.*` | Web UI API image | `ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api:latest` |
 | `webUiApi.corsOrigin` | Allowed frontend origin(s) for the API (`CORS_ORIGIN`). Empty: `https://<first ingress host>` with the ingress on, else `*` | `""` |
+| `webUiApi.metrics.serviceMonitor.enabled` / `.interval` / `.labels` | ServiceMonitor for web-ui-api's `/metrics` (scraper run health, app >= v0.6.0); needs the Prometheus Operator CRDs. The alert rules belong with your Prometheus | `false` / `60s` / `{}` |
 | `webUiApi.resources` | Web UI API container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
 | `webUiFrontend.image.*` | Web UI frontend image | `ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-frontend:latest` |
 | `webUiFrontend.replicas` | Web UI frontend replica count | `1` |
@@ -192,7 +195,9 @@ ServiceAccount/Role/RoleBinding) for the scraper, a Deployment for
 telegram-notifier, a Deployment for email-notifier, a Deployment + Service
 for web-ui-api, and a Deployment + Service (+ optional Ingress) for
 web-ui-frontend; optionally a NATS ConfigMap (`nats.auth.token`) and a NATS
-NetworkPolicy (`networkPolicy.enabled`).
+NetworkPolicy (`networkPolicy.enabled`), a weekly digest CronJob
+(`scraper.digest.enabled`) and a ServiceMonitor for web-ui-api
+(`webUiApi.metrics.serviceMonitor.enabled`).
 
 Every pod runs as uid/gid 1000 (`fsGroup` 1000) with the `RuntimeDefault`
 seccomp profile and no service account token; every container has a
