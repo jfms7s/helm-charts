@@ -12,6 +12,9 @@ nats:
       value: "test-nats-token-not-real"
 networkPolicy:
   enabled: true
+scraper:
+  digest:
+    enabled: true
 ingress:
   enabled: true
   className: traefik

@@ -115,6 +115,15 @@ scraper:
   # address) so the site can reach whoever runs this install.
   userAgent: "ticket-live-event-scanner (+https://github.com/jfms7s/ticket-live-event-scanner)"
   requestDelayMs: 1500
+  # Weekly Telegram digest (app >= v0.6.0): a second CronJob running the
+  # scraper image with --digest, which publishes one summary for
+  # telegram-notifier to send (next 14 days, new this week, hubs, runs).
+  # Off by default. Never retried (backoffLimit 0) and never caught up late.
+  digest:
+    enabled: false
+    schedule: "0 19 * * 0"
+    # IANA zone for the schedule (CronJob spec.timeZone).
+    timeZone: "Europe/Lisbon"
   resources:
     requests:
       cpu: 50m
@@ -164,6 +173,15 @@ webUiApi:
   # (see the README's Security section). Set this explicitly if the frontend
   # is served from another origin or over plain http.
   corsOrigin: ""
+  # Scraper run health on web-ui-api's /metrics (app >= v0.6.0): last run,
+  # run failed and per-hub consecutive empty runs, for Prometheus alert
+  # rules. Off by default; needs the Prometheus Operator CRDs.
+  metrics:
+    serviceMonitor:
+      enabled: false
+      interval: 60s
+      # Extra labels, for a Prometheus that selects ServiceMonitors by label.
+      labels: {}
   resources:
     requests:
       cpu: 50m

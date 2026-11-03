@@ -1,0 +1,69 @@
+{{- if .Values.scraper.digest.enabled }}
+{{- include "ticket-live-event-scanner-helm.validate" . }}
+# The weekly Telegram digest: the scraper image run with --digest. It
+# builds one message and publishes it once (message ID per ISO week);
+# telegram-notifier sends it to the chat. Pods keep the scraper's
+# app.kubernetes.io/name, so the NATS NetworkPolicy admits them.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-digest
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "scraper" "component" "digest") | nindent 4 }}
+spec:
+  schedule: {{ .Values.scraper.digest.schedule | quote }}
+  {{- with .Values.scraper.digest.timeZone }}
+  timeZone: {{ . | quote }}
+  {{- end }}
+  # One digest a week: never two at once, and a missed one is not caught
+  # up later (it would arrive stale).
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      # Finished Jobs are deleted after a day: kube-prometheus-stack's
+      # KubeJobFailed fires for each failed Job until it is gone.
+      ttlSecondsAfterFinished: {{ .Values.scraper.ttlSecondsAfterFinished }}
+      # No retry: a pod that dies after publishing must not publish again
+      # (the stream's dedup window would drop it, but don't lean on that).
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "scraper" "component" "digest") | nindent 12 }}
+          {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "TURSO_AUTH_TOKEN" "TURSO_DATABASE_URL" "NATS_TOKEN")) }}{{ . | nindent 10 }}{{ end }}
+        spec:
+          serviceAccountName: {{ .Release.Name }}-ticket-scanner-scraper
+          securityContext:
+            {{- include "ticket-live-event-scanner-helm.podSecurityContext" . | nindent 12 }}
+          automountServiceAccountToken: false
+          containers:
+            - name: digest
+              image: {{ .Values.scraper.image.repository }}:{{ .Values.scraper.image.tag }}
+              imagePullPolicy: {{ .Values.scraper.image.pullPolicy }}
+              args: ["--digest"]
+              securityContext:
+                {{- include "ticket-live-event-scanner-helm.containerSecurityContext" . | nindent 16 }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+              env:
+                - name: TICKETLINE_HUB_PAGES
+                  value: {{ .Values.scraper.hubPages | quote }}
+                {{- include "ticket-live-event-scanner-helm.natsClientEnv" . | nindent 16 }}
+                - name: TURSO_DATABASE_URL
+                  {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TURSO_DATABASE_URL") | nindent 18 }}
+                - name: TURSO_AUTH_TOKEN
+                  {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TURSO_AUTH_TOKEN") | nindent 18 }}
+                - name: USER_AGENT
+                  value: {{ .Values.scraper.userAgent | quote }}
+                - name: REQUEST_DELAY_MS
+                  value: {{ .Values.scraper.requestDelayMs | quote }}
+              resources:
+                {{- toYaml .Values.scraper.resources | nindent 16 }}
+          restartPolicy: Never
+          volumes:
+            - name: tmp
+              emptyDir: {}
+{{- end }}
