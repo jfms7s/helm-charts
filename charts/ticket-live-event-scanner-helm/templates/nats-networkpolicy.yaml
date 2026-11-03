@@ -1,0 +1,31 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-ticket-scanner-nats
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 4 }}
+spec:
+  # Only ingress is restricted; egress is left open.
+  podSelector:
+    matchLabels:
+      {{- include "ticket-live-event-scanner-helm.selectorLabels" (dict "context" $ "name" "nats") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - scraper
+                  - telegram-notifier
+                  - email-notifier
+                  - web-ui-api
+      ports:
+        - protocol: TCP
+          port: 4222
+{{- end }}

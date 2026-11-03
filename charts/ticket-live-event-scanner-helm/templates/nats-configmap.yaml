@@ -1,0 +1,16 @@
+{{- if include "ticket-live-event-scanner-helm.natsAuthEnabled" . }}
+{{- include "ticket-live-event-scanner-helm.validate" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ticket-live-event-scanner-helm.natsConfigName" . }}
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 4 }}
+data:
+  # No secret here: the token comes from the broker's environment
+  # (NATS_TOKEN_QUOTED, set from nats.auth.token).
+  nats.conf: |
+    authorization {
+      token: $NATS_TOKEN_QUOTED
+    }
+{{- end }}

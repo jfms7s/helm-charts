@@ -14,7 +14,7 @@ spec:
     metadata:
       labels:
         {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "email-notifier" "component" "notifier") | nindent 8 }}
-      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "SMTP_PASSWORD" "SMTP_USERNAME")) }}{{ . | nindent 6 }}{{ end }}
+      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "SMTP_PASSWORD" "SMTP_USERNAME" "NATS_TOKEN")) }}{{ . | nindent 6 }}{{ end }}
     spec:
       securityContext:
         {{- include "ticket-live-event-scanner-helm.podSecurityContext" . | nindent 8 }}
@@ -29,8 +29,7 @@ spec:
             - name: tmp
               mountPath: /tmp
           env:
-            - name: NATS_URL
-              value: nats://{{ .Release.Name }}-ticket-scanner-nats:4222
+            {{- include "ticket-live-event-scanner-helm.natsClientEnv" . | nindent 12 }}
             - name: SMTP_HOST
               value: {{ .Values.smtp.host | quote }}
             - name: SMTP_PORT

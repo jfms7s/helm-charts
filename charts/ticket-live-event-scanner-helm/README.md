@@ -37,6 +37,8 @@ without a `valueFrom` (since 0.7.0); see the note below.
 | `nats.persistence.volume` | Volume source (excl. `name`) for NATS JetStream file storage | `{}` (emptyDir) |
 | `nats.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-ticket-scanner-nats-data` (RWO, kept on uninstall/prune); point `nats.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
 | `nats.persistence.subPath` | Subdirectory of the volume to mount as `/data` (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
+| `nats.auth.token` | `{value, valueFrom}`: shared token the broker requires from every client (see [NATS authentication](#nats-authentication)). Empty = no auth | `{value: "", valueFrom: {}}` |
+| `networkPolicy.enabled` | Render a NetworkPolicy limiting ingress to the NATS pod to TCP 4222 from this release's scraper, notifiers and web-ui-api | `false` |
 | `turso.databaseUrl` / `turso.authToken` | Turso credentials shared by the scraper and web-ui-api, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `telegram.botToken` / `telegram.chatId` | Telegram bot credentials for telegram-notifier, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `scraper.image.*` | Scraper image | `ghcr.io/jfms7s/ticket-live-event-scanner-scraper:latest` |
@@ -94,6 +96,45 @@ so changing a `value` rolls only the pods that use it. The hash is unsalted
 and readable with the workload, so give `value` credentials high entropy, or
 use `valueFrom`.
 
+### NATS authentication
+
+The broker accepts anonymous clients unless `nats.auth.token` is set
+(same `{value, valueFrom}` shape as the credentials above). When it is,
+the chart renders a ConfigMap `<release>-ticket-scanner-nats-config` with
+`authorization { token: $NATS_TOKEN_QUOTED }` and starts NATS with
+`-c /etc/nats/nats.conf`; the broker reads the token from its environment,
+so it is never in the ConfigMap or on the command line. Every client
+(scraper, notifiers, web-ui-api) gets `NATS_TOKEN` from the same source.
+App images before `v0.5.0` ignore `NATS_TOKEN` and are refused, so bump the
+images first. A `value` token with `"`, `\` or a newline fails the render; a
+`valueFrom` one with any of them would stop the broker at startup.
+
+```yaml
+nats:
+  auth:
+    token:
+      valueFrom:
+        secretKeyRef:
+          name: ticket-scanner-nats
+          key: NATS_TOKEN
+```
+
+Turning it on (or rotating a `value` token) restarts the broker and every
+client in the same sync; clients reconnect once the broker is back. A
+`valueFrom` token rotated in its Secret rolls nothing: restart the broker
+and then the notifiers and web-ui-api (`kubectl rollout restart`); the
+scraper CronJob reads the new token on its next run. The chart cannot check
+the image versions, so make sure every app image is `v0.5.0` or later
+before turning auth on. The token must not contain `"`, `\` or a newline.
+
+### NetworkPolicy
+
+`networkPolicy.enabled: true` adds `<release>-ticket-scanner-nats`, which
+allows ingress to the NATS pod only on TCP 4222 and only from pods of this
+release labelled `app.kubernetes.io/name` `scraper`, `telegram-notifier`,
+`email-notifier` or `web-ui-api`. Egress is not restricted, and the other
+workloads get no policy. It needs a CNI that enforces NetworkPolicy (k3s's
+embedded kube-router does).
 
 ### Persistent storage
 
@@ -150,7 +191,8 @@ This chart creates: a Deployment + Service for NATS, a CronJob (+
 ServiceAccount/Role/RoleBinding) for the scraper, a Deployment for
 telegram-notifier, a Deployment for email-notifier, a Deployment + Service
 for web-ui-api, and a Deployment + Service (+ optional Ingress) for
-web-ui-frontend.
+web-ui-frontend; optionally a NATS ConfigMap (`nats.auth.token`) and a NATS
+NetworkPolicy (`networkPolicy.enabled`).
 
 Every pod runs as uid/gid 1000 (`fsGroup` 1000) with the `RuntimeDefault`
 seccomp profile and no service account token; every container has a

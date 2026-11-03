@@ -34,6 +34,23 @@ nats:
     # Optional subdirectory of the volume to mount as /data (keeps ext4's
     # lost+found out of it, and lets the copy chown it for the non-root user).
     subPath: ""
+  # Optional shared token the broker requires from every client. Same
+  # {value, valueFrom} shape as turso below. Empty (default) = no auth, the
+  # broker accepts anonymous clients as before. When set, the broker loads
+  # `authorization { token: ... }` from a chart ConfigMap (the token itself
+  # comes from the env, never the ConfigMap or argv) and every client gets
+  # NATS_TOKEN. Needs app images v0.5.0 or later (older ones ignore
+  # NATS_TOKEN and are refused). Must not contain `"`, `\` or a newline.
+  auth:
+    token:
+      value: ""
+      valueFrom: {}
+
+# Optional NetworkPolicy limiting ingress to the NATS pod to TCP 4222 from
+# this release's scraper, notifiers and web-ui-api. Off by default; needs a
+# CNI that enforces NetworkPolicy (k3s does). Egress is not restricted.
+networkPolicy:
+  enabled: false
 
 # Turso (libSQL) database credentials, shared by the scraper (writer) and
 # web-ui-api (reader). Each is a standard Kubernetes EnvVarSource: set
