@@ -263,6 +263,15 @@ entries:
     version: 0.1.0
   common:
   - apiVersion: v2
+    created: "2026-11-03T09:34:24.088209206Z"
+    description: A Helm chart for Kubernetes
+    digest: ea17ed6abff319b621287b68a49cfc9c34f27e650616a4e63520a74e1c542a07
+    name: common
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/common-0.10.4/common-0.10.4.tgz
+    version: 0.10.4
+  - apiVersion: v2
     created: "2026-11-03T09:32:00.185779764Z"
     description: A Helm chart for Kubernetes
     digest: 8f99cd4ad8a7aa8ec880d52847163445e8248a6d341b599a3def376c84d7981e
@@ -464,6 +473,26 @@ entries:
   data-lab-helm:
   - apiVersion: v2
     appVersion: "1"
+    created: "2026-11-03T09:34:24.340237869Z"
+    description: Shared infrastructure for the Spark and Flink learning labs — namespaces
+      and engine RBAC
+    digest: 56d0b148460d50fbcb8b8819b93a0ec2324d8c1f882465402185b1b46862a0bd
+    keywords:
+    - spark
+    - flink
+    - lab
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: data-lab-helm
+    sources:
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/data-lab-helm-0.2.3/data-lab-helm-0.2.3.tgz
+    version: 0.2.3
+  - apiVersion: v2
+    appVersion: "1"
     created: "2026-11-02T22:48:42.904596123Z"
     description: Shared infrastructure for the Spark and Flink learning labs — namespaces
       and engine RBAC
@@ -544,6 +573,27 @@ entries:
     - https://github.com/jfms7s/helm-charts/releases/download/data-lab-helm-0.1.0/data-lab-helm-0.1.0.tgz
     version: 0.1.0
   eng-metrics-lab-helm:
+  - apiVersion: v2
+    appVersion: 0.4.0
+    created: "2026-11-03T09:34:24.535476389Z"
+    description: A Helm chart for the eng-metrics-lab code-quality reporting stack
+      (Postgres, schema migration, nightly GitHub collector, weekly hotspots and backup)
+      on Kubernetes
+    digest: e6e23551ac73d625b5e49a1eeb388cda48e215b48e17bb1b5f07e5fc05f00264
+    keywords:
+    - eng-metrics-lab
+    - code-quality
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: eng-metrics-lab-helm
+    sources:
+    - https://github.com/jfms7s/eng-metrics-lab
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/eng-metrics-lab-helm-0.3.3/eng-metrics-lab-helm-0.3.3.tgz
+    version: 0.3.3
   - apiVersion: v2
     appVersion: 0.4.0
     created: "2026-11-03T09:32:00.379679811Z"
@@ -789,6 +839,27 @@ entries:
   padel-score-helm:
   - apiVersion: v2
     appVersion: v0.2.0
+    created: "2026-11-03T09:34:24.906822582Z"
+    description: A Helm chart for padel-score, a padel match scorer with live spectator
+      links
+    digest: 57e82e8d0f830b62f4f8e809463a1739cb6d91d0b0ef72893fd2126af1ccf130
+    keywords:
+    - padel-score
+    - padel
+    - scoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: padel-score-helm
+    sources:
+    - https://github.com/jfms7s/padel-score
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/padel-score-helm-0.3.3/padel-score-helm-0.3.3.tgz
+    version: 0.3.3
+  - apiVersion: v2
+    appVersion: v0.2.0
     created: "2026-11-03T09:32:00.560560296Z"
     description: A Helm chart for padel-score, a padel match scorer with live spectator
       links
@@ -893,6 +964,27 @@ entries:
     - https://github.com/jfms7s/helm-charts/releases/download/padel-score-helm-0.1.0/padel-score-helm-0.1.0.tgz
     version: 0.1.0
   patchmon-helm:
+  - apiVersion: v2
+    appVersion: 2.1.3
+    created: "2026-11-03T09:34:25.119571226Z"
+    description: A Helm chart for PatchMon, a Linux patch management platform
+    digest: 355d872aa4baac36fda4e44926b88bf40404ae7fc125faec729eadb1bdd96d06
+    home: https://patchmon.net/
+    keywords:
+    - patchmon
+    - patch-management
+    - monitoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: patchmon-helm
+    sources:
+    - https://github.com/PatchMon/PatchMon
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.7.3/patchmon-helm-0.7.3.tgz
+    version: 0.7.3
   - apiVersion: v2
     appVersion: 2.1.3
     created: "2026-11-03T09:32:00.822093723Z"
@@ -1483,4 +1575,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-03T09:32:00.822549557Z"
+generated: "2026-11-03T09:34:25.119880343Z"
