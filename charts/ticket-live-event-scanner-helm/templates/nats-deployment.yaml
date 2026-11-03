@@ -1,3 +1,4 @@
+{{- include "ticket-live-event-scanner-helm.validate" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,6 +16,7 @@ spec:
     metadata:
       labels:
         {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "nats" "component" "message-bus") | nindent 8 }}
+      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "NATS_TOKEN")) }}{{ . | nindent 6 }}{{ end }}
     spec:
       securityContext:
         {{- include "ticket-live-event-scanner-helm.podSecurityContext" . | nindent 8 }}
@@ -25,7 +27,21 @@ spec:
           imagePullPolicy: {{ .Values.nats.image.pullPolicy }}
           securityContext:
             {{- include "ticket-live-event-scanner-helm.containerSecurityContext" . | nindent 12 }}
+          {{- if include "ticket-live-event-scanner-helm.natsAuthEnabled" . }}
+          env:
+            - name: NATS_TOKEN
+              {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "NATS_TOKEN") | nindent 14 }}
+            # nats.conf references this one. The server parses an env value
+            # as config, so quoting it keeps any token a string (a bare
+            # numeric token would otherwise crash the server).
+            - name: NATS_TOKEN_QUOTED
+              value: "\"$(NATS_TOKEN)\""
+          {{- end }}
           args:
+            {{- if include "ticket-live-event-scanner-helm.natsAuthEnabled" . }}
+            - -c
+            - /etc/nats/nats.conf
+            {{- end }}
             - -js
             - -sd
             - /data
@@ -47,6 +63,11 @@ spec:
               {{- end }}
             - name: tmp
               mountPath: /tmp
+            {{- if include "ticket-live-event-scanner-helm.natsAuthEnabled" . }}
+            - name: config
+              mountPath: /etc/nats
+              readOnly: true
+            {{- end }}
       restartPolicy: Always
       volumes:
         - name: data
@@ -57,3 +78,8 @@ spec:
           {{- end }}
         - name: tmp
           emptyDir: {}
+        {{- if include "ticket-live-event-scanner-helm.natsAuthEnabled" . }}
+        - name: config
+          configMap:
+            name: {{ include "ticket-live-event-scanner-helm.natsConfigName" . }}
+        {{- end }}

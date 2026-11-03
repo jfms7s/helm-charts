@@ -1,0 +1,170 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: nats-auth
+templates:
+  - templates/nats-deployment.yaml
+  - templates/nats-configmap.yaml
+  - templates/credentials-secret.yaml
+  - templates/scraper-cronjob.yaml
+  - templates/telegram-notifier-deployment.yaml
+  - templates/email-notifier-deployment.yaml
+  - templates/web-ui-api-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+chart:
+  version: 0.0.0-test
+tests:
+  - it: renders no NATS config without a token
+    template: templates/nats-configmap.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: keeps the broker anonymous without a token
+    template: templates/nats-deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: [-js, -sd, /data]
+      - notExists:
+          path: spec.template.spec.containers[0].env
+      - notExists:
+          path: spec.template.metadata.annotations
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: config
+            configMap:
+              name: RELEASE-NAME-ticket-scanner-nats-config
+
+  - it: gives no Deployment client NATS_TOKEN without a token
+    templates:
+      - templates/telegram-notifier-deployment.yaml
+      - templates/email-notifier-deployment.yaml
+      - templates/web-ui-api-deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "NATS_TOKEN")]
+
+  - it: gives the scraper no NATS_TOKEN without a token
+    template: templates/scraper-cronjob.yaml
+    asserts:
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env[?(@.name == "NATS_TOKEN")]
+
+  - it: stores no NATS_TOKEN in the chart Secret without a token
+    template: templates/credentials-secret.yaml
+    asserts:
+      - notExists:
+          path: data.NATS_TOKEN
+
+  - it: renders the token config without the token in it
+    template: templates/nats-configmap.yaml
+    set:
+      nats.auth.token.value: s3ntinel
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-ticket-scanner-nats-config
+      - equal:
+          path: data["nats.conf"]
+          value: |
+            authorization {
+              token: $NATS_TOKEN_QUOTED
+            }
+      - notMatchRegex:
+          path: data["nats.conf"]
+          pattern: s3ntinel
+
+  - it: makes the broker load the config and read the token from the chart Secret
+    template: templates/nats-deployment.yaml
+    set:
+      nats.auth.token.value: s3ntinel
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: [-c, /etc/nats/nats.conf, -js, -sd, /data]
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - name: NATS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: RELEASE-NAME-ticket-scanner-credentials
+                  key: NATS_TOKEN
+            - name: NATS_TOKEN_QUOTED
+              value: '"$(NATS_TOKEN)"'
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /etc/nats
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: config
+            configMap:
+              name: RELEASE-NAME-ticket-scanner-nats-config
+      - exists:
+          path: spec.template.metadata.annotations["checksum/credentials"]
+      - notExists:
+          path: ..[?(@ == "s3ntinel")]
+
+  - it: stores a token given as value in the chart Secret
+    template: templates/credentials-secret.yaml
+    set:
+      nats.auth.token.value: s3ntinel
+    asserts:
+      - equal:
+          path: data.NATS_TOKEN
+          value: czNudGluZWw=
+
+  - it: gives every Deployment client NATS_TOKEN from the token's own valueFrom
+    templates:
+      - templates/telegram-notifier-deployment.yaml
+      - templates/email-notifier-deployment.yaml
+      - templates/web-ui-api-deployment.yaml
+    set:
+      nats.auth.token.valueFrom.secretKeyRef: {name: ticket-scanner-nats, key: NATS_TOKEN}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NATS_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: ticket-scanner-nats
+                key: NATS_TOKEN
+
+  - it: gives the scraper NATS_TOKEN from the token's own valueFrom
+    template: templates/scraper-cronjob.yaml
+    set:
+      nats.auth.token.valueFrom.secretKeyRef: {name: ticket-scanner-nats, key: NATS_TOKEN}
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: NATS_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: ticket-scanner-nats
+                key: NATS_TOKEN
+
+  - it: keeps a valueFrom token out of the chart Secret
+    template: templates/credentials-secret.yaml
+    set:
+      nats.auth.token.valueFrom.secretKeyRef: {name: ticket-scanner-nats, key: NATS_TOKEN}
+    asserts:
+      - notExists:
+          path: data.NATS_TOKEN
+
+  - it: rolls a client when its token value changes
+    template: templates/telegram-notifier-deployment.yaml
+    set:
+      nats.auth.token.value: one
+    asserts:
+      - notEqual:
+          path: spec.template.metadata.annotations["checksum/credentials"]
+          value: ""

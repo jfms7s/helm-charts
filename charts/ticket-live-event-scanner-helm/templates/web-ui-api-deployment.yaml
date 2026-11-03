@@ -20,7 +20,7 @@ spec:
     metadata:
       labels:
         {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "web-ui-api" "component" "api") | nindent 8 }}
-      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "TURSO_AUTH_TOKEN" "TURSO_DATABASE_URL")) }}{{ . | nindent 6 }}{{ end }}
+      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "TURSO_AUTH_TOKEN" "TURSO_DATABASE_URL" "NATS_TOKEN")) }}{{ . | nindent 6 }}{{ end }}
     spec:
       securityContext:
         {{- include "ticket-live-event-scanner-helm.podSecurityContext" . | nindent 8 }}
@@ -38,8 +38,7 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            - name: NATS_URL
-              value: nats://{{ .Release.Name }}-ticket-scanner-nats:4222
+            {{- include "ticket-live-event-scanner-helm.natsClientEnv" . | nindent 12 }}
             - name: TURSO_DATABASE_URL
               {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TURSO_DATABASE_URL") | nindent 14 }}
             - name: TURSO_AUTH_TOKEN

@@ -1,0 +1,31 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+# Render-time guard for nats.auth.token (only while it is set).
+suite: nats-auth-guard
+templates:
+  - templates/nats-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: refuses the CHANGE_ME placeholder as token
+    template: templates/nats-deployment.yaml
+    set:
+      nats.auth.token.value: CHANGE_ME
+    asserts:
+      - failedTemplate:
+          errorMessage: "ticket-live-event-scanner-helm: nats.auth.token must be set (value or valueFrom); the CHANGE_ME placeholder is not accepted"
+
+  - it: refuses a token value with a double quote
+    template: templates/nats-deployment.yaml
+    set:
+      nats.auth.token.value: 'a"b'
+    asserts:
+      - failedTemplate:
+          errorMessage: "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote or a backslash"
+
+  - it: refuses a token value with a backslash
+    template: templates/nats-deployment.yaml
+    set:
+      nats.auth.token.value: 'a\b'
+    asserts:
+      - failedTemplate:
+          errorMessage: "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote or a backslash"

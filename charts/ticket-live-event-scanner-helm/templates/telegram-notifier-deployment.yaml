@@ -14,7 +14,7 @@ spec:
     metadata:
       labels:
         {{- include "ticket-live-event-scanner-helm.podLabels" (dict "context" $ "name" "telegram-notifier" "component" "notifier") | nindent 8 }}
-      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "TELEGRAM_BOT_TOKEN" "TELEGRAM_CHAT_ID")) }}{{ . | nindent 6 }}{{ end }}
+      {{- with include "ticket-live-event-scanner-helm.credentialsChecksum" (dict "ctx" $ "keys" (list "TELEGRAM_BOT_TOKEN" "TELEGRAM_CHAT_ID" "NATS_TOKEN")) }}{{ . | nindent 6 }}{{ end }}
     spec:
       securityContext:
         {{- include "ticket-live-event-scanner-helm.podSecurityContext" . | nindent 8 }}
@@ -29,8 +29,7 @@ spec:
             - name: tmp
               mountPath: /tmp
           env:
-            - name: NATS_URL
-              value: nats://{{ .Release.Name }}-ticket-scanner-nats:4222
+            {{- include "ticket-live-event-scanner-helm.natsClientEnv" . | nindent 12 }}
             - name: TELEGRAM_BOT_TOKEN
               {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TELEGRAM_BOT_TOKEN") | nindent 14 }}
             - name: TELEGRAM_CHAT_ID

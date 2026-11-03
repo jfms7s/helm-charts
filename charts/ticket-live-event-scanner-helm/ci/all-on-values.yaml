@@ -7,6 +7,11 @@ nats:
       persistentVolumeClaim:
         claimName: test-release-ticket-scanner-nats-data
     subPath: data
+  auth:
+    token:
+      value: "test-nats-token-not-real"
+networkPolicy:
+  enabled: true
 ingress:
   enabled: true
   className: traefik
