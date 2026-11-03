@@ -263,6 +263,15 @@ entries:
     version: 0.1.0
   common:
   - apiVersion: v2
+    created: "2026-11-03T09:32:00.185779764Z"
+    description: A Helm chart for Kubernetes
+    digest: 8f99cd4ad8a7aa8ec880d52847163445e8248a6d341b599a3def376c84d7981e
+    name: common
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/common-0.10.3/common-0.10.3.tgz
+    version: 0.10.3
+  - apiVersion: v2
     created: "2026-11-02T23:09:39.454444932Z"
     description: A Helm chart for Kubernetes
     digest: 8b740898000d04f35410bb2de45d89f7034aa4bf22e668d6c4cf3eeaeac5c94e
@@ -537,6 +546,27 @@ entries:
   eng-metrics-lab-helm:
   - apiVersion: v2
     appVersion: 0.4.0
+    created: "2026-11-03T09:32:00.379679811Z"
+    description: A Helm chart for the eng-metrics-lab code-quality reporting stack
+      (Postgres, schema migration, nightly GitHub collector, weekly hotspots and backup)
+      on Kubernetes
+    digest: 5842016c638b32b038174ce5dd320a64769f0bf0fbe4edb2ab36501f6e0a410f
+    keywords:
+    - eng-metrics-lab
+    - code-quality
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: eng-metrics-lab-helm
+    sources:
+    - https://github.com/jfms7s/eng-metrics-lab
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/eng-metrics-lab-helm-0.3.2/eng-metrics-lab-helm-0.3.2.tgz
+    version: 0.3.2
+  - apiVersion: v2
+    appVersion: 0.4.0
     created: "2026-11-02T22:48:43.0919677Z"
     description: A Helm chart for the eng-metrics-lab code-quality reporting stack
       (Postgres, schema migration, nightly GitHub collector, weekly hotspots and backup)
@@ -759,6 +789,27 @@ entries:
   padel-score-helm:
   - apiVersion: v2
     appVersion: v0.2.0
+    created: "2026-11-03T09:32:00.560560296Z"
+    description: A Helm chart for padel-score, a padel match scorer with live spectator
+      links
+    digest: 85ddcc169d360763023738666d03375a0ca695753e9a0ca3dfbc7b0580c1008b
+    keywords:
+    - padel-score
+    - padel
+    - scoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: padel-score-helm
+    sources:
+    - https://github.com/jfms7s/padel-score
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/padel-score-helm-0.3.2/padel-score-helm-0.3.2.tgz
+    version: 0.3.2
+  - apiVersion: v2
+    appVersion: v0.2.0
     created: "2026-11-02T22:48:43.288501723Z"
     description: A Helm chart for padel-score, a padel match scorer with live spectator
       links
@@ -842,6 +893,27 @@ entries:
     - https://github.com/jfms7s/helm-charts/releases/download/padel-score-helm-0.1.0/padel-score-helm-0.1.0.tgz
     version: 0.1.0
   patchmon-helm:
+  - apiVersion: v2
+    appVersion: 2.1.3
+    created: "2026-11-03T09:32:00.822093723Z"
+    description: A Helm chart for PatchMon, a Linux patch management platform
+    digest: 2997e38619ead22761da1dfed983e9d2f9fff4ba40be8b80e21b05a5643c6065
+    home: https://patchmon.net/
+    keywords:
+    - patchmon
+    - patch-management
+    - monitoring
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: patchmon-helm
+    sources:
+    - https://github.com/PatchMon/PatchMon
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.7.2/patchmon-helm-0.7.2.tgz
+    version: 0.7.2
   - apiVersion: v2
     appVersion: 2.1.3
     created: "2026-11-03T09:29:12.940319335Z"
@@ -1411,4 +1483,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-03T09:29:12.940496916Z"
+generated: "2026-11-03T09:32:00.822549557Z"
