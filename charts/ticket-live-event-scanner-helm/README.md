@@ -106,8 +106,8 @@ the chart renders a ConfigMap `<release>-ticket-scanner-nats-config` with
 so it is never in the ConfigMap or on the command line. Every client
 (scraper, notifiers, web-ui-api) gets `NATS_TOKEN` from the same source.
 App images before `v0.5.0` ignore `NATS_TOKEN` and are refused, so bump the
-images first. The token must not contain `"` or `\` (a `value` with either
-fails the render; a `valueFrom` one would stop the broker at startup).
+images first. A `value` token with `"`, `\` or a newline fails the render; a
+`valueFrom` one with any of them would stop the broker at startup.
 
 ```yaml
 nats:
@@ -120,8 +120,12 @@ nats:
 ```
 
 Turning it on (or rotating a `value` token) restarts the broker and every
-client in the same sync; a `valueFrom` token rotated in its Secret needs a
-restart of all of them by hand.
+client in the same sync; clients reconnect once the broker is back. A
+`valueFrom` token rotated in its Secret rolls nothing: restart the broker
+and then the notifiers and web-ui-api (`kubectl rollout restart`); the
+scraper CronJob reads the new token on its next run. The chart cannot check
+the image versions, so make sure every app image is `v0.5.0` or later
+before turning auth on. The token must not contain `"`, `\` or a newline.
 
 ### NetworkPolicy
 

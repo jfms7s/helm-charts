@@ -20,7 +20,7 @@ tests:
       nats.auth.token.value: 'a"b'
     asserts:
       - failedTemplate:
-          errorMessage: "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote or a backslash"
+          errorMessage: "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote, a backslash or a newline"
 
   - it: refuses a token value with a backslash
     template: templates/nats-deployment.yaml
@@ -28,4 +28,20 @@ tests:
       nats.auth.token.value: 'a\b'
     asserts:
       - failedTemplate:
-          errorMessage: "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote or a backslash"
+          errorMessage: "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote, a backslash or a newline"
+
+  - it: refuses a token value with a newline
+    template: templates/nats-deployment.yaml
+    set:
+      nats.auth.token.value: "a\nb"
+    asserts:
+      - failedTemplate:
+          errorMessage: "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote, a backslash or a newline"
+
+  - it: refuses a whitespace-only token value instead of leaving auth off
+    template: templates/nats-deployment.yaml
+    set:
+      nats.auth.token.value: "   "
+    asserts:
+      - failedTemplate:
+          errorMessage: "ticket-live-event-scanner-helm: nats.auth.token must be set (value or valueFrom); the CHANGE_ME placeholder is not accepted"

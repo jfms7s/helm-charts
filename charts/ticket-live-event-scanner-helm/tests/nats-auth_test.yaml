@@ -160,11 +160,41 @@ tests:
       - notExists:
           path: data.NATS_TOKEN
 
-  - it: rolls a client when its token value changes
+  # Each hash is the client's checksum with no token (test-values); a token
+  # given as value must change it, so a client missing NATS_TOKEN from its
+  # checksum keys fails here.
+  - it: rolls telegram-notifier-deployment when the token value changes
     template: templates/telegram-notifier-deployment.yaml
     set:
       nats.auth.token.value: one
     asserts:
       - notEqual:
           path: spec.template.metadata.annotations["checksum/credentials"]
-          value: ""
+          value: ec85ea4737cf6383281a7543625d75ac3140e82b91fe01763dbb53ddfc0e5fe5
+
+  - it: rolls email-notifier-deployment when the token value changes
+    template: templates/email-notifier-deployment.yaml
+    set:
+      nats.auth.token.value: one
+    asserts:
+      - notEqual:
+          path: spec.template.metadata.annotations["checksum/credentials"]
+          value: 3306459d1e28261453ee81d0dad9ff9ef053de0a7619448f845136f6ef4a4e33
+
+  - it: rolls web-ui-api-deployment when the token value changes
+    template: templates/web-ui-api-deployment.yaml
+    set:
+      nats.auth.token.value: one
+    asserts:
+      - notEqual:
+          path: spec.template.metadata.annotations["checksum/credentials"]
+          value: ff57a3c7db5a27235dd056b67e1f99d252b80cdabb990b83d8472bd683471b5f
+
+  - it: rolls scraper-cronjob when the token value changes
+    template: templates/scraper-cronjob.yaml
+    set:
+      nats.auth.token.value: one
+    asserts:
+      - notEqual:
+          path: spec.jobTemplate.spec.template.metadata.annotations["checksum/credentials"]
+          value: ff57a3c7db5a27235dd056b67e1f99d252b80cdabb990b83d8472bd683471b5f

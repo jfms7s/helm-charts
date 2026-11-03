@@ -56,13 +56,14 @@ map. Fills the dict passed as .out; pass (dict "ctx" $ "out" (dict)).
 {{- end -}}
 
 {{/*
-"true" when nats.auth.token is set (valueFrom, or a non-empty value), else
+"true" when nats.auth.token is set (valueFrom, or any non-empty value), else
 empty. Off means no NATS auth anywhere: the render matches a chart without
-the option.
+the option. A whitespace-only value counts as set, so the guard in validate
+rejects it instead of silently leaving auth off.
 */}}
 {{- define "ticket-live-event-scanner-helm.natsAuthEnabled" -}}
 {{- $tok := ((.Values.nats).auth).token | default dict -}}
-{{- if or $tok.valueFrom (ne (trim (toString ($tok.value | default ""))) "") -}}
+{{- if or $tok.valueFrom (ne (toString ($tok.value | default "")) "") -}}
 true
 {{- end -}}
 {{- end -}}
@@ -224,8 +225,8 @@ one, so no template renders on its own with a placeholder. Renders nothing.
 {{- if include "ticket-live-event-scanner-helm.natsAuthEnabled" $ }}
 {{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "nats.auth.token" "credential" $.Values.nats.auth.token) }}
 {{- $tok := toString ($.Values.nats.auth.token.value | default "") }}
-{{- if and (not $.Values.nats.auth.token.valueFrom) (or (contains "\"" $tok) (contains "\\" $tok)) }}
-{{- fail "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote or a backslash" }}
+{{- if and (not $.Values.nats.auth.token.valueFrom) (or (contains "\"" $tok) (contains "\\" $tok) (contains "\n" $tok)) }}
+{{- fail "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote, a backslash or a newline" }}
 {{- end }}
 {{- end }}
 {{- end -}}
