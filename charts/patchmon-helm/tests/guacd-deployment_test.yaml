@@ -26,7 +26,7 @@ tests:
             helm.sh/chart: patchmon-helm-0.0.0-test
       - equal:
           path: spec.template.spec.containers[0].image
-          value: guacamole/guacd:latest
+          value: guacamole/guacd:1.6.0
       - equal:
           path: spec.template.spec.containers[0].ports[0]
           value:
