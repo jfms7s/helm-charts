@@ -156,3 +156,21 @@ Any change to what a chart publishes (`templates/`, `values.yaml`, `Chart.yaml`,
 Charts are released by the `release` job in `.github/workflows/lint-test.yml` ("Lint and Test Charts"). It runs only on a push to `main` and only after the `lint-test` job (lint, template, kubeconform, helm-unittest) passed in the same run. chart-releaser (`skip_existing: true`) then packages every chart whose `Chart.yaml` version has no GitHub Release yet, publishes it as a GitHub Release and adds it to the `gh-pages` `index.yaml`. A published version is permanent. Pull requests run `lint-test` (plus the version-bump check) and never the release job.
 
 If CI cannot run (runner outage), re-run it and merge only once `lint-test` is green; never hand-publish to `gh-pages` or Releases. If a release job fails after merge, fix forward: the next green push to `main` publishes any version still missing.
+
+### If CI cannot run: owner-only manual publish
+
+Agents never run this; they re-run the workflow and wait, or stop and report. Re-run the `Lint and Test Charts` workflow first. Only when a publish truly cannot wait for the runner, the owner publishes by hand with the same chart-releaser (`cr`) version the `release` job uses (v1.6.1, the default of `helm/chart-releaser-action` v1.6.0), the same calls the action makes:
+
+1. A clean checkout of the exact `main` commit being released (`git status` clean, `HEAD` equal to `origin/main`), and `make test` passes there.
+2. A GitHub token with `contents: write` on this repo in `CR_TOKEN` (never on the command line, never committed).
+3. For each chart whose version has no GitHub Release yet:
+   ```bash
+   cr package charts/<chart> --package-path .cr-release-packages
+   ```
+4. Then, once:
+   ```bash
+   cr upload --owner jfms7s --git-repo helm-charts --commit "$(git rev-parse HEAD)" --skip-existing
+   cr index --owner jfms7s --git-repo helm-charts --push
+   ```
+   `cr upload` creates the GitHub Releases from `.cr-release-packages/`; `cr index` adds them to `gh-pages` `index.yaml` and pushes it. `.cr-release-packages/` and `.cr-index/` are scratch: delete them afterwards.
+5. Record the manual publish (chart, version, commit, why) in the PR that merged the change or in the release notes. The next green `release` job skips the versions that already exist.
