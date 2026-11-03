@@ -1,0 +1,50 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: namespaces
+templates:
+  - templates/namespaces.yaml
+tests:
+  - it: enforces Pod Security baseline and warns/audits at restricted on both namespaces
+    asserts:
+      - hasDocuments:
+          count: 2
+      - isSubset:
+          path: metadata.labels
+          content:
+            pod-security.kubernetes.io/enforce: baseline
+            pod-security.kubernetes.io/enforce-version: latest
+            pod-security.kubernetes.io/warn: restricted
+            pod-security.kubernetes.io/warn-version: latest
+            pod-security.kubernetes.io/audit: restricted
+            pod-security.kubernetes.io/audit-version: latest
+
+  - it: skips a mode left empty
+    set:
+      podSecurity.warn: ""
+      podSecurity.audit: ""
+    asserts:
+      - isSubset:
+          path: metadata.labels
+          content:
+            pod-security.kubernetes.io/enforce: baseline
+      - notExists:
+          path: metadata.labels["pod-security.kubernetes.io/warn"]
+      - notExists:
+          path: metadata.labels["pod-security.kubernetes.io/warn-version"]
+      - notExists:
+          path: metadata.labels["pod-security.kubernetes.io/audit"]
+
+  - it: renders no Pod Security labels when podSecurity is empty
+    set:
+      podSecurity: null
+    asserts:
+      - notExists:
+          path: metadata.labels["pod-security.kubernetes.io/enforce"]
+      - notExists:
+          path: metadata.labels["pod-security.kubernetes.io/warn"]
+
+  - it: fails on a level Pod Security Admission does not know
+    set:
+      podSecurity.enforce: strict
+    asserts:
+      - failedTemplate:
+          errorMessage: "data-lab-helm: podSecurity.enforce must be privileged, baseline or restricted (got \"strict\")"
