@@ -202,3 +202,15 @@ tests:
             capabilities:
               drop: [ALL]
               add: [CHOWN, SETUID, SETGID]
+
+  - it: runs the liveness ping every 30 s (readiness stays at 10 s)
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.periodSeconds
+          value: 30
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.failureThreshold
+          value: 5
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.periodSeconds
+          value: 10

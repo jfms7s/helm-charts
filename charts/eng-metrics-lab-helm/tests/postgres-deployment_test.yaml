@@ -10,6 +10,7 @@ tests:
       - equal: {path: metadata.name, value: eng-metrics-lab-postgres}
       - equal: {path: spec.strategy.type, value: Recreate}
       - equal: {path: spec.replicas, value: 1}
+      - equal: {path: spec.revisionHistoryLimit, value: 3}
       - equal: {path: "spec.template.spec.containers[0].image", value: "docker.io/library/postgres:18-bookworm"}
       - equal: {path: "spec.template.spec.containers[0].env[?(@.name==\"PGDATA\")].value", value: /var/lib/postgresql/data/pgdata}
       - contains:

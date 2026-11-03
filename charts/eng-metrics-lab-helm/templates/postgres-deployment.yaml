@@ -7,6 +7,9 @@ metadata:
 spec:
   # One pod on one RWO volume: never two during a rollout.
   replicas: 1
+  # Keep 3 old ReplicaSets (default 10) in the datastore; not part of the
+  # pod template, so changing it rolls nothing.
+  revisionHistoryLimit: 3
   strategy:
     type: Recreate
   selector:

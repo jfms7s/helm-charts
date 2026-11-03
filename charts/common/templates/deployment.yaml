@@ -9,6 +9,9 @@ metadata:
 
 spec:
   replicas: {{ .Values.deploy.replicas }}
+  # Keep 3 old ReplicaSets (default 10) in the datastore; not part of the
+  # pod template, so changing it rolls nothing.
+  revisionHistoryLimit: 3
 {{- with .Values.deploy.strategy }}
   strategy:
   {{- if eq (toString .type) "Recreate" }}

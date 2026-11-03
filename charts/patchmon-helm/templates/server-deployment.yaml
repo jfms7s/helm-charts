@@ -7,6 +7,9 @@ metadata:
     {{- include "patchmon-helm.labels" (dict "context" $ "name" "server" "component" "server") | nindent 4 }}
 spec:
   replicas: {{ .Values.replicas }}
+  # Keep 3 old ReplicaSets (default 10) in the datastore; not part of the
+  # pod template, so changing it rolls nothing.
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       {{- include "patchmon-helm.selectorLabels" (dict "context" $ "name" "server") | nindent 6 }}
