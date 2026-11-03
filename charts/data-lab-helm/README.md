@@ -31,6 +31,10 @@ This chart alone only creates namespaces/RBAC — it does not stand up a
 working object store by itself. See helm-argo-cd's `data-lab` Application for
 the full picture (this chart + RustFS's chart together).
 
+## Resource names
+
+The Namespaces and ServiceAccounts are named by values, not by the release: Spark jobs submit to Namespace `spark.namespace` (default `spark`) as ServiceAccount `spark.serviceAccount` (default `spark`); Flink likewise with `flink.namespace` / `flink.serviceAccount` (default `flink` / `flink`). Renaming a Namespace value deletes the old Namespace with everything in it.
+
 ## Configuration
 
 See [values.yaml](values.yaml) — every parameter is documented inline. Key ones:

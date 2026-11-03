@@ -114,6 +114,22 @@ with all Linux capabilities dropped and no privilege escalation, matching
 upstream's docker-compose hardening. Set `guacd.enabled: false` to omit it
 if the RDP feature isn't needed.
 
+## Resource names
+
+Part of the chart's interface (unit tests pin them). With release `patchmon` in namespace `patchmon`:
+
+| Object | Name | Example (DNS for Services) |
+|---|---|---|
+| Service (server, port 3000) | `<release>-patchmon-server` | `patchmon-patchmon-server.patchmon.svc` |
+| Service (Postgres, 5432) | `<release>-patchmon-postgres` | `patchmon-patchmon-postgres.patchmon.svc` |
+| Service (Redis, 6379) | `<release>-patchmon-redis` | `patchmon-patchmon-redis.patchmon.svc` |
+| Service (guacd, 4822; when `guacd.enabled`) | `<release>-patchmon-guacd` | `patchmon-patchmon-guacd.patchmon.svc` |
+| PVC (when `postgres.persistence.claim.size` is set) | `<release>-patchmon-postgres-data` | `patchmon-patchmon-postgres-data` |
+| PVC (when `redis.persistence.claim.size` is set) | `<release>-patchmon-redis-data` | `patchmon-patchmon-redis-data` |
+| Secret (credentials given as `value`) | `<release>-patchmon-credentials` | `patchmon-patchmon-credentials` |
+
+A chart-made claim is not mounted automatically: point `*.persistence.volume.persistentVolumeClaim.claimName` at the name above.
+
 ## Deployment
 
 This chart creates: a Deployment + Service (+ optional Ingress) for the
