@@ -5,6 +5,7 @@ metadata:
   name: {{ .Values.spark.namespace }}
   labels:
     {{- include "data-lab-helm.labels" (dict "context" $ "name" "spark" "component" "namespace") | nindent 4 }}
+    {{- include "data-lab-helm.podSecurityLabels" $ | nindent 4 }}
 {{- end }}
 {{- if .Values.flink.enabled }}
 ---
@@ -14,4 +15,5 @@ metadata:
   name: {{ .Values.flink.namespace }}
   labels:
     {{- include "data-lab-helm.labels" (dict "context" $ "name" "flink" "component" "namespace") | nindent 4 }}
+    {{- include "data-lab-helm.podSecurityLabels" $ | nindent 4 }}
 {{- end }}

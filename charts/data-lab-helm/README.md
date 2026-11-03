@@ -42,3 +42,13 @@ See [values.yaml](values.yaml) — every parameter is documented inline. Key one
 | Key | Default | Notes |
 |---|---|---|
 | `spark.enabled` / `flink.enabled` | `true` | per-engine namespace + RBAC |
+| `podSecurity.enforce` | `baseline` | Pod Security Admission level enforced on both namespaces (`privileged`, `baseline`, `restricted`; `""` skips it). Not `restricted`: lab pods mount inline `nfs:` volumes |
+| `podSecurity.warn` / `podSecurity.audit` | `restricted` | levels reported as client warnings / in the audit log only |
+
+### Pod Security
+
+Both engine ServiceAccounts can create pods in their namespace, so each
+Namespace carries `pod-security.kubernetes.io/enforce: baseline`: a leaked
+token or a lab job cannot start a privileged, host-namespace or `hostPath`
+pod. Pods already running are not evicted when the label is added; a
+non-compliant pod is rejected at its next creation.
