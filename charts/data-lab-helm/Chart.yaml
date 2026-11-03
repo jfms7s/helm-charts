@@ -2,7 +2,7 @@ apiVersion: v2
 name: data-lab-helm
 description: Shared infrastructure for the Spark and Flink learning labs — namespaces and engine RBAC
 type: application
-version: 0.3.0
+version: 0.3.1
 appVersion: "1"
 keywords:
   - spark
