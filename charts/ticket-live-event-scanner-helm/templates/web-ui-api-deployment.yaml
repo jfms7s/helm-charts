@@ -45,8 +45,10 @@ spec:
               {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TURSO_AUTH_TOKEN") | nindent 14 }}
             - name: LISTEN_ADDR
               value: ":8080"
+            {{- with .Values.webUiApi.corsOrigin }}
             - name: CORS_ORIGIN
-              value: {{ include "ticket-live-event-scanner-helm.corsOrigin" . | quote }}
+              value: {{ . | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.webUiApi.resources | nindent 12 }}
           livenessProbe:

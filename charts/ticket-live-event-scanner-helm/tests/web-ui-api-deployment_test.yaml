@@ -61,11 +61,11 @@ tests:
           content:
             name: LISTEN_ADDR
             value: ":8080"
-      - contains:
+      - notContains:
           path: spec.template.spec.containers[0].env
+          any: true
           content:
             name: CORS_ORIGIN
-            value: "*"
       - equal:
           path: spec.template.spec.containers[0].livenessProbe.httpGet.port
           value: http
@@ -119,37 +119,15 @@ tests:
             name: CORS_ORIGIN
             value: "https://ticket-scanner.example.com"
 
-  - it: defaults CORS_ORIGIN to the first ingress host when the ingress is on
+  - it: sets no CORS_ORIGIN by default, even with the ingress on
     set:
       ingress.enabled: true
     asserts:
-      - contains:
+      - notContains:
           path: spec.template.spec.containers[0].env
+          any: true
           content:
             name: CORS_ORIGIN
-            value: "https://ticket-scanner.example.local"
-
-  - it: lets an explicit corsOrigin win over the ingress-derived origin
-    set:
-      ingress.enabled: true
-      webUiApi.corsOrigin: "https://other.example.com"
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: CORS_ORIGIN
-            value: "https://other.example.com"
-
-  - it: falls back to "*" with the ingress on but no host
-    set:
-      ingress.enabled: true
-      ingress.hosts: []
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: CORS_ORIGIN
-            value: "*"
 
   # Credential guard (<chart>.validate): this template refuses to render alone
   # with a placeholder credential, and renders with valueFrom only.

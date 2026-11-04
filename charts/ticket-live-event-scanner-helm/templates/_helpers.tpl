@@ -6,7 +6,7 @@ Chart name and version, for the helm.sh/chart label.
 {{- end -}}
 
 {{/*
-Standard labels for a component. Pass (dict "context" $ "name" "nats|scraper|telegram-notifier|email-notifier|web-ui-api|web-ui-frontend" "component" "message-bus|scraper|notifier|api|frontend|storage").
+Standard labels for a component. Pass (dict "context" $ "name" "nats|scraper|telegram-notifier|email-notifier|web-ui-api" "component" "message-bus|scraper|notifier|api|storage").
 */}}
 {{- define "ticket-live-event-scanner-helm.labels" -}}
 {{ include "ticket-live-event-scanner-helm.podLabels" . }}
@@ -31,7 +31,7 @@ Selector labels for a component. Kept separate from
 ticket-live-event-scanner-helm.labels because selectors (Deployment
 matchLabels / Service selector) are immutable after creation, so this must
 never gain chart-version-derived keys. Pass
-(dict "context" $ "name" "nats|scraper|telegram-notifier|email-notifier|web-ui-api|web-ui-frontend").
+(dict "context" $ "name" "nats|scraper|telegram-notifier|email-notifier|web-ui-api").
 */}}
 {{- define "ticket-live-event-scanner-helm.selectorLabels" -}}
 app.kubernetes.io/name: {{ .name }}
@@ -165,21 +165,6 @@ valueFrom:
   secretKeyRef:
     name: {{ include "ticket-live-event-scanner-helm.credentialsSecretName" .ctx }}
     key: {{ .key }}
-{{- end -}}
-{{- end -}}
-
-{{/*
-CORS_ORIGIN for web-ui-api: webUiApi.corsOrigin when set; else, with the
-ingress on, https://<first ingress host> (the origin the frontend is served
-from); else "*" (the API is then reachable only in-cluster).
-*/}}
-{{- define "ticket-live-event-scanner-helm.corsOrigin" -}}
-{{- if .Values.webUiApi.corsOrigin -}}
-{{- .Values.webUiApi.corsOrigin -}}
-{{- else if and .Values.ingress.enabled .Values.ingress.hosts (first .Values.ingress.hosts).host -}}
-{{- printf "https://%s" (first .Values.ingress.hosts).host -}}
-{{- else -}}
-*
 {{- end -}}
 {{- end -}}
 
