@@ -75,3 +75,10 @@ ingress:
   tls:
     - secretName: a-example-tls
       hosts: [a.example.local]
+serviceMonitor:
+  enabled: true
+  port: metrics
+  interval: 30s
+  scrapeTimeout: 10s
+  labels:
+    example.com/team: test

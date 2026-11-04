@@ -1,0 +1,32 @@
+{{- if and .Values.serviceMonitor.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+{{- $port := required "common: serviceMonitor.port must name a service.ports key when serviceMonitor.enabled" .Values.serviceMonitor.port }}
+{{- if not (hasKey .Values.service.ports $port) }}
+{{- fail (printf "common: serviceMonitor.port %q is not a service.ports key" $port) }}
+{{- end }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "common.names.fullname" . | quote }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  {{- with .Values.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ include "common.names.name" . }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace | quote }}
+  endpoints:
+    - port: {{ $port | quote }}
+      path: {{ .Values.serviceMonitor.path | quote }}
+      {{- with .Values.serviceMonitor.interval }}
+      interval: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.serviceMonitor.scrapeTimeout }}
+      scrapeTimeout: {{ . | quote }}
+      {{- end }}
+{{- end }}

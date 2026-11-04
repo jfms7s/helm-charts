@@ -217,6 +217,32 @@ service:
   ##
   labels: {}
 
+serviceMonitor:
+  ## @param serviceMonitor.enabled Render a Prometheus Operator ServiceMonitor for the Service
+  ## Only rendered when the cluster has the monitoring.coreos.com/v1 API.
+  ##
+  enabled: false
+
+  ## @param serviceMonitor.port Name of the service.ports key to scrape (required when enabled)
+  ##
+  port: ""
+
+  ## @param serviceMonitor.path Metrics path
+  ##
+  path: /metrics
+
+  ## @param serviceMonitor.interval Scrape interval (empty = Prometheus default)
+  ##
+  interval: ""
+
+  ## @param serviceMonitor.scrapeTimeout Scrape timeout (empty = Prometheus default)
+  ##
+  scrapeTimeout: ""
+
+  ## @param serviceMonitor.labels Extra labels on the ServiceMonitor
+  ##
+  labels: {}
+
 ingress:
   ## @param ingress.enabled Enable ingress controller resource
   ##

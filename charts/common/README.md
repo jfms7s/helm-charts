@@ -58,6 +58,11 @@ Since 0.10.0 the chart ships a `values.schema.json`: an unknown key under `deplo
 | `service.ports` | Service ports: scalar `http: 80` or map `https: {port: 443, targetPort: 8443, protocol: TCP}` | `{"http": 80}` |
 | `service.annotations` | Service annotations | `{}` |
 | `service.labels` | Service labels | `{}` |
+| `serviceMonitor.enabled` | Render a Prometheus Operator ServiceMonitor for the Service; nothing renders unless the cluster has the `monitoring.coreos.com/v1` API (common >= 0.12.0) | `false` |
+| `serviceMonitor.port` | Name of the `service.ports` key to scrape (required when enabled; the render fails if it is not a key) | `""` |
+| `serviceMonitor.path` | Metrics path | `/metrics` |
+| `serviceMonitor.interval` / `serviceMonitor.scrapeTimeout` | Scrape interval and timeout (empty = Prometheus default) | `""` |
+| `serviceMonitor.labels` | Extra labels on the ServiceMonitor | `{}` |
 | `ingress.enabled` | Render an Ingress | `false` |
 | `ingress.className` | IngressClass name (omitted when empty) | `""` |
 | `ingress.annotations` | Ingress annotations | `{}` |
@@ -161,6 +166,7 @@ Consumers wire other apps to these names, so they are part of the chart's interf
 | ServiceAccount (`deploy.serviceAccount.create`) | `deploy.serviceAccount.name`, else `<fullname>` | `my-app` |
 | PersistentVolumeClaim | each `deploy.persistentVolumeClaims[].name`, verbatim | |
 | ConfigMap | `<fullname>-<key>` per `configMaps` key | `my-app-config` |
+| ServiceMonitor | `<fullname>` | `my-app` |
 
 ## Deployment
 
@@ -171,6 +177,7 @@ This chart creates the following Kubernetes resources:
 - Ingress (if enabled)
 - PersistentVolumeClaims (`deploy.persistentVolumeClaims`)
 - ConfigMaps (`configMaps`)
+- ServiceMonitor (`serviceMonitor.enabled`, needs the Prometheus Operator CRD)
 - ServiceAccount (`deploy.serviceAccount.create`)
 
 ## Upgrading
