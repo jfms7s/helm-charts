@@ -1,0 +1,94 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: configmap
+templates:
+  - templates/configmap.yaml
+values:
+  - ../ci/test-values.yaml
+chart:
+  version: 0.0.0-test
+tests:
+  - it: renders no ConfigMap by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders one ConfigMap <fullname>-<key> per configMaps entry with the chart labels
+    set:
+      configMaps:
+        app:
+          data:
+            k: v
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-common-app
+      - equal:
+          path: metadata.namespace
+          value: NAMESPACE
+      - equal:
+          path: metadata.labels
+          value:
+            app.kubernetes.io/name: common
+            helm.sh/chart: common-0.0.0-test
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
+            app.kubernetes.io/version: latest
+      - equal:
+          path: data
+          value:
+            k: v
+
+  - it: renders a ConfigMap per entry, multi-line data intact
+    set:
+      configMaps:
+        app:
+          data:
+            config.yml: |
+              a: 1
+              b: 2
+        other:
+          data:
+            x: "1"
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-common-app
+        documentIndex: 0
+      - equal:
+          path: data["config.yml"]
+          value: |
+            a: 1
+            b: 2
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-common-other
+        documentIndex: 1
+
+  - it: honours fullnameOverride in the ConfigMap name
+    set:
+      fullnameOverride: homepage
+      configMaps:
+        app:
+          data:
+            k: v
+    asserts:
+      - equal:
+          path: metadata.name
+          value: homepage-app
+
+  - it: renders an empty data map for an entry without data
+    set:
+      configMaps:
+        app: {}
+    asserts:
+      - hasDocuments:
+          count: 1
+      - notExists:
+          path: data

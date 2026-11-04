@@ -28,6 +28,12 @@ deploy:
     - name: init
       image: busybox:1.36
       command: ["sh", "-c", "true"]
+  extraContainers:
+    - name: sidecar
+      image: busybox:1.36
+      command: ["sh", "-c", "sleep infinity"]
+  podAnnotations:
+    example.com/pod: "true"
   env:
     - name: EXAMPLE
       value: "1"
@@ -42,6 +48,11 @@ deploy:
   tolerations:
     - key: example
       operator: Exists
+configMaps:
+  app:
+    data:
+      config.yml: |
+        key: value
 service:
   ports:
     http: 80

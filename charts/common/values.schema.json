@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "common chart values",
-  "description": "Unknown keys under deploy, deploy.image, deploy.serviceAccount, service and ingress fail the render, so a mistyped key is an error instead of a silently dropped setting. Kubernetes-shaped values (resources, probes, volumes, env, ...) are passed through verbatim and checked by the API server, not here.",
+  "description": "Unknown keys under deploy, deploy.image, deploy.serviceAccount, configMaps entries, service and ingress fail the render, so a mistyped key is an error instead of a silently dropped setting. Kubernetes-shaped values (resources, probes, volumes, env, ...) are passed through verbatim and checked by the API server, not here.",
   "type": "object",
   "properties": {
     "nameOverride": {
@@ -128,6 +128,13 @@
           "type": "array",
           "description": "Init containers, rendered verbatim"
         },
+        "extraContainers": {
+          "type": "array",
+          "description": "Sidecar containers, rendered verbatim after the app container",
+          "items": {
+            "type": "object"
+          }
+        },
         "env": {
           "type": "array",
           "description": "Container env, rendered verbatim"
@@ -206,6 +213,33 @@
         "startupProbe": {
           "type": "object",
           "description": "Rendered verbatim"
+        },
+        "podAnnotations": {
+          "type": "object",
+          "description": "Pod-template annotations, merged over commonAnnotations",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "configMaps": {
+      "type": "object",
+      "description": "Chart-owned ConfigMaps, keyed by name suffix: each renders <fullname>-<key> and a checksum/config-<key> pod annotation",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+        "maxLength": 56
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
         }
       }
     },

@@ -13,8 +13,22 @@ nameOverride: ""
 fullnameOverride: ""
 
 ## @param commonAnnotations Annotations added to the pod template
+## Merged with deploy.podAnnotations (which wins a shared key); no annotations key
+## is rendered when both are empty and there are no configMaps.
 ##
 commonAnnotations: {}
+
+## @param configMaps Chart-owned ConfigMaps, keyed by name suffix
+## Each entry renders a ConfigMap `<fullname>-<key>` with the chart's labels, plus a
+## `checksum/config-<key>` pod annotation (sha256 of its data), so a data change rolls
+## the pod. Keys: lowercase letters, digits and "-", at most 56 characters. Mount one
+## through deploy.volumes as `configMap: {name: <fullname>-<key>}`.
+##
+configMaps: {}
+  # app:
+  #   data:
+  #     config.yml: |
+  #       key: value
 
 deploy:
 
@@ -111,6 +125,19 @@ deploy:
     #   volumeMounts:
     #     - name: extra
     #       mountPath: /extra
+
+  ## @param deploy.extraContainers Sidecar containers, rendered verbatim after the app container
+  ## ref: https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/
+  ##
+  extraContainers: []
+    # - name: sidecar
+    #   image: busybox:1.36
+    #   command: ["sh", "-c", "sleep infinity"]
+
+  ## @param deploy.podAnnotations Annotations added to the pod template, merged over commonAnnotations
+  ##
+  podAnnotations: {}
+    # reloader.stakater.com/auto: "true"
 
   ## @param deploy.env Environment variables for the container
   ##

@@ -1,6 +1,6 @@
 # Common Chart
 
-> **Scope (frozen):** one single-container Deployment + Service + optional Ingress + PVCs (+ ServiceAccount). Defect fixes only; anything that needs a CronJob, StatefulSet, sidecar, ConfigMap, ServiceMonitor or PDB uses bjw-s `app-template` instead (see "Choosing a composition model" in the repo's `AGENTS.md`).
+> **Scope limit:** one Deployment per release (the app container plus init containers and sidecars), its Service, an optional Ingress, PVCs, chart-owned ConfigMaps, an optional ServiceMonitor and a ServiceAccount. StatefulSets, CronJobs, Jobs, a second controller and free-form `extraObjects` are out of scope: such an app gets its own chart or uses bjw-s `app-template` (see "Choosing a composition model" in the repo's `AGENTS.md`).
 
 A generic Helm chart for deploying containerized applications to Kubernetes. This chart provides a standardized template with common configurations for deployments, services, and ingress.
 
@@ -21,13 +21,14 @@ helm install my-release .
 
 The following table lists the configurable parameters of the common chart and their default values.
 
-Since 0.10.0 the chart ships a `values.schema.json`: an unknown key under `deploy`, `deploy.image`, `deploy.serviceAccount`, `service` or `ingress` (a typo such as `deploy.volumeMount` or `deploy.extraVolumes`) fails the render instead of being silently ignored. Kubernetes-shaped values (`resources`, probes, `volumes`, `env`, ...) are passed through as-is and not checked inside. `service.enabled` is accepted but ignored (the Service is always rendered); drop it from your values.
+Since 0.10.0 the chart ships a `values.schema.json`: an unknown key under `deploy`, `deploy.image`, `deploy.serviceAccount`, a `configMaps` entry, `service` or `ingress` (a typo such as `deploy.volumeMount` or `deploy.extraVolumes`) fails the render instead of being silently ignored. Kubernetes-shaped values (`resources`, probes, `volumes`, `env`, ...) are passed through as-is and not checked inside. `service.enabled` is accepted but ignored (the Service is always rendered); drop it from your values.
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `nameOverride` | String to partially override common.names.name | `""` |
 | `fullnameOverride` | String to fully override common.names.fullname | `""` |
-| `commonAnnotations` | Annotations added to the pod template | `{}` |
+| `commonAnnotations` | Annotations added to the pod template, merged with `deploy.podAnnotations`; no `annotations:` key renders when every source is empty (common >= 0.11.0; older versions render `annotations: {}`) | `{}` |
+| `configMaps` | Chart-owned ConfigMaps keyed by name suffix, each `{data: {<file>: <string>}}`: renders a ConfigMap `<fullname>-<key>` with the chart labels and a `checksum/config-<key>` pod annotation (sha256 of `data`), so a data change rolls the pod. Keys are DNS labels of at most 56 characters (common >= 0.11.0) | `{}` |
 | `deploy.image.repository` | Container image repository (required: the render fails without it) | `""` |
 | `deploy.image.tag` | Container image tag (empty renders the repository alone) | `""` |
 | `deploy.image.pullPolicy` | Container image pull policy | `IfNotPresent` |
@@ -46,6 +47,8 @@ Since 0.10.0 the chart ships a `values.schema.json`: an unknown key under `deplo
 | `deploy.volumeMounts` | Container volume mounts, rendered verbatim | `[]` |
 | `deploy.persistentVolumeClaims` | PVCs to create: `{name, storageClassName, size, accessModes}` (class and size required, accessModes defaults to `[ReadWriteOnce]`). Kept on uninstall/prune (`helm.sh/resource-policy: keep`, Argo CD `Prune=false,Delete=false`); reference one from `deploy.volumes` via `persistentVolumeClaim.claimName` | `[]` |
 | `deploy.initContainers` | Init containers, rendered verbatim | `[]` |
+| `deploy.extraContainers` | Sidecar containers, rendered verbatim after the app container (common >= 0.11.0) | `[]` |
+| `deploy.podAnnotations` | Pod-template annotations, merged over `commonAnnotations` (a shared key takes this value; common >= 0.11.0) | `{}` |
 | `deploy.env` | Container environment variables (`{name, value}` or `{name, valueFrom}`), rendered verbatim | `[]` |
 | `deploy.command` | Override the image's ENTRYPOINT (exec form) | `[]` |
 | `deploy.args` | Override the image's CMD (exec form) | `[]` |
@@ -119,6 +122,33 @@ deploy:
       subPath: data         # keeps ext4's lost+found out of the data dir
 ```
 
+### Sidecar and chart-owned ConfigMap
+
+```yaml
+fullnameOverride: homepage
+configMaps:
+  config:                   # ConfigMap homepage-config, pod annotation checksum/config-config
+    data:
+      settings.yaml: |
+        title: Home
+deploy:
+  podAnnotations:
+    reloader.stakater.com/auto: "true"
+  extraContainers:
+    - name: exporter
+      image: ghcr.io/example/exporter:1.0.0
+      ports:
+        - name: metrics
+          containerPort: 9100
+  volumes:
+    - name: config
+      configMap:
+        name: homepage-config
+  volumeMounts:
+    - name: config
+      mountPath: /app/config
+```
+
 ## Resource names
 
 Consumers wire other apps to these names, so they are part of the chart's interface (unit tests pin them). `<fullname>` is `fullnameOverride` if set; else the release name when it already contains `nameOverride` (default `common`); else `<release>-<nameOverride>`. Every name is cut to 63 characters.
@@ -130,6 +160,7 @@ Consumers wire other apps to these names, so they are part of the chart's interf
 | Deployment | `<fullname>` | `my-app` |
 | ServiceAccount (`deploy.serviceAccount.create`) | `deploy.serviceAccount.name`, else `<fullname>` | `my-app` |
 | PersistentVolumeClaim | each `deploy.persistentVolumeClaims[].name`, verbatim | |
+| ConfigMap | `<fullname>-<key>` per `configMaps` key | `my-app-config` |
 
 ## Deployment
 
@@ -138,6 +169,9 @@ This chart creates the following Kubernetes resources:
 - Deployment
 - Service
 - Ingress (if enabled)
+- PersistentVolumeClaims (`deploy.persistentVolumeClaims`)
+- ConfigMaps (`configMaps`)
+- ServiceAccount (`deploy.serviceAccount.create`)
 
 ## Upgrading
 
