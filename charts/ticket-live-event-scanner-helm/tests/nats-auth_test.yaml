@@ -5,8 +5,6 @@ templates:
   - templates/nats-configmap.yaml
   - templates/credentials-secret.yaml
   - templates/scraper-cronjob.yaml
-  - templates/telegram-notifier-deployment.yaml
-  - templates/email-notifier-deployment.yaml
   - templates/web-ui-api-deployment.yaml
 values:
   - ../ci/test-values.yaml
@@ -38,8 +36,6 @@ tests:
 
   - it: gives no Deployment client NATS_TOKEN without a token
     templates:
-      - templates/telegram-notifier-deployment.yaml
-      - templates/email-notifier-deployment.yaml
       - templates/web-ui-api-deployment.yaml
     asserts:
       - notExists:
@@ -123,8 +119,6 @@ tests:
 
   - it: gives every Deployment client NATS_TOKEN from the token's own valueFrom
     templates:
-      - templates/telegram-notifier-deployment.yaml
-      - templates/email-notifier-deployment.yaml
       - templates/web-ui-api-deployment.yaml
     set:
       nats.auth.token.valueFrom.secretKeyRef: {name: ticket-scanner-nats, key: NATS_TOKEN}
@@ -163,24 +157,6 @@ tests:
   # Each hash is the client's checksum with no token (test-values); a token
   # given as value must change it, so a client missing NATS_TOKEN from its
   # checksum keys fails here.
-  - it: rolls telegram-notifier-deployment when the token value changes
-    template: templates/telegram-notifier-deployment.yaml
-    set:
-      nats.auth.token.value: one
-    asserts:
-      - notEqual:
-          path: spec.template.metadata.annotations["checksum/credentials"]
-          value: ec85ea4737cf6383281a7543625d75ac3140e82b91fe01763dbb53ddfc0e5fe5
-
-  - it: rolls email-notifier-deployment when the token value changes
-    template: templates/email-notifier-deployment.yaml
-    set:
-      nats.auth.token.value: one
-    asserts:
-      - notEqual:
-          path: spec.template.metadata.annotations["checksum/credentials"]
-          value: 3306459d1e28261453ee81d0dad9ff9ef053de0a7619448f845136f6ef4a4e33
-
   - it: rolls web-ui-api-deployment when the token value changes
     template: templates/web-ui-api-deployment.yaml
     set:
@@ -188,7 +164,7 @@ tests:
     asserts:
       - notEqual:
           path: spec.template.metadata.annotations["checksum/credentials"]
-          value: ff57a3c7db5a27235dd056b67e1f99d252b80cdabb990b83d8472bd683471b5f
+          value: 5483ad517a57e5dabdd9428364eea8e687ac08a8b4bbb6da280ec29a57e3ec68
 
   - it: rolls scraper-cronjob when the token value changes
     template: templates/scraper-cronjob.yaml
@@ -197,4 +173,4 @@ tests:
     asserts:
       - notEqual:
           path: spec.jobTemplate.spec.template.metadata.annotations["checksum/credentials"]
-          value: ff57a3c7db5a27235dd056b67e1f99d252b80cdabb990b83d8472bd683471b5f
+          value: 5483ad517a57e5dabdd9428364eea8e687ac08a8b4bbb6da280ec29a57e3ec68

@@ -132,37 +132,14 @@ scraper:
       cpu: 200m
       memory: 128Mi
 
-telegramNotifier:
-  image:
-    repository: ghcr.io/jfms7s/ticket-live-event-scanner-telegram-notifier
-    tag: latest
-    pullPolicy: IfNotPresent
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 128Mi
-
-emailNotifier:
-  image:
-    repository: ghcr.io/jfms7s/ticket-live-event-scanner-email-notifier
-    tag: latest
-    pullPolicy: IfNotPresent
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 128Mi
-
 webUiApi:
   image:
     repository: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api
     tag: latest
     pullPolicy: IfNotPresent
+  # Besides the API and the dashboard this process runs the Telegram and
+  # email notifiers (app >= v0.10.0), so it needs the resources of the three
+  # pods it replaced.
   # CORS_ORIGIN, only for a dashboard served from another origin than the
   # API (e.g. a dev setup on two ports). Empty (default): no CORS headers;
   # web-ui-api serves the dashboard itself, so the browser makes same-origin
@@ -179,11 +156,11 @@ webUiApi:
       labels: {}
   resources:
     requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
+      cpu: 100m
       memory: 128Mi
+    limits:
+      cpu: 400m
+      memory: 256Mi
 
 ingress:
   enabled: false
