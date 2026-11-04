@@ -119,6 +119,33 @@ tests:
       - exists:
           path: spec.template.spec.containers[0].env[?(@.name == "SMTP_HOST")]
 
+  - it: runs the scraper and the digest with the chart's scraper settings
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TICKETLINE_HUB_PAGES
+            value: "auchan-live-academia-maia-98164,auchan-live-academia-aveiro-98167"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REQUEST_DELAY_MS
+            value: "1500"
+      - exists:
+          path: spec.template.spec.containers[0].env[?(@.name == "USER_AGENT")]
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "SCRAPER_ENABLED")]
+
+  - it: turns the scraper and digest off with scraper.enabled false
+    set:
+      scraper.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SCRAPER_ENABLED
+            value: "false"
+
   - it: sources TURSO_DATABASE_URL/TURSO_AUTH_TOKEN from their valueFrom when set, taking precedence over the value default
     set:
       turso.databaseUrl.valueFrom.secretKeyRef.name: turso-credentials

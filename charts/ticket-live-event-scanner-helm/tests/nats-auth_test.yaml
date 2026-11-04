@@ -4,7 +4,6 @@ templates:
   - templates/nats-deployment.yaml
   - templates/nats-configmap.yaml
   - templates/credentials-secret.yaml
-  - templates/scraper-cronjob.yaml
   - templates/web-ui-api-deployment.yaml
 values:
   - ../ci/test-values.yaml
@@ -40,12 +39,6 @@ tests:
     asserts:
       - notExists:
           path: spec.template.spec.containers[0].env[?(@.name == "NATS_TOKEN")]
-
-  - it: gives the scraper no NATS_TOKEN without a token
-    template: templates/scraper-cronjob.yaml
-    asserts:
-      - notExists:
-          path: spec.jobTemplate.spec.template.spec.containers[0].env[?(@.name == "NATS_TOKEN")]
 
   - it: stores no NATS_TOKEN in the chart Secret without a token
     template: templates/credentials-secret.yaml
@@ -132,20 +125,6 @@ tests:
                 name: ticket-scanner-nats
                 key: NATS_TOKEN
 
-  - it: gives the scraper NATS_TOKEN from the token's own valueFrom
-    template: templates/scraper-cronjob.yaml
-    set:
-      nats.auth.token.valueFrom.secretKeyRef: {name: ticket-scanner-nats, key: NATS_TOKEN}
-    asserts:
-      - contains:
-          path: spec.jobTemplate.spec.template.spec.containers[0].env
-          content:
-            name: NATS_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: ticket-scanner-nats
-                key: NATS_TOKEN
-
   - it: keeps a valueFrom token out of the chart Secret
     template: templates/credentials-secret.yaml
     set:
@@ -166,11 +145,3 @@ tests:
           path: spec.template.metadata.annotations["checksum/credentials"]
           value: 5483ad517a57e5dabdd9428364eea8e687ac08a8b4bbb6da280ec29a57e3ec68
 
-  - it: rolls scraper-cronjob when the token value changes
-    template: templates/scraper-cronjob.yaml
-    set:
-      nats.auth.token.value: one
-    asserts:
-      - notEqual:
-          path: spec.jobTemplate.spec.template.metadata.annotations["checksum/credentials"]
-          value: 5483ad517a57e5dabdd9428364eea8e687ac08a8b4bbb6da280ec29a57e3ec68

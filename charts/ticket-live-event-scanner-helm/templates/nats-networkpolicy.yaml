@@ -21,7 +21,6 @@ spec:
               - key: app.kubernetes.io/name
                 operator: In
                 values:
-                  - scraper
                   - web-ui-api
       ports:
         - protocol: TCP

@@ -6,7 +6,6 @@ suite: pod-labels
 templates:
   - templates/nats-deployment.yaml
   - templates/web-ui-api-deployment.yaml
-  - templates/scraper-cronjob.yaml
 values:
   - ../ci/test-values.yaml
 tests:
@@ -37,14 +36,3 @@ tests:
           content:
             app.kubernetes.io/instance: RELEASE-NAME
 
-  - it: scraper-cronjob.yaml job pod template has no chart label
-    template: templates/scraper-cronjob.yaml
-    asserts:
-      - exists:
-          path: metadata.labels["helm.sh/chart"]
-      - notExists:
-          path: spec.jobTemplate.spec.template.metadata.labels["helm.sh/chart"]
-      - isSubset:
-          path: spec.jobTemplate.spec.template.metadata.labels
-          content:
-            app.kubernetes.io/instance: RELEASE-NAME
