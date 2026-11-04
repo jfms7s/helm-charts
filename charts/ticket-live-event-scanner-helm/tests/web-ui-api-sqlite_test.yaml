@@ -1,0 +1,165 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: web-ui-api-sqlite
+templates:
+  - templates/web-ui-api-deployment.yaml
+  - templates/web-ui-api-pvc.yaml
+values:
+  - ../ci/test-values.yaml
+chart:
+  version: 0.0.0-test
+tests:
+  - it: keeps the libSQL server and a rolling pod spec by default
+    template: templates/web-ui-api-deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.strategy
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "DATABASE_PATH")]
+      - exists:
+          path: spec.template.spec.containers[0].env[?(@.name == "TURSO_DATABASE_URL")]
+      - notContains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: data
+
+  - it: renders no PVC by default
+    template: templates/web-ui-api-pvc.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: holds the first start open long enough for an import from sqld
+    template: templates/web-ui-api-deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+
+  - it: with sqlite enabled, owns the file on a Recreate pod with the volume mounted
+    template: templates/web-ui-api-deployment.yaml
+    set:
+      database.sqlite.enabled: true
+      database.sqlite.claim: {storageClassName: iscsi, size: 1Gi}
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PATH
+            value: /data/ticket-scanner.db
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /data
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            persistentVolumeClaim:
+              claimName: RELEASE-NAME-ticket-scanner-web-ui-api-data
+      # The first start imports from sqld, so the server settings stay.
+      - exists:
+          path: spec.template.spec.containers[0].env[?(@.name == "TURSO_DATABASE_URL")]
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "DATABASE_ALLOW_EMPTY")]
+
+  - it: creates the claim and keeps it
+    template: templates/web-ui-api-pvc.yaml
+    set:
+      database.sqlite.enabled: true
+      database.sqlite.claim: {storageClassName: iscsi, size: 1Gi}
+    asserts:
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-ticket-scanner-web-ui-api-data
+      - equal:
+          path: metadata.annotations["helm.sh/resource-policy"]
+          value: keep
+      - equal:
+          path: spec.storageClassName
+          value: iscsi
+      - equal:
+          path: spec.resources.requests.storage
+          value: 1Gi
+
+  - it: uses an existing claim and creates none
+    set:
+      database.sqlite.enabled: true
+      database.sqlite.existingClaim: mine
+    asserts:
+      - hasDocuments:
+          count: 0
+        template: templates/web-ui-api-pvc.yaml
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            persistentVolumeClaim:
+              claimName: mine
+        template: templates/web-ui-api-deployment.yaml
+
+  - it: drops the sqld settings once the import is done
+    template: templates/web-ui-api-deployment.yaml
+    set:
+      database.sqlite.enabled: true
+      database.sqlite.importFromSqld: false
+      database.sqlite.claim: {storageClassName: iscsi, size: 1Gi}
+      turso.databaseUrl.value: CHANGE_ME
+      turso.authToken.value: CHANGE_ME
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "TURSO_DATABASE_URL")]
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "TURSO_AUTH_TOKEN")]
+      - exists:
+          path: spec.template.spec.containers[0].env[?(@.name == "DATABASE_PATH")]
+
+  - it: marks a fresh install as allowed to start empty
+    template: templates/web-ui-api-deployment.yaml
+    set:
+      database.sqlite.enabled: true
+      database.sqlite.importFromSqld: false
+      database.sqlite.allowEmpty: true
+      database.sqlite.claim: {storageClassName: iscsi, size: 1Gi}
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_ALLOW_EMPTY
+            value: "true"
+
+  - it: refuses sqlite without a volume
+    template: templates/web-ui-api-pvc.yaml
+    set:
+      database.sqlite.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: "database.sqlite.enabled needs a volume"
+
+  - it: refuses a chart-created claim without a size
+    template: templates/web-ui-api-pvc.yaml
+    set:
+      database.sqlite.enabled: true
+      database.sqlite.claim.storageClassName: iscsi
+    asserts:
+      - failedTemplate:
+          errorPattern: "database.sqlite.claim.size is required"
+
+  - it: still requires the sqld credentials while it is the database
+    template: templates/web-ui-api-deployment.yaml
+    set:
+      turso.databaseUrl.value: CHANGE_ME
+    asserts:
+      - failedTemplate:
+          errorPattern: "turso.databaseUrl must be set"

@@ -1,0 +1,21 @@
+{{- if and .Values.database.sqlite.enabled (not .Values.database.sqlite.existingClaim) }}
+{{- include "ticket-live-event-scanner-helm.validate" . }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ticket-live-event-scanner-helm.sqliteClaimName" . }}
+  labels:
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "web-ui-api" "component" "storage") | nindent 4 }}
+  annotations:
+    # Data outlives the release: never delete on uninstall, prune, or
+    # Application deletion. Removing a claim is a deliberate manual step.
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.database.sqlite.claim.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.database.sqlite.claim.size | quote }}
+{{- end }}

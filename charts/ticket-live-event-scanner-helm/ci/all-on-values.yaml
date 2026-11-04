@@ -12,6 +12,11 @@ nats:
       value: "test-nats-token-not-real"
 networkPolicy:
   enabled: true
+database:
+  sqlite:
+    enabled: true
+    allowEmpty: true
+    claim: {storageClassName: standard, size: 1Gi}
 ingress:
   enabled: true
   className: traefik
