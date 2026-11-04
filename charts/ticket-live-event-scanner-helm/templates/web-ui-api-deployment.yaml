@@ -13,6 +13,12 @@ metadata:
     description: "Web UI API, dashboard, scraper, weekly digest and the Telegram and email notifiers. Kept at 1 replica (multi-replica untested)."
 spec:
   replicas: 1
+  {{- if .Values.database.sqlite.enabled }}
+  # One pod owns the SQLite file on its ReadWriteOnce volume: stop the old
+  # pod before starting the new one.
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
       {{- include "ticket-live-event-scanner-helm.selectorLabels" (dict "context" $ "name" "web-ui-api") | nindent 6 }}
@@ -34,15 +40,29 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- if .Values.database.sqlite.enabled }}
+            - name: data
+              mountPath: {{ dir .Values.database.sqlite.path }}
+            {{- end }}
           ports:
             - name: http
               containerPort: 8080
           env:
             {{- include "ticket-live-event-scanner-helm.natsClientEnv" . | nindent 12 }}
+            {{- if .Values.database.sqlite.enabled }}
+            - name: DATABASE_PATH
+              value: {{ .Values.database.sqlite.path | quote }}
+            {{- if .Values.database.sqlite.allowEmpty }}
+            - name: DATABASE_ALLOW_EMPTY
+              value: "true"
+            {{- end }}
+            {{- end }}
+            {{- if include "ticket-live-event-scanner-helm.sqldInUse" . }}
             - name: TURSO_DATABASE_URL
               {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TURSO_DATABASE_URL") | nindent 14 }}
             - name: TURSO_AUTH_TOKEN
               {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TURSO_AUTH_TOKEN") | nindent 14 }}
+            {{- end }}
             - name: LISTEN_ADDR
               value: ":8080"
             # The scraper and the weekly digest (app >= v0.11.0).
@@ -80,6 +100,14 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.webUiApi.resources | nindent 12 }}
+          # The first start with an import from sqld runs before the HTTP
+          # listener opens (up to 3 minutes): hold the other probes back.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
           livenessProbe:
             httpGet:
               path: /healthz
@@ -96,3 +124,8 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- if .Values.database.sqlite.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "ticket-live-event-scanner-helm.sqliteClaimName" . }}
+        {{- end }}

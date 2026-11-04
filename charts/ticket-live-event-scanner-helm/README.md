@@ -39,6 +39,12 @@ without a `valueFrom` (since 0.7.0); see the note below.
 | `nats.persistence.subPath` | Subdirectory of the volume to mount as `/data` (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
 | `nats.auth.token` | `{value, valueFrom}`: shared token the broker requires from every client (see [NATS authentication](#nats-authentication)). Empty = no auth | `{value: "", valueFrom: {}}` |
 | `networkPolicy.enabled` | Render a NetworkPolicy limiting ingress to the NATS pod to TCP 4222 from this release's web-ui-api | `false` |
+| `database.sqlite.enabled` | Keep the database in a SQLite file (WAL) on a volume instead of the libSQL server (app >= v0.12.0); one replica owns it, so the Deployment becomes `Recreate` | `false` |
+| `database.sqlite.importFromSqld` | While true, a new SQLite file is filled once from the libSQL server named by `turso.*`, verified, and the process does not start if the copy fails. Set false after the first start: the `turso.*` settings then leave the Deployment and are no longer required (with them set, a lost volume would copy the server's frozen snapshot over newer state) | `true` |
+| `database.sqlite.allowEmpty` | Start on an empty database with nothing to import (a fresh install); without it an empty file is refused | `false` |
+| `database.sqlite.path` | The file inside the container; its directory is the mount point | `/data/ticket-scanner.db` |
+| `database.sqlite.claim.storageClassName` / `.size` | Have the chart create the PVC `<release>-ticket-scanner-web-ui-api-data` (kept on uninstall/prune) | unset |
+| `database.sqlite.existingClaim` | Use a PVC you manage instead | `""` |
 | `turso.databaseUrl` / `turso.authToken` | Turso credentials for web-ui-api, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `telegram.botToken` / `telegram.chatId` | Telegram bot credentials for web-ui-api's Telegram channel, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `scraper.hubPages` | Comma-separated ticketline.pt hub page slugs or URLs; seeds the watches table (manage them on the dashboard's Watches page afterwards) | `auchan-live-academia-maia-98164,auchan-live-academia-aveiro-98167` |
