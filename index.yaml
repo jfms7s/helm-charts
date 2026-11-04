@@ -1319,6 +1319,27 @@ entries:
   ticket-live-event-scanner-helm:
   - apiVersion: v2
     appVersion: latest
+    created: "2026-11-04T21:51:38.654552289Z"
+    description: A Helm chart for Ticket Live Event Scanner, a scraper/notifier pipeline
+      for ticketline.pt event listings
+    digest: f5a45a01f941d4f993337f3aa0a48b8e25fe60174351d117416146201728cde8
+    keywords:
+    - ticket-scanner
+    - scraper
+    - notifications
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: ticket-live-event-scanner-helm
+    sources:
+    - https://github.com/jfms7s/ticket-live-event-scanner
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/ticket-live-event-scanner-helm-0.13.0/ticket-live-event-scanner-helm-0.13.0.tgz
+    version: 0.13.0
+  - apiVersion: v2
+    appVersion: latest
     created: "2026-11-04T21:10:06.748545526Z"
     description: A Helm chart for Ticket Live Event Scanner, a scraper/notifier pipeline
       for ticketline.pt event listings
@@ -1717,4 +1738,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-04T21:10:06.748837162Z"
+generated: "2026-11-04T21:51:38.654737997Z"
