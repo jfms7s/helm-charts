@@ -5,7 +5,7 @@ A collection of Helm charts for Kubernetes applications.
 ## Available Charts
 
 ### Common
-A generic application chart that provides a standardized template for deploying containerized applications to Kubernetes.
+A generic application chart: one Deployment per release (app container, init containers and sidecars), its Service, an optional Ingress, PVCs, chart-owned ConfigMaps and a ServiceAccount. StatefulSets, CronJobs, Jobs, a second controller and free-form `extraObjects` are out of its scope (see "Choosing a composition model" in [AGENTS.md](AGENTS.md)). See [charts/common/README.md](charts/common/README.md).
 
 ### firstdime-helm
 Deploys [First Dime](https://github.com/jfms7s/firstdime) (Number One Dime), a personal finance application, with its API server, web UI frontend, async worker, NATS (JetStream) message bus, an optional Frankfurter exchange-rate API, and optional Enable Banking bank sync (bank-sync). See [charts/firstdime-helm/README.md](charts/firstdime-helm/README.md).

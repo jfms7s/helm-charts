@@ -97,3 +97,17 @@ Labels to use on deploy.spec.selector.matchLabels and svc.spec.selector
 app.kubernetes.io/name: {{ include "common.names.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{/*
+Pod-template annotations: commonAnnotations, then deploy.podAnnotations (wins a
+shared key), then one checksum/config-<key> per chart-owned ConfigMap (the
+sha256 of its data), so a data change rolls the pod. Rendered as YAML; empty
+when there is nothing to annotate, so the pod template gets no annotations key.
+*/}}
+{{- define "common.podAnnotations" -}}
+{{- $out := dict -}}
+{{- range $k, $v := .Values.commonAnnotations }}{{ $_ := set $out $k $v }}{{ end -}}
+{{- range $k, $v := .Values.deploy.podAnnotations }}{{ $_ := set $out $k $v }}{{ end -}}
+{{- range $name, $cm := .Values.configMaps }}{{ $_ := set $out (printf "checksum/config-%s" $name) (toYaml ($cm.data | default dict) | sha256sum) }}{{ end -}}
+{{- if $out }}{{ toYaml $out }}{{ end -}}
+{{- end -}}

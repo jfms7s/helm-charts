@@ -1,0 +1,12 @@
+{{- range $name, $cm := .Values.configMaps }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-%s" (include "common.names.fullname" $) $name | quote }}
+  namespace: {{ $.Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" $ | nindent 4 }}
+{{- with $cm.data }}
+data: {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
