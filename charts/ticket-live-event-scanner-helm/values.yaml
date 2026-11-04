@@ -52,8 +52,7 @@ nats:
 networkPolicy:
   enabled: false
 
-# Turso (libSQL) database credentials, shared by the scraper (writer) and
-# web-ui-api (reader). Each is a standard Kubernetes EnvVarSource: set
+# Turso (libSQL) database credentials, used by web-ui-api (which also runs the scraper). Each is a standard Kubernetes EnvVarSource: set
 # `value` for a plain literal (Argo CD does not support Helm's `lookup`
 # function, so these can't be safely auto-generated and persisted across
 # syncs -- pin explicitly, e.g. from a values-secrets file kept out of
@@ -68,7 +67,7 @@ turso:
     value: "CHANGE_ME"
     valueFrom: {}
 
-# Telegram bot credentials for telegram-notifier. Same shape/rationale as
+# Telegram bot credentials for web-ui-api's Telegram channel. Same shape/rationale as
 # turso above.
 telegram:
   botToken:
@@ -78,7 +77,7 @@ telegram:
     value: "CHANGE_ME"
     valueFrom: {}
 
-# SMTP relay credentials for email-notifier, which emails a calendar
+# SMTP relay credentials for web-ui-api's email channel, which emails a calendar
 # invite (.ics) when an event is marked purchased. host/port/from/to are
 # plain config (not secret-worthy on their own), so they're bare scalars
 # rather than the value/valueFrom shape used for username/password below
@@ -98,39 +97,22 @@ smtp:
   from: "CHANGE_ME"
   to: "CHANGE_ME"
 
+# The scraper and the weekly digest run inside web-ui-api (app >= v0.11.0):
+# a scrape at start-up and then at the top of every hour, the digest on
+# Sunday at 19:00 Europe/Lisbon. Formerly two CronJobs.
 scraper:
-  image:
-    repository: ghcr.io/jfms7s/ticket-live-event-scanner-scraper
-    tag: latest
-    pullPolicy: IfNotPresent
-  # Cron schedule the scraper CronJob runs on.
-  schedule: "0 * * * *"
-  backoffLimit: 2
-  # Seconds a finished scraper Job (and its pod's logs) is kept before deletion.
-  ttlSecondsAfterFinished: 86400
-  # Comma-separated ticketline.pt hub page slugs the scraper re-checks for
-  # new session IDs.
+  # false sets SCRAPER_ENABLED=false: web-ui-api then only serves the
+  # dashboard and delivers notifications, with no scrape and no digest.
+  enabled: true
+  # Comma-separated ticketline.pt hub page slugs or URLs. Seeds the watches
+  # table (app >= v0.9.0): each hub not yet a watch becomes one, and after
+  # that the hubs are managed on the dashboard's Watches page. Empty is fine
+  # once there are watches.
   hubPages: "auchan-live-academia-maia-98164,auchan-live-academia-aveiro-98167"
   # HTTP User-Agent the scraper sends. Add your own contact (a URL or an
   # address) so the site can reach whoever runs this install.
   userAgent: "ticket-live-event-scanner (+https://github.com/jfms7s/ticket-live-event-scanner)"
   requestDelayMs: 1500
-  # Weekly Telegram digest (app >= v0.6.0): a second CronJob running the
-  # scraper image with --digest, which publishes one summary for
-  # telegram-notifier to send (next 14 days, new this week, hubs, runs).
-  # Off by default. Never retried (backoffLimit 0) and never caught up late.
-  digest:
-    enabled: false
-    schedule: "0 19 * * 0"
-    # IANA zone for the schedule (CronJob spec.timeZone).
-    timeZone: "Europe/Lisbon"
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 128Mi
 
 webUiApi:
   image:

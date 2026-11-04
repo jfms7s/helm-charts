@@ -39,7 +39,7 @@ tests:
                     matchExpressions:
                       - key: app.kubernetes.io/name
                         operator: In
-                        values: [scraper, web-ui-api]
+                        values: [web-ui-api]
               ports:
                 - protocol: TCP
                   port: 4222

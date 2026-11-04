@@ -3,7 +3,6 @@ suite: pod hardening
 templates:
   - templates/nats-deployment.yaml
   - templates/web-ui-api-deployment.yaml
-  - templates/scraper-cronjob.yaml
 values:
   - ../ci/test-values.yaml
 tests:
@@ -74,35 +73,3 @@ tests:
             emptyDir: {}
 
 
-  - it: hardens the scraper-cronjob pod
-    template: templates/scraper-cronjob.yaml
-    asserts:
-      - equal:
-          path: spec.jobTemplate.spec.template.spec.securityContext
-          value:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            fsGroup: 1000
-            seccompProfile:
-              type: RuntimeDefault
-      - equal:
-          path: spec.jobTemplate.spec.template.spec.automountServiceAccountToken
-          value: false
-      - equal:
-          path: spec.jobTemplate.spec.template.spec.containers[0].securityContext
-          value:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-      - contains:
-          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts
-          content:
-            name: tmp
-            mountPath: /tmp
-      - contains:
-          path: spec.jobTemplate.spec.template.spec.volumes
-          content:
-            name: tmp
-            emptyDir: {}

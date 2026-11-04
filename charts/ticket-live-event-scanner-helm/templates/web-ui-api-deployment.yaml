@@ -10,7 +10,7 @@ metadata:
     # JetStream consumers are durable pull consumers with explicit ack, so a
     # second pod (as during a rolling update) shares the messages rather
     # than processing each one twice.
-    description: "Web UI API, dashboard and the Telegram and email notifiers. Kept at 1 replica (multi-replica untested)."
+    description: "Web UI API, dashboard, scraper, weekly digest and the Telegram and email notifiers. Kept at 1 replica (multi-replica untested)."
 spec:
   replicas: 1
   selector:
@@ -45,6 +45,17 @@ spec:
               {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TURSO_AUTH_TOKEN") | nindent 14 }}
             - name: LISTEN_ADDR
               value: ":8080"
+            # The scraper and the weekly digest (app >= v0.11.0).
+            {{- if not .Values.scraper.enabled }}
+            - name: SCRAPER_ENABLED
+              value: "false"
+            {{- end }}
+            - name: TICKETLINE_HUB_PAGES
+              value: {{ .Values.scraper.hubPages | quote }}
+            - name: USER_AGENT
+              value: {{ .Values.scraper.userAgent | quote }}
+            - name: REQUEST_DELAY_MS
+              value: {{ .Values.scraper.requestDelayMs | quote }}
             # The delivery channels (app >= v0.10.0): Telegram and the
             # calendar-invite email run in this process.
             - name: TELEGRAM_BOT_TOKEN
