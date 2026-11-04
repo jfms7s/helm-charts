@@ -2,7 +2,7 @@
 {{- include "ticket-live-event-scanner-helm.validate" . }}
 # The weekly Telegram digest: the scraper image run with --digest. It
 # builds one message and publishes it once (message ID per ISO week);
-# telegram-notifier sends it to the chat. Pods keep the scraper's
+# web-ui-api's Telegram channel sends it to the chat. Pods keep the scraper's
 # app.kubernetes.io/name, so the NATS NetworkPolicy admits them.
 apiVersion: batch/v1
 kind: CronJob

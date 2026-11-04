@@ -76,14 +76,48 @@ tests:
           path: spec.template.spec.containers[0].resources
           value:
             requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
+              cpu: 100m
               memory: 128Mi
+            limits:
+              cpu: 400m
+              memory: 256Mi
       - equal:
           path: spec.template.spec.restartPolicy
           value: Always
+
+  - it: passes the Telegram and email notifier credentials and settings to this container
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TELEGRAM_BOT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-ticket-scanner-credentials
+                key: TELEGRAM_BOT_TOKEN
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TELEGRAM_CHAT_ID
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-ticket-scanner-credentials
+                key: TELEGRAM_CHAT_ID
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SMTP_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-ticket-scanner-credentials
+                key: SMTP_PASSWORD
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: EMAIL_TO
+            value: recipient@example.com
+      - exists:
+          path: spec.template.spec.containers[0].env[?(@.name == "SMTP_HOST")]
 
   - it: sources TURSO_DATABASE_URL/TURSO_AUTH_TOKEN from their valueFrom when set, taking precedence over the value default
     set:

@@ -6,7 +6,7 @@ Chart name and version, for the helm.sh/chart label.
 {{- end -}}
 
 {{/*
-Standard labels for a component. Pass (dict "context" $ "name" "nats|scraper|telegram-notifier|email-notifier|web-ui-api" "component" "message-bus|scraper|notifier|api|storage").
+Standard labels for a component. Pass (dict "context" $ "name" "nats|scraper|web-ui-api" "component" "message-bus|scraper|notifier|api|storage").
 */}}
 {{- define "ticket-live-event-scanner-helm.labels" -}}
 {{ include "ticket-live-event-scanner-helm.podLabels" . }}
@@ -31,7 +31,7 @@ Selector labels for a component. Kept separate from
 ticket-live-event-scanner-helm.labels because selectors (Deployment
 matchLabels / Service selector) are immutable after creation, so this must
 never gain chart-version-derived keys. Pass
-(dict "context" $ "name" "nats|scraper|telegram-notifier|email-notifier|web-ui-api").
+(dict "context" $ "name" "nats|scraper|web-ui-api").
 */}}
 {{- define "ticket-live-event-scanner-helm.selectorLabels" -}}
 app.kubernetes.io/name: {{ .name }}

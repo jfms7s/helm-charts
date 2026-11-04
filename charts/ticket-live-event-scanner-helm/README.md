@@ -38,9 +38,9 @@ without a `valueFrom` (since 0.7.0); see the note below.
 | `nats.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-ticket-scanner-nats-data` (RWO, kept on uninstall/prune); point `nats.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
 | `nats.persistence.subPath` | Subdirectory of the volume to mount as `/data` (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
 | `nats.auth.token` | `{value, valueFrom}`: shared token the broker requires from every client (see [NATS authentication](#nats-authentication)). Empty = no auth | `{value: "", valueFrom: {}}` |
-| `networkPolicy.enabled` | Render a NetworkPolicy limiting ingress to the NATS pod to TCP 4222 from this release's scraper, notifiers and web-ui-api | `false` |
+| `networkPolicy.enabled` | Render a NetworkPolicy limiting ingress to the NATS pod to TCP 4222 from this release's scraper and web-ui-api | `false` |
 | `turso.databaseUrl` / `turso.authToken` | Turso credentials shared by the scraper and web-ui-api, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
-| `telegram.botToken` / `telegram.chatId` | Telegram bot credentials for telegram-notifier, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
+| `telegram.botToken` / `telegram.chatId` | Telegram bot credentials for web-ui-api's Telegram channel, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `scraper.image.*` | Scraper image | `ghcr.io/jfms7s/ticket-live-event-scanner-scraper:latest` |
 | `scraper.schedule` | CronJob schedule for the scraper | `0 * * * *` (hourly) |
 | `scraper.backoffLimit` | CronJob `backoffLimit` | `2` |
@@ -51,13 +51,9 @@ without a `valueFrom` (since 0.7.0); see the note below.
 | `scraper.digest.enabled` | Weekly Telegram digest CronJob (`scraper --digest`, app >= v0.6.0): one summary to the chat; never retried | `false` |
 | `scraper.digest.schedule` / `scraper.digest.timeZone` | Digest schedule and its IANA time zone (`spec.timeZone`) | `0 19 * * 0` / `Europe/Lisbon` (Sunday 19:00) |
 | `scraper.resources` | Scraper container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
-| `telegramNotifier.image.*` | Telegram notifier image | `ghcr.io/jfms7s/ticket-live-event-scanner-telegram-notifier:latest` |
-| `telegramNotifier.resources` | Telegram notifier container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
-| `smtp.host` / `smtp.port` | SMTP relay address for email-notifier | `smtp.gmail.com` / `587` |
+| `smtp.host` / `smtp.port` | SMTP relay address for web-ui-api's email channel | `smtp.gmail.com` / `587` |
 | `smtp.username` / `smtp.password` | SMTP auth credentials, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `smtp.from` / `smtp.to` | From address and comma-separated recipient list for the calendar-invite email | `CHANGE_ME` |
-| `emailNotifier.image.*` | Email notifier image | `ghcr.io/jfms7s/ticket-live-event-scanner-email-notifier:latest` |
-| `emailNotifier.resources` | Email notifier container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
 | `webUiApi.image.*` | Web UI API image | `ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api:latest` |
 | `webUiApi.corsOrigin` | `CORS_ORIGIN`, only for a dashboard served from another origin (dev). Empty: no CORS headers (web-ui-api serves the dashboard itself) | `""` |
 | `webUiApi.metrics.serviceMonitor.enabled` / `.interval` / `.labels` | ServiceMonitor for web-ui-api's `/metrics` (scraper run health, app >= v0.6.0); needs the Prometheus Operator CRDs. The alert rules belong with your Prometheus | `false` / `60s` / `{}` |
@@ -131,8 +127,7 @@ before turning auth on. The token must not contain `"`, `\` or a newline.
 
 `networkPolicy.enabled: true` adds `<release>-ticket-scanner-nats`, which
 allows ingress to the NATS pod only on TCP 4222 and only from pods of this
-release labelled `app.kubernetes.io/name` `scraper`, `telegram-notifier`,
-`email-notifier` or `web-ui-api`. Egress is not restricted, and the other
+release labelled `app.kubernetes.io/name` `scraper` or `web-ui-api`. Egress is not restricted, and the other
 workloads get no policy. It needs a CNI that enforces NetworkPolicy (k3s's
 embedded kube-router does).
 
@@ -188,9 +183,10 @@ not stop direct requests. No CORS headers are sent unless
 ## Deployment
 
 This chart creates: a Deployment + Service for NATS, a CronJob (+
-ServiceAccount/Role/RoleBinding) for the scraper, a Deployment for
-telegram-notifier, a Deployment for email-notifier, a Deployment + Service
-(+ optional Ingress) for web-ui-api, which also serves the dashboard; optionally a NATS ConfigMap (`nats.auth.token`) and a NATS
+ServiceAccount/Role/RoleBinding) for the scraper and a Deployment + Service
+(+ optional Ingress) for web-ui-api, which also serves the dashboard and runs
+the Telegram and email notifiers (app >= v0.10.0; it needs the resources of
+the three pods it replaced); optionally a NATS ConfigMap (`nats.auth.token`) and a NATS
 NetworkPolicy (`networkPolicy.enabled`), a weekly digest CronJob
 (`scraper.digest.enabled`) and a ServiceMonitor for web-ui-api
 (`webUiApi.metrics.serviceMonitor.enabled`).
@@ -198,7 +194,7 @@ NetworkPolicy (`networkPolicy.enabled`), a weekly digest CronJob
 Every pod runs as uid/gid 1000 (`fsGroup` 1000) with the `RuntimeDefault`
 seccomp profile and no service account token; every container has a
 read-only root filesystem, no capabilities, no privilege escalation and a
-`/tmp` emptyDir (the notifiers' health file lives there).
+`/tmp` emptyDir.
 
 ## Uninstalling
 
