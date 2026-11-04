@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}-ticket-scanner-web-ui-frontend
+  name: {{ .Release.Name }}-ticket-scanner-web-ui
   labels:
-    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "web-ui-frontend" "component" "frontend") | nindent 4 }}
+    {{- include "ticket-live-event-scanner-helm.labels" (dict "context" $ "name" "web-ui-api" "component" "api") | nindent 4 }}
   annotations:
     {{- range $key, $value := .Values.ingress.annotations }}
     {{ $key }}: {{ $value | quote }}
@@ -33,12 +33,11 @@ spec:
             pathType: {{ .pathType | default "Prefix" }}
             backend:
               service:
-                # Per-path service override (e.g. routing /api to
-                # web-ui-api) -- defaults to the frontend service so
-                # existing single-path (`/`) configs are unaffected.
-                # The backend port is the Service port named `http` (both
-                # chart Services have one); a path's `port` value is ignored.
-                name: {{ .service | default (printf "%s-ticket-scanner-web-ui-frontend" $.Release.Name) }}
+                # web-ui-api serves the dashboard at / and the API under /api
+                # (same origin), so every path goes to it unless a per-path
+                # `service` overrides. The backend port is the Service port
+                # named `http`; a path's `port` value is ignored.
+                name: {{ .service | default (printf "%s-ticket-scanner-web-ui-api" $.Release.Name) }}
                 port:
                   name: http
           {{- end }}

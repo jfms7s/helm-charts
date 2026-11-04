@@ -59,13 +59,10 @@ without a `valueFrom` (since 0.7.0); see the note below.
 | `emailNotifier.image.*` | Email notifier image | `ghcr.io/jfms7s/ticket-live-event-scanner-email-notifier:latest` |
 | `emailNotifier.resources` | Email notifier container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
 | `webUiApi.image.*` | Web UI API image | `ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api:latest` |
-| `webUiApi.corsOrigin` | Allowed frontend origin(s) for the API (`CORS_ORIGIN`). Empty: `https://<first ingress host>` with the ingress on, else `*` | `""` |
+| `webUiApi.corsOrigin` | `CORS_ORIGIN`, only for a dashboard served from another origin (dev). Empty: no CORS headers (web-ui-api serves the dashboard itself) | `""` |
 | `webUiApi.metrics.serviceMonitor.enabled` / `.interval` / `.labels` | ServiceMonitor for web-ui-api's `/metrics` (scraper run health, app >= v0.6.0); needs the Prometheus Operator CRDs. The alert rules belong with your Prometheus | `false` / `60s` / `{}` |
 | `webUiApi.resources` | Web UI API container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
-| `webUiFrontend.image.*` | Web UI frontend image | `ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-frontend:latest` |
-| `webUiFrontend.replicas` | Web UI frontend replica count | `1` |
-| `webUiFrontend.resources` | Web UI frontend container resources | `requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 200m, memory: 128Mi}` |
-| `ingress.enabled` / `ingress.className` / `ingress.hosts` / `ingress.tls` | Ingress for the web UI frontend; a path's `service` routes it to another Service, always on that Service's port named `http` (a path's `port` key is ignored) | disabled |
+| `ingress.enabled` / `ingress.className` / `ingress.hosts` / `ingress.tls` | Ingress for the web UI (web-ui-api serves the dashboard at `/` and the API under `/api`); a path's `service` routes it to another Service instead, always on that Service's port named `http` (a path's `port` key is ignored) | disabled |
 
 ### Secrets
 
@@ -172,10 +169,9 @@ once per delivery sequence.
 
 web-ui-api has no authentication, and some of its calls have side effects
 (marking an event purchased sends email and calendar invites). With the
-ingress off it is reachable only in-cluster. Routing `/api` through the
-ingress (an `ingress.hosts[].paths[]` entry with
-`service: <release>-ticket-scanner-web-ui-api`) publishes it to anyone who
-can reach that host, so protect it there, e.g. with a Traefik forward-auth
+ingress off it is reachable only in-cluster. Turning the ingress on
+publishes the dashboard and the API (same origin, app >= v0.7.0) to anyone
+who can reach that host, so protect it there, e.g. with a Traefik forward-auth
 or basic-auth middleware:
 
 ```yaml
@@ -184,17 +180,17 @@ ingress:
     traefik.ingress.kubernetes.io/router.middlewares: <namespace>-<middleware>@kubernetescrd
 ```
 
-`webUiApi.corsOrigin` defaults to the ingress origin when the ingress is on,
-so other sites cannot read API responses from a visitor's browser; CORS is
-not authentication and does not stop direct requests.
+Mutating calls need an `X-Requested-With` header, so other sites cannot
+trigger them from a visitor's browser; that is not authentication and does
+not stop direct requests. No CORS headers are sent unless
+`webUiApi.corsOrigin` is set.
 
 ## Deployment
 
 This chart creates: a Deployment + Service for NATS, a CronJob (+
 ServiceAccount/Role/RoleBinding) for the scraper, a Deployment for
 telegram-notifier, a Deployment for email-notifier, a Deployment + Service
-for web-ui-api, and a Deployment + Service (+ optional Ingress) for
-web-ui-frontend; optionally a NATS ConfigMap (`nats.auth.token`) and a NATS
+(+ optional Ingress) for web-ui-api, which also serves the dashboard; optionally a NATS ConfigMap (`nats.auth.token`) and a NATS
 NetworkPolicy (`networkPolicy.enabled`), a weekly digest CronJob
 (`scraper.digest.enabled`) and a ServiceMonitor for web-ui-api
 (`webUiApi.metrics.serviceMonitor.enabled`).

@@ -8,7 +8,6 @@ templates:
   - templates/telegram-notifier-deployment.yaml
   - templates/email-notifier-deployment.yaml
   - templates/web-ui-api-deployment.yaml
-  - templates/web-ui-frontend-deployment.yaml
   - templates/scraper-cronjob.yaml
 values:
   - ../ci/test-values.yaml
@@ -65,19 +64,7 @@ tests:
           path: spec.template.metadata.labels
           content:
             app.kubernetes.io/instance: RELEASE-NAME
-  - it: web-ui-frontend-deployment.yaml pod template has no chart label
-    template: templates/web-ui-frontend-deployment.yaml
-    asserts:
-      - exists:
-          path: metadata.labels["helm.sh/chart"]
-      - notExists:
-          path: spec.template.metadata.labels["helm.sh/chart"]
-      - notExists:
-          path: spec.template.metadata.labels["app.kubernetes.io/version"]
-      - isSubset:
-          path: spec.template.metadata.labels
-          content:
-            app.kubernetes.io/instance: RELEASE-NAME
+
   - it: scraper-cronjob.yaml job pod template has no chart label
     template: templates/scraper-cronjob.yaml
     asserts:

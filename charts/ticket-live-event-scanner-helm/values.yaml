@@ -163,15 +163,10 @@ webUiApi:
     repository: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api
     tag: latest
     pullPolicy: IfNotPresent
-  # Allowed frontend origin(s) (CORS_ORIGIN). The API is unauthenticated,
-  # and some calls have side effects (marking an event purchased sends email
-  # and calendar invites). Empty (default): https://<first ingress host> when
-  # the ingress is on, else "*" -- harmless only while the API is reachable
-  # in-cluster alone. Routing /api through the ingress (a path with
-  # `service: <release>-ticket-scanner-web-ui-api`) publishes the API to
-  # anyone who can reach that host: put an auth middleware in front of it
-  # (see the README's Security section). Set this explicitly if the frontend
-  # is served from another origin or over plain http.
+  # CORS_ORIGIN, only for a dashboard served from another origin than the
+  # API (e.g. a dev setup on two ports). Empty (default): no CORS headers;
+  # web-ui-api serves the dashboard itself, so the browser makes same-origin
+  # calls. Never "*": the API is unauthenticated and has side effects.
   corsOrigin: ""
   # Scraper run health on web-ui-api's /metrics (app >= v0.6.0): last run,
   # run failed and per-hub consecutive empty runs, for Prometheus alert
@@ -182,26 +177,6 @@ webUiApi:
       interval: 60s
       # Extra labels, for a Prometheus that selects ServiceMonitors by label.
       labels: {}
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 200m
-      memory: 128Mi
-
-webUiFrontend:
-  image:
-    repository: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-frontend
-    tag: latest
-    pullPolicy: IfNotPresent
-  replicas: 1
-  # Public origin the browser should call for API requests (no trailing
-  # /api -- the frontend's own JS already appends /api/... per request).
-  # Empty defaults to the in-cluster Service DNS name, which only works if
-  # the browser itself is inside the cluster network -- set this to the
-  # ingress's public URL wherever the API is exposed externally.
-  apiBaseUrl: ""
   resources:
     requests:
       cpu: 50m
@@ -221,6 +196,6 @@ ingress:
         - path: /
           pathType: Prefix
           # Optional: `service: <name>` routes the path to another Service
-          # (e.g. <release>-ticket-scanner-web-ui-api for /api). The backend
-          # is that Service's port named `http`; a `port` key is ignored.
+          # instead of web-ui-api, which serves both the dashboard and /api.
+          # The backend is that Service's port named `http`; a `port` key is ignored.
   tls: []

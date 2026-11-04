@@ -5,7 +5,6 @@ templates:
   - templates/telegram-notifier-deployment.yaml
   - templates/email-notifier-deployment.yaml
   - templates/web-ui-api-deployment.yaml
-  - templates/web-ui-frontend-deployment.yaml
   - templates/scraper-cronjob.yaml
 values:
   - ../ci/test-values.yaml
@@ -142,38 +141,6 @@ tests:
             name: tmp
             emptyDir: {}
 
-  - it: hardens the web-ui-frontend-deployment pod
-    template: templates/web-ui-frontend-deployment.yaml
-    asserts:
-      - equal:
-          path: spec.template.spec.securityContext
-          value:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            fsGroup: 1000
-            seccompProfile:
-              type: RuntimeDefault
-      - equal:
-          path: spec.template.spec.automountServiceAccountToken
-          value: false
-      - equal:
-          path: spec.template.spec.containers[0].securityContext
-          value:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-      - contains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: tmp
-            mountPath: /tmp
-      - contains:
-          path: spec.template.spec.volumes
-          content:
-            name: tmp
-            emptyDir: {}
 
   - it: hardens the scraper-cronjob pod
     template: templates/scraper-cronjob.yaml

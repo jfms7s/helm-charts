@@ -1,7 +1,7 @@
 # $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
-suite: web-ui-frontend-ingress
+suite: web-ui-ingress
 templates:
-  - templates/web-ui-frontend-ingress.yaml
+  - templates/web-ui-ingress.yaml
 values:
   - ../ci/test-values.yaml
 tests:
@@ -18,7 +18,7 @@ tests:
           of: Ingress
       - equal:
           path: metadata.name
-          value: RELEASE-NAME-ticket-scanner-web-ui-frontend
+          value: RELEASE-NAME-ticket-scanner-web-ui
       - equal:
           path: spec.rules[0].host
           value: ticket-scanner.example.local
@@ -30,7 +30,7 @@ tests:
           value: Prefix
       - equal:
           path: spec.rules[0].http.paths[0].backend.service.name
-          value: RELEASE-NAME-ticket-scanner-web-ui-frontend
+          value: RELEASE-NAME-ticket-scanner-web-ui-api
       - equal:
           path: spec.rules[0].http.paths[0].backend.service.port.name
           value: http
@@ -89,7 +89,6 @@ tests:
           path: spec.rules[0].http.paths[0].backend.service.port.number
 
   - it: routes a path to a different service when service is set
-    # e.g. exposing web-ui-api under /api on the same host as the frontend.
     set:
       ingress.enabled: true
       ingress.hosts:
@@ -97,8 +96,8 @@ tests:
           paths:
             - path: /
               port: 80
-            - path: /api
-              service: RELEASE-NAME-ticket-scanner-web-ui-api
+            - path: /other
+              service: other-service
               port: 80
     asserts:
       - lengthEqual:
@@ -106,13 +105,10 @@ tests:
           count: 2
       - equal:
           path: spec.rules[0].http.paths[0].backend.service.name
-          value: RELEASE-NAME-ticket-scanner-web-ui-frontend
-      - equal:
-          path: spec.rules[0].http.paths[1].path
-          value: /api
+          value: RELEASE-NAME-ticket-scanner-web-ui-api
       - equal:
           path: spec.rules[0].http.paths[1].backend.service.name
-          value: RELEASE-NAME-ticket-scanner-web-ui-api
+          value: other-service
       - equal:
           path: spec.rules[0].http.paths[1].backend.service.port.name
           value: http
