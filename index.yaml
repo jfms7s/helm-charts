@@ -263,6 +263,15 @@ entries:
     version: 0.1.0
   common:
   - apiVersion: v2
+    created: "2026-11-04T15:13:10.113023805Z"
+    description: A Helm chart for Kubernetes
+    digest: fd8b89fe6853facbf026382ea99db9cc8c30a2bff038424a932d83d7468676fd
+    name: common
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/common-0.12.0/common-0.12.0.tgz
+    version: 0.12.0
+  - apiVersion: v2
     created: "2026-11-04T00:04:30.432679605Z"
     description: A Helm chart for Kubernetes
     digest: 01806c3dcd1629d14e39530b538467a7b792e38fbee8f0a617c7b8c7a848fd76
@@ -1666,4 +1675,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-04T00:04:30.432804693Z"
+generated: "2026-11-04T15:13:10.113424836Z"
