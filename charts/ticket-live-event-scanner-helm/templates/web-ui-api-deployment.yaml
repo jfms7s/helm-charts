@@ -48,7 +48,6 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            {{- include "ticket-live-event-scanner-helm.natsClientEnv" . | nindent 12 }}
             {{- if .Values.database.sqlite.enabled }}
             - name: DATABASE_PATH
               value: {{ .Values.database.sqlite.path | quote }}

@@ -3,7 +3,7 @@
 A Helm chart for deploying [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner),
 a scraper/notifier pipeline that watches ticketline.pt event listings, pushes
 Telegram alerts, and emails a calendar invite (.ics) when an event is marked
-purchased, along with its in-cluster NATS (JetStream) message bus. Modeled on
+purchased. Everything runs in one pod (web-ui-api) on one SQLite file; there is no message broker. Modeled on
 upstream's own
 [deploy/k8s](https://github.com/jfms7s/ticket-live-event-scanner/tree/master/deploy/k8s)
 manifests.
@@ -32,13 +32,6 @@ without a `valueFrom` (since 0.7.0); see the note below.
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `nats.image.*` | NATS image | `nats:2-alpine` |
-| `nats.resources` | NATS container resources | `requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: 500m, memory: 512Mi}` |
-| `nats.persistence.volume` | Volume source (excl. `name`) for NATS JetStream file storage | `{}` (emptyDir) |
-| `nats.persistence.claim` | `{storageClassName, size}`: when the class is set, render a PVC `<release>-ticket-scanner-nats-data` (RWO, kept on uninstall/prune); point `nats.persistence.volume` at it via `persistentVolumeClaim.claimName` | unset |
-| `nats.persistence.subPath` | Subdirectory of the volume to mount as `/data` (use on block-backed PVCs to keep ext4's `lost+found` out of it) | `""` |
-| `nats.auth.token` | `{value, valueFrom}`: shared token the broker requires from every client (see [NATS authentication](#nats-authentication)). Empty = no auth | `{value: "", valueFrom: {}}` |
-| `networkPolicy.enabled` | Render a NetworkPolicy limiting ingress to the NATS pod to TCP 4222 from this release's web-ui-api | `false` |
 | `database.sqlite.enabled` | Keep the database in a SQLite file (WAL) on a volume instead of the libSQL server (app >= v0.12.0); one replica owns it, so the Deployment becomes `Recreate` | `false` |
 | `database.sqlite.importFromSqld` | While true, a new SQLite file is filled once from the libSQL server named by `turso.*`, verified, and the process does not start if the copy fails. Set false after the first start: the `turso.*` settings then leave the Deployment and are no longer required (with them set, a lost volume would copy the server's frozen snapshot over newer state) | `true` |
 | `database.sqlite.allowEmpty` | Start on an empty database with nothing to import (a fresh install); without it an empty file is refused | `false` |
@@ -92,72 +85,9 @@ so changing a `value` rolls only the pods that use it. The hash is unsalted
 and readable with the workload, so give `value` credentials high entropy, or
 use `valueFrom`.
 
-### NATS authentication
-
-The broker accepts anonymous clients unless `nats.auth.token` is set
-(same `{value, valueFrom}` shape as the credentials above). When it is,
-the chart renders a ConfigMap `<release>-ticket-scanner-nats-config` with
-`authorization { token: $NATS_TOKEN_QUOTED }` and starts NATS with
-`-c /etc/nats/nats.conf`; the broker reads the token from its environment,
-so it is never in the ConfigMap or on the command line. Every client
-(web-ui-api, which also runs the scraper and the notifiers) gets `NATS_TOKEN` from the same source.
-App images before `v0.5.0` ignore `NATS_TOKEN` and are refused, so bump the
-images first. A `value` token with `"`, `\` or a newline fails the render; a
-`valueFrom` one with any of them would stop the broker at startup.
-
-```yaml
-nats:
-  auth:
-    token:
-      valueFrom:
-        secretKeyRef:
-          name: ticket-scanner-nats
-          key: NATS_TOKEN
-```
-
-Turning it on (or rotating a `value` token) restarts the broker and every
-client in the same sync; clients reconnect once the broker is back. A
-`valueFrom` token rotated in its Secret rolls nothing: restart the broker
-and then web-ui-api (`kubectl rollout restart`). The chart cannot check
-the image versions, so make sure every app image is `v0.5.0` or later
-before turning auth on. The token must not contain `"`, `\` or a newline.
-
-### NetworkPolicy
-
-`networkPolicy.enabled: true` adds `<release>-ticket-scanner-nats`, which
-allows ingress to the NATS pod only on TCP 4222 and only from pods of this
-release labelled `app.kubernetes.io/name` `web-ui-api`. Egress is not restricted, and the other
-workloads get no policy. It needs a CNI that enforces NetworkPolicy (k3s's
-embedded kube-router does).
-
-### Persistent storage
-
-NATS doesn't ship a default storage backend for its JetStream data, since
-the right one (NFS, hostPath, a PVC, cloud block storage, ...) is
-environment-specific. `nats.persistence.volume` takes the full body of a
-Kubernetes volume source (everything except `name`), e.g.:
-
-```yaml
-nats:
-  persistence:
-    volume:
-      nfs:
-        server: 192.168.1.10
-        path: /volumes/ticket-scanner/nats
-```
-
-Leaving it unset falls back to `emptyDir` (non-persistent) — fine for a
-quick test, not for real data (JetStream state, and therefore in-flight
-event dedup, is lost on pod restart).
-
 ### web-ui-api replica count
 
-`webUiApi` is hardcoded to 1 replica in the template (not configurable via
-`values.yaml`) because multi-replica operation is untested. Its JetStream
-consumers are durable pull consumers with explicit ack, so two pods (as
-during a rolling update) split the messages between them rather than both
-processing each one; a message redelivered after its ack wait is recorded
-once per delivery sequence.
+`webUiApi` is hardcoded to 1 replica (and `Recreate`) because it owns one SQLite file on a ReadWriteOnce volume.
 
 ## Security
 
@@ -181,13 +111,7 @@ not stop direct requests. No CORS headers are sent unless
 
 ## Deployment
 
-This chart creates: a Deployment + Service for NATS and a Deployment + Service
-(+ optional Ingress) for web-ui-api, which also serves the dashboard, runs
-the Telegram and email notifiers (app >= v0.10.0) and the scraper and weekly
-digest (app >= v0.11.0; it needs the resources of the pods and CronJobs it
-replaced); optionally a NATS ConfigMap (`nats.auth.token`), a NATS
-NetworkPolicy (`networkPolicy.enabled`) and a ServiceMonitor for web-ui-api
-(`webUiApi.metrics.serviceMonitor.enabled`).
+This chart creates: a Deployment + Service (+ optional Ingress) for web-ui-api, which serves the dashboard, scrapes and sends the weekly digest, and delivers the Telegram and email notifications from a database outbox (app >= v0.14.0), plus its SQLite volume and an optional ServiceMonitor (`webUiApi.metrics.serviceMonitor.enabled`).
 
 Every pod runs as uid/gid 1000 (`fsGroup` 1000) with the `RuntimeDefault`
 seccomp profile and no service account token; every container has a
@@ -199,3 +123,7 @@ read-only root filesystem, no capabilities, no privilege escalation and a
 ```bash
 helm uninstall my-release
 ```
+
+## Upgrading to 0.15.0
+
+The NATS broker is gone (needs app >= v0.15.0, which no longer connects to it). The `nats.*` and `networkPolicy.*` values are removed; remove them from your values. A sync that prunes the old objects also deletes the NATS volume claim, so move to this version only after app v0.14.0 or later has been delivering from the outbox for a day.

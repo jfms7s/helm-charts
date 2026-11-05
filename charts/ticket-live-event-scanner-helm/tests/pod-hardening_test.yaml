@@ -1,44 +1,10 @@
 # $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
 suite: pod hardening
 templates:
-  - templates/nats-deployment.yaml
   - templates/web-ui-api-deployment.yaml
 values:
   - ../ci/test-values.yaml
 tests:
-  - it: hardens the nats-deployment pod
-    template: templates/nats-deployment.yaml
-    asserts:
-      - equal:
-          path: spec.template.spec.securityContext
-          value:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            fsGroup: 1000
-            seccompProfile:
-              type: RuntimeDefault
-      - equal:
-          path: spec.template.spec.automountServiceAccountToken
-          value: false
-      - equal:
-          path: spec.template.spec.containers[0].securityContext
-          value:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop: [ALL]
-      - contains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: tmp
-            mountPath: /tmp
-      - contains:
-          path: spec.template.spec.volumes
-          content:
-            name: tmp
-            emptyDir: {}
-
   - it: hardens the web-ui-api-deployment pod
     template: templates/web-ui-api-deployment.yaml
     asserts:

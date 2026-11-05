@@ -38,11 +38,6 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: NATS_URL
-            value: nats://RELEASE-NAME-ticket-scanner-nats:4222
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
             name: TURSO_DATABASE_URL
             valueFrom:
               secretKeyRef:
