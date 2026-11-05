@@ -23,7 +23,7 @@ Deploys [Chez Tomperô](https://github.com/jfms7s/tompero), a self-hosted recipe
 Deploys [padel-score](https://github.com/jfms7s/padel-score), a padel match scorer with live spectator links, as a single server container with SQLite. See [charts/padel-score-helm/README.md](charts/padel-score-helm/README.md).
 
 ### ticket-live-event-scanner-helm
-Deploys [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings, with its in-cluster NATS (JetStream) message bus. See [charts/ticket-live-event-scanner-helm/README.md](charts/ticket-live-event-scanner-helm/README.md).
+Deploys [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings. See [charts/ticket-live-event-scanner-helm/README.md](charts/ticket-live-event-scanner-helm/README.md).
 
 ### eng-metrics-lab-helm
 Deploys eng-metrics-lab, a code-quality reporting stack: a small Postgres, a PostSync migrate Job, a nightly GitHub collector CronJob and a nightly `pg_dump` backup CronJob to NFS. See [charts/eng-metrics-lab-helm/README.md](charts/eng-metrics-lab-helm/README.md).

@@ -1,17 +1,5 @@
 # CI-only: turns on every off-by-default branch so kubeconform -strict sees it
 # (layered on ci/test-values.yaml by the Makefile's validate loop).
-nats:
-  persistence:
-    claim: {storageClassName: standard, size: 1Gi}
-    volume:
-      persistentVolumeClaim:
-        claimName: test-release-ticket-scanner-nats-data
-    subPath: data
-  auth:
-    token:
-      value: "test-nats-token-not-real"
-networkPolicy:
-  enabled: true
 database:
   sqlite:
     enabled: true

@@ -6,7 +6,7 @@ Chart name and version, for the helm.sh/chart label.
 {{- end -}}
 
 {{/*
-Standard labels for a component. Pass (dict "context" $ "name" "nats|web-ui-api" "component" "message-bus|api|storage").
+Standard labels for a component. Pass (dict "context" $ "name" "web-ui-api" "component" "api|storage").
 */}}
 {{- define "ticket-live-event-scanner-helm.labels" -}}
 {{ include "ticket-live-event-scanner-helm.podLabels" . }}
@@ -31,7 +31,7 @@ Selector labels for a component. Kept separate from
 ticket-live-event-scanner-helm.labels because selectors (Deployment
 matchLabels / Service selector) are immutable after creation, so this must
 never gain chart-version-derived keys. Pass
-(dict "context" $ "name" "nats|web-ui-api").
+(dict "context" $ "name" "web-ui-api").
 */}}
 {{- define "ticket-live-event-scanner-helm.selectorLabels" -}}
 app.kubernetes.io/name: {{ .name }}
@@ -52,9 +52,6 @@ map. Fills the dict passed as .out; pass (dict "ctx" $ "out" (dict)).
 {{- $_ := set .out "TELEGRAM_CHAT_ID" ($v.telegram.chatId | default dict) -}}
 {{- $_ := set .out "SMTP_USERNAME" ($v.smtp.username | default dict) -}}
 {{- $_ := set .out "SMTP_PASSWORD" ($v.smtp.password | default dict) -}}
-{{- if include "ticket-live-event-scanner-helm.natsAuthEnabled" .ctx -}}
-{{- $_ := set .out "NATS_TOKEN" $v.nats.auth.token -}}
-{{- end -}}
 {{- end -}}
 
 {{/*
@@ -76,39 +73,6 @@ or the chart-created claim.
 {{- define "ticket-live-event-scanner-helm.sqliteClaimName" -}}
 {{- $s := .Values.database.sqlite -}}
 {{- default (printf "%s-ticket-scanner-web-ui-api-data" .Release.Name) $s.existingClaim -}}
-{{- end -}}
-
-{{/*
-"true" when nats.auth.token is set (valueFrom, or any non-empty value), else
-empty. Off means no NATS auth anywhere: the render matches a chart without
-the option. A whitespace-only value counts as set, so the guard in validate
-rejects it instead of silently leaving auth off.
-*/}}
-{{- define "ticket-live-event-scanner-helm.natsAuthEnabled" -}}
-{{- $tok := ((.Values.nats).auth).token | default dict -}}
-{{- if or $tok.valueFrom (ne (toString ($tok.value | default "")) "") -}}
-true
-{{- end -}}
-{{- end -}}
-
-{{/*
-Name of the ConfigMap holding the NATS server config (auth on only).
-*/}}
-{{- define "ticket-live-event-scanner-helm.natsConfigName" -}}
-{{- printf "%s-ticket-scanner-nats-config" .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
-NATS client env for a workload: NATS_URL, plus NATS_TOKEN when
-nats.auth.token is set. Pass the root context.
-*/}}
-{{- define "ticket-live-event-scanner-helm.natsClientEnv" -}}
-- name: NATS_URL
-  value: nats://{{ .Release.Name }}-ticket-scanner-nats:4222
-{{- if include "ticket-live-event-scanner-helm.natsAuthEnabled" . }}
-- name: NATS_TOKEN
-  {{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" . "key" "NATS_TOKEN") | nindent 2 }}
-{{- end }}
 {{- end -}}
 
 {{/*
@@ -240,13 +204,6 @@ one, so no template renders on its own with a placeholder. Renders nothing.
 {{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "smtp.password" "credential" $.Values.smtp.password) }}
 {{- include "ticket-live-event-scanner-helm.requiredScalar" (dict "name" "smtp.from" "value" $.Values.smtp.from) }}
 {{- include "ticket-live-event-scanner-helm.requiredScalar" (dict "name" "smtp.to" "value" $.Values.smtp.to) }}
-{{- if include "ticket-live-event-scanner-helm.natsAuthEnabled" $ }}
-{{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "nats.auth.token" "credential" $.Values.nats.auth.token) }}
-{{- $tok := toString ($.Values.nats.auth.token.value | default "") }}
-{{- if and (not $.Values.nats.auth.token.valueFrom) (or (contains "\"" $tok) (contains "\\" $tok) (contains "\n" $tok)) }}
-{{- fail "ticket-live-event-scanner-helm: nats.auth.token must not contain a double quote, a backslash or a newline" }}
-{{- end }}
-{{- end }}
 {{- end -}}
 
 {{/*

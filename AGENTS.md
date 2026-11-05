@@ -78,7 +78,6 @@ Application-specific chart for deploying [padel-score](https://github.com/jfms7s
 
 ### ticket-live-event-scanner-helm
 Application-specific chart for deploying [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings. Modeled on upstream's own [deploy/k8s](https://github.com/jfms7s/ticket-live-event-scanner/tree/master/deploy/k8s) manifests. Includes:
-- In-cluster NATS (JetStream) message bus
 - Scraper CronJob (+ ServiceAccount/Role/RoleBinding)
 - Telegram notifier deployment
 - Email notifier deployment (calendar-invite emails on purchase)
