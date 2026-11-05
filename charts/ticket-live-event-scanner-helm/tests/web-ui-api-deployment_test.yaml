@@ -38,19 +38,8 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: TURSO_DATABASE_URL
-            valueFrom:
-              secretKeyRef:
-                name: RELEASE-NAME-ticket-scanner-credentials
-                key: TURSO_DATABASE_URL
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: TURSO_AUTH_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: RELEASE-NAME-ticket-scanner-credentials
-                key: TURSO_AUTH_TOKEN
+            name: DATABASE_PATH
+            value: /data/ticket-scanner.db
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -141,30 +130,6 @@ tests:
             name: SCRAPER_ENABLED
             value: "false"
 
-  - it: sources TURSO_DATABASE_URL/TURSO_AUTH_TOKEN from their valueFrom when set, taking precedence over the value default
-    set:
-      turso.databaseUrl.valueFrom.secretKeyRef.name: turso-credentials
-      turso.databaseUrl.valueFrom.secretKeyRef.key: database_url
-      turso.authToken.valueFrom.secretKeyRef.name: turso-credentials
-      turso.authToken.valueFrom.secretKeyRef.key: auth_token
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: TURSO_DATABASE_URL
-            valueFrom:
-              secretKeyRef:
-                name: turso-credentials
-                key: database_url
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: TURSO_AUTH_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: turso-credentials
-                key: auth_token
-
   - it: uses a custom CORS origin
     set:
       webUiApi.corsOrigin: "https://ticket-scanner.example.com"
@@ -189,18 +154,12 @@ tests:
   # with a placeholder credential, and renders with valueFrom only.
   - it: web-ui-api-deployment.yaml refuses to render with a placeholder credential
     set:
-      turso.databaseUrl.value: "CHANGE_ME"
+      telegram.botToken.value: "CHANGE_ME"
     asserts:
       - failedTemplate:
-          errorPattern: "turso.databaseUrl must be set"
+          errorPattern: "telegram.botToken must be set"
   - it: web-ui-api-deployment.yaml renders with every credential given as valueFrom only
     set:
-      turso.databaseUrl.value: ""
-      turso.databaseUrl.valueFrom.secretKeyRef.name: s
-      turso.databaseUrl.valueFrom.secretKeyRef.key: databaseurl
-      turso.authToken.value: ""
-      turso.authToken.valueFrom.secretKeyRef.name: s
-      turso.authToken.valueFrom.secretKeyRef.key: authtoken
       telegram.botToken.value: ""
       telegram.botToken.valueFrom.secretKeyRef.name: s
       telegram.botToken.valueFrom.secretKeyRef.key: bottoken

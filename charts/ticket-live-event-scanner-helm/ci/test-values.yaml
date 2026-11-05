@@ -3,11 +3,9 @@
 # CHANGE_ME without a valueFrom. Used by the Makefile,
 # .github/workflows/lint-test.yml and the helm-unittest suites
 # (values: [../ci/test-values.yaml]). Never put a real credential here.
-turso:
-  databaseUrl:
-    value: "http://test-libsql:8080"
-  authToken:
-    value: "test-auth-token-not-real"
+database:
+  sqlite:
+    claim: {storageClassName: standard, size: 1Gi}
 telegram:
   botToken:
     value: "test-bot-token-not-real"

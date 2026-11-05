@@ -1,4 +1,4 @@
-{{- if and .Values.database.sqlite.enabled (not .Values.database.sqlite.existingClaim) }}
+{{- if not .Values.database.sqlite.existingClaim }}
 {{- include "ticket-live-event-scanner-helm.validate" . }}
 apiVersion: v1
 kind: PersistentVolumeClaim

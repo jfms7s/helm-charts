@@ -12,8 +12,8 @@ manifests.
 
 - Kubernetes 1.19+
 - Helm 3.0+
-- A [Turso](https://turso.tech/) (libSQL) database, a Telegram bot, and an
-  SMTP relay (e.g. Gmail with an App Password), credentials for all three
+- A ReadWriteOnce volume for the SQLite database, a Telegram bot, and an
+  SMTP relay (e.g. Gmail with an App Password), credentials for the last two
   supplied by the caller (see Secrets below)
 
 ## Installing the Chart
@@ -22,7 +22,7 @@ manifests.
 helm install my-release .
 ```
 
-Set `turso.databaseUrl`, `turso.authToken`, `telegram.botToken`,
+Set `database.sqlite.claim.storageClassName` and `.size` (or `database.sqlite.existingClaim`), `telegram.botToken`,
 `telegram.chatId`, `smtp.username` and `smtp.password` (each as `.value` or
 `.valueFrom`), plus `smtp.from` and `smtp.to`, before installing. The chart
 refuses to render while any of them is empty or the `CHANGE_ME` placeholder
@@ -32,13 +32,10 @@ without a `valueFrom` (since 0.7.0); see the note below.
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `database.sqlite.enabled` | Keep the database in a SQLite file (WAL) on a volume instead of the libSQL server (app >= v0.12.0); one replica owns it, so the Deployment becomes `Recreate` | `false` |
-| `database.sqlite.importFromSqld` | While true, a new SQLite file is filled once from the libSQL server named by `turso.*`, verified, and the process does not start if the copy fails. Set false after the first start: the `turso.*` settings then leave the Deployment and are no longer required (with them set, a lost volume would copy the server's frozen snapshot over newer state) | `true` |
-| `database.sqlite.allowEmpty` | Start on an empty database with nothing to import (a fresh install); without it an empty file is refused | `false` |
+| `database.sqlite.allowEmpty` | Start on an empty database (a fresh install); without it an empty file is refused | `false` |
 | `database.sqlite.path` | The file inside the container; its directory is the mount point | `/data/ticket-scanner.db` |
-| `database.sqlite.claim.storageClassName` / `.size` | Have the chart create the PVC `<release>-ticket-scanner-web-ui-api-data` (kept on uninstall/prune) | unset |
+| `database.sqlite.claim.storageClassName` / `.size` | Have the chart create the PVC `<release>-ticket-scanner-web-ui-api-data` (kept on uninstall/prune); required unless `existingClaim` is set | unset |
 | `database.sqlite.existingClaim` | Use a PVC you manage instead | `""` |
-| `turso.databaseUrl` / `turso.authToken` | Turso credentials for web-ui-api, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `telegram.botToken` / `telegram.chatId` | Telegram bot credentials for web-ui-api's Telegram channel, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `scraper.hubPages` | Comma-separated ticketline.pt hub page slugs or URLs; seeds the watches table (manage them on the dashboard's Watches page afterwards) | `auchan-live-academia-maia-98164,auchan-live-academia-aveiro-98167` |
 | `scraper.userAgent` | HTTP User-Agent sent by the scraper; add your own contact to it | `ticket-live-event-scanner (+https://github.com/jfms7s/ticket-live-event-scanner)` |
@@ -58,8 +55,7 @@ without a `valueFrom` (since 0.7.0); see the note below.
 Argo CD does not support Helm's `lookup` function, so this chart can't
 safely auto-generate random secrets and persist them across syncs the way a
 plain `helm install` could — they would silently rotate on the next sync.
-`turso.databaseUrl`, `turso.authToken`, `telegram.botToken`,
-`telegram.chatId`, `smtp.username`, and `smtp.password` are each a standard Kubernetes `EnvVarSource` (the same
+`telegram.botToken`, `telegram.chatId`, `smtp.username`, and `smtp.password` are each a standard Kubernetes `EnvVarSource` (the same
 shape as a container's `env[].valueFrom`): set `<field>.value` to a plain
 literal, e.g. from a secrets file kept out of version control, or
 `<field>.valueFrom` (e.g. a `secretKeyRef`) to source it from a Secret you
@@ -67,16 +63,16 @@ manage yourself instead (an external secrets manager, ...). `valueFrom`
 takes precedence whenever it's set, and each field toggles independently:
 
 ```yaml
-turso:
-  authToken:
+smtp:
+  password:
     valueFrom:
       secretKeyRef:
-        name: turso-credentials
-        key: auth_token
+        name: smtp-credentials
+        key: password
 ```
 
 A credential given as `value` is stored in a chart-owned Secret,
-`<release>-ticket-scanner-credentials` (one key per credential, e.g. `TURSO_AUTH_TOKEN`), and the
+`<release>-ticket-scanner-credentials` (one key per credential, e.g. `SMTP_PASSWORD`), and the
 containers read it through `secretKeyRef`, so it never appears in a
 Deployment or CronJob spec. The Secret is rendered only while at least one
 credential uses `value`. A pod that reads one carries a
@@ -127,3 +123,7 @@ helm uninstall my-release
 ## Upgrading to 0.15.0
 
 The NATS broker is gone (needs app >= v0.15.0, which no longer connects to it). The `nats.*` and `networkPolicy.*` values are removed; remove them from your values. A sync that prunes the old objects also deletes the NATS volume claim, so move to this version only after app v0.14.0 or later has been delivering from the outbox for a day.
+
+## Upgrading to 0.16.0
+
+The libSQL/Turso database is gone: the database is always the SQLite file on the volume (app >= v0.13.0). `database.sqlite.enabled`, `database.sqlite.importFromSqld` and `turso.*` are removed; remove them from your values, and set the claim (or `existingClaim`), since the volume is no longer optional.

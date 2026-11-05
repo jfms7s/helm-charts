@@ -1,19 +1,10 @@
-# The database (app >= v0.12.0). By default it is the libSQL server named by
-# the turso.* values below, as before. With sqlite.enabled the process keeps
-# a SQLite file (WAL) on a volume instead, and one replica owns it.
+# The database: one SQLite file (WAL) on a volume, owned by the single
+# web-ui-api replica (app >= v0.13.0).
 database:
   sqlite:
-    enabled: false
-    # While true the turso.* values stay in the Deployment: a new, empty
-    # SQLite file is filled once from that server at start-up, verified, and
-    # the process does not start if the copy fails. Set it to false after the
-    # first start (removing turso.* from the Deployment, and the need to set
-    # them): with them still set, a lost volume would copy the server's
-    # frozen snapshot over newer state.
-    importFromSqld: true
-    # Start on an empty database with nothing to import (a fresh install).
-    # Without it an empty file is refused, which is also what a missing or
-    # misnamed Secret looks like (the scraper would notify every session again).
+    # Start on an empty database (a fresh install). Without it an empty file
+    # is refused, which is also what a missing or misnamed volume looks like
+    # (the scraper would notify every session again).
     allowEmpty: false
     # Where the file is inside the container; the volume is mounted at its
     # directory.
@@ -26,23 +17,13 @@ database:
     # ... or use one you manage.
     existingClaim: ""
 
-# Turso (libSQL) database credentials, used by web-ui-api (which also runs the scraper). Each is a standard Kubernetes EnvVarSource: set
+# Telegram bot credentials for web-ui-api's Telegram channel. Each is a standard Kubernetes EnvVarSource: set
 # `value` for a plain literal (Argo CD does not support Helm's `lookup`
 # function, so these can't be safely auto-generated and persisted across
 # syncs -- pin explicitly, e.g. from a values-secrets file kept out of
 # version control), or `valueFrom` (e.g. a `secretKeyRef`) to source it from
 # a Secret you manage yourself instead. `valueFrom` takes precedence when
 # both are set; each field toggles independently.
-turso:
-  databaseUrl:
-    value: "CHANGE_ME"
-    valueFrom: {}
-  authToken:
-    value: "CHANGE_ME"
-    valueFrom: {}
-
-# Telegram bot credentials for web-ui-api's Telegram channel. Same shape/rationale as
-# turso above.
 telegram:
   botToken:
     value: "CHANGE_ME"
@@ -55,7 +36,7 @@ telegram:
 # invite (.ics) when an event is marked purchased. host/port/from/to are
 # plain config (not secret-worthy on their own), so they're bare scalars
 # rather than the value/valueFrom shape used for username/password below
-# -- those two follow turso/telegram's shape/rationale above. Defaults
+# -- those two follow telegram's shape/rationale above. Defaults
 # below assume Gmail (smtp.gmail.com:587 with STARTTLS); username must be
 # a full Gmail address and password a Gmail App Password, not the account
 # password.

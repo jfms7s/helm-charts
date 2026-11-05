@@ -2,9 +2,7 @@
 # (layered on ci/test-values.yaml by the Makefile's validate loop).
 database:
   sqlite:
-    enabled: true
     allowEmpty: true
-    claim: {storageClassName: standard, size: 1Gi}
 ingress:
   enabled: true
   className: traefik
