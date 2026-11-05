@@ -44,26 +44,10 @@ map. Fills the dict passed as .out; pass (dict "ctx" $ "out" (dict)).
 */}}
 {{- define "ticket-live-event-scanner-helm.credentials" -}}
 {{- $v := .ctx.Values -}}
-{{- if include "ticket-live-event-scanner-helm.sqldInUse" .ctx -}}
-{{- $_ := set .out "TURSO_DATABASE_URL" ($v.turso.databaseUrl | default dict) -}}
-{{- $_ := set .out "TURSO_AUTH_TOKEN" ($v.turso.authToken | default dict) -}}
-{{- end -}}
 {{- $_ := set .out "TELEGRAM_BOT_TOKEN" ($v.telegram.botToken | default dict) -}}
 {{- $_ := set .out "TELEGRAM_CHAT_ID" ($v.telegram.chatId | default dict) -}}
 {{- $_ := set .out "SMTP_USERNAME" ($v.smtp.username | default dict) -}}
 {{- $_ := set .out "SMTP_PASSWORD" ($v.smtp.password | default dict) -}}
-{{- end -}}
-
-{{/*
-"true" when the libSQL server (turso.*) is in use: the database is the
-server itself, or a SQLite file that is still filled from it (see
-database.sqlite.importFromSqld). Empty for SQLite alone.
-*/}}
-{{- define "ticket-live-event-scanner-helm.sqldInUse" -}}
-{{- $s := (.Values.database).sqlite | default dict -}}
-{{- if or (not $s.enabled) (ne (toString (hasKey $s "importFromSqld" | ternary $s.importFromSqld true)) "false") -}}
-true
-{{- end -}}
 {{- end -}}
 
 {{/*
@@ -131,7 +115,7 @@ annotations:
 
 {{/*
 Render an env var's valueFrom body for one credential, by its Secret key, e.g.
-{{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TURSO_DATABASE_URL") | nindent N }}
+{{- include "ticket-live-event-scanner-helm.credentialEnv" (dict "ctx" $ "key" "TELEGRAM_BOT_TOKEN") | nindent N }}
 A credential's own valueFrom (a standard corev1 EnvVarSource body, e.g.
 secretKeyRef) is passed through; a credential given as value is read from the
 chart Secret, so it never appears in a workload spec. Never emits both value
@@ -186,17 +170,11 @@ one, so no template renders on its own with a placeholder. Renders nothing.
 */}}
 {{- define "ticket-live-event-scanner-helm.validate" -}}
 {{- $ := . -}}
-{{- if include "ticket-live-event-scanner-helm.sqldInUse" $ }}
-{{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "turso.databaseUrl" "credential" $.Values.turso.databaseUrl) }}
-{{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "turso.authToken" "credential" $.Values.turso.authToken) }}
-{{- end }}
-{{- if $.Values.database.sqlite.enabled }}
 {{- if and (not $.Values.database.sqlite.existingClaim) (not $.Values.database.sqlite.claim.storageClassName) }}
-{{- fail "ticket-live-event-scanner-helm: database.sqlite.enabled needs a volume: set database.sqlite.claim.storageClassName and .size (the chart creates the PVC) or database.sqlite.existingClaim" }}
+{{- fail "ticket-live-event-scanner-helm: the SQLite database needs a volume: set database.sqlite.claim.storageClassName and .size (the chart creates the PVC) or database.sqlite.existingClaim" }}
 {{- end }}
 {{- if and (not $.Values.database.sqlite.existingClaim) (not $.Values.database.sqlite.claim.size) }}
 {{- fail "ticket-live-event-scanner-helm: database.sqlite.claim.size is required with database.sqlite.claim.storageClassName" }}
-{{- end }}
 {{- end }}
 {{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "telegram.botToken" "credential" $.Values.telegram.botToken) }}
 {{- include "ticket-live-event-scanner-helm.requiredCredential" (dict "credentialName" "telegram.chatId" "credential" $.Values.telegram.chatId) }}
