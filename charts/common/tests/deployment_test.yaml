@@ -567,6 +567,43 @@ tests:
               value: ci
               effect: NoSchedule
 
+  - it: renders no hostNetwork or dnsPolicy by default
+    asserts:
+      - notExists:
+          path: spec.template.spec.hostNetwork
+      - notExists:
+          path: spec.template.spec.dnsPolicy
+
+  - it: defaults dnsPolicy to ClusterFirstWithHostNet with hostNetwork
+    set:
+      deploy.hostNetwork: true
+    asserts:
+      - equal:
+          path: spec.template.spec.hostNetwork
+          value: true
+      - equal:
+          path: spec.template.spec.dnsPolicy
+          value: ClusterFirstWithHostNet
+
+  - it: renders an explicit deploy.dnsPolicy over the hostNetwork default
+    set:
+      deploy.hostNetwork: true
+      deploy.dnsPolicy: Default
+    asserts:
+      - equal:
+          path: spec.template.spec.dnsPolicy
+          value: Default
+
+  - it: renders deploy.dnsPolicy without hostNetwork
+    set:
+      deploy.dnsPolicy: None
+    asserts:
+      - notExists:
+          path: spec.template.spec.hostNetwork
+      - equal:
+          path: spec.template.spec.dnsPolicy
+          value: None
+
   # Pod template labels must not change with the chart release, or every
   # common version bump restarts every consumer's pod.
   - it: keeps chart-version labels off the pod template

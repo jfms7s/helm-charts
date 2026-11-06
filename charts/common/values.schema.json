@@ -76,6 +76,15 @@
             }
           }
         },
+        "hostNetwork": {
+          "type": "boolean",
+          "description": "Run the pod in the node's network namespace"
+        },
+        "dnsPolicy": {
+          "type": "string",
+          "enum": ["", "ClusterFirst", "ClusterFirstWithHostNet", "Default", "None"],
+          "description": "Pod DNS policy (empty = Kubernetes default, or ClusterFirstWithHostNet with hostNetwork)"
+        },
         "nodeSelector": {
           "type": "object",
           "description": "Node selector, rendered verbatim"

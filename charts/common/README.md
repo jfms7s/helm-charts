@@ -40,6 +40,8 @@ Since 0.10.0 the chart ships a `values.schema.json`: an unknown key under `deplo
 | `deploy.serviceAccount.create` | Create a ServiceAccount for the pod | `false` |
 | `deploy.serviceAccount.name` | ServiceAccount name (with `create`, defaults to the fullname; without it, an existing account to use) | `""` |
 | `deploy.serviceAccount.annotations` | Annotations on the created ServiceAccount | `{}` |
+| `deploy.hostNetwork` | Run the pod in the node's network namespace, for LAN discovery (mDNS/SSDP); ports bind on the node, so pin it with `nodeSelector` (common >= 0.13.0) | `false` |
+| `deploy.dnsPolicy` | Pod DNS policy; empty is the Kubernetes default, or `ClusterFirstWithHostNet` when `hostNetwork` is true so cluster DNS keeps working (common >= 0.13.0) | `""` |
 | `deploy.nodeSelector` | Node labels the pod must match, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `{}` |
 | `deploy.affinity` | Pod/node affinity, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `{}` |
 | `deploy.tolerations` | Tolerations for tainted nodes, rendered verbatim (common >= 0.7.0; older versions ignore it silently) | `[]` |

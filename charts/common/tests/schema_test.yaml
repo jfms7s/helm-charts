@@ -156,3 +156,11 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "App_Config"
+
+  - it: rejects an unknown deploy.dnsPolicy
+    template: templates/deployment.yaml
+    set:
+      deploy.dnsPolicy: ClusterFirstWithHostNetwork
+    asserts:
+      - failedTemplate:
+          errorPattern: "dnsPolicy"
