@@ -43,6 +43,7 @@ deploy:
     httpGet: {path: /ready, port: http}
   startupProbe:
     tcpSocket: {port: 8080}
+  hostNetwork: true
   nodeSelector:
     kubernetes.io/arch: arm64
   tolerations:

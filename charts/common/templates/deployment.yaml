@@ -43,6 +43,12 @@ spec:
       serviceAccountName: {{ .Values.deploy.serviceAccount.name }}
 {{- end }}
       securityContext: {{- .Values.deploy.podSecurityContext | toYaml | nindent 8 }}
+{{- if .Values.deploy.hostNetwork }}
+      hostNetwork: true
+{{- end }}
+{{- with (.Values.deploy.dnsPolicy | default (ternary "ClusterFirstWithHostNet" "" (.Values.deploy.hostNetwork | default false))) }}
+      dnsPolicy: {{ . }}
+{{- end }}
 {{- with .Values.deploy.nodeSelector }}
       nodeSelector: {{- toYaml . | nindent 8 }}
 {{- end }}

@@ -85,6 +85,16 @@ deploy:
     name: ""
     annotations: {}
 
+  ## @param deploy.hostNetwork Run the pod in the node's network namespace (for LAN discovery: mDNS/SSDP)
+  ## Its ports bind on the node itself, so pin the pod with nodeSelector and run one replica.
+  ##
+  hostNetwork: false
+
+  ## @param deploy.dnsPolicy Pod DNS policy (empty = Kubernetes default; ClusterFirstWithHostNet when hostNetwork is true)
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+  ##
+  dnsPolicy: ""
+
   ## @param deploy.nodeSelector Node labels the pod must match, rendered verbatim (empty = none)
   ## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
   ##
