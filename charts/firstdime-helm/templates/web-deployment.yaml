@@ -1,3 +1,4 @@
+{{- include "firstdime-helm.validate" . }}
 {{- include "firstdime-helm.validateOrigin" (dict "context" $ "originName" "apiOrigin" "origin" .Values.apiOrigin) }}
 apiVersion: apps/v1
 kind: Deployment
@@ -8,7 +9,7 @@ metadata:
   annotations:
     description: "First Dime web UI frontend (Nginx)"
 spec:
-  replicas: {{ .Values.web.replicas | default 1 }}
+  replicas: {{ .Values.web.replicas }}
   selector:
     matchLabels:
       {{- include "firstdime-helm.selectorLabels" (dict "context" $ "name" "web") | nindent 6 }}

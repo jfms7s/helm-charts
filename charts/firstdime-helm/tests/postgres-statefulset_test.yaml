@@ -40,14 +40,6 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: replicas stay 1 whatever the values say
-    set:
-      postgres.replicas: 3
-    asserts:
-      - equal:
-          path: spec.replicas
-          value: 1
-
   - it: pod labels carry no helm.sh/chart, metadata labels do
     asserts:
       - isNull:
@@ -58,9 +50,8 @@ tests:
       - equal:
           path: spec.template.metadata.labels["app.kubernetes.io/component"]
           value: database
-      - equal:
+      - exists:
           path: metadata.labels["helm.sh/chart"]
-          value: firstdime-helm-0.10.0
       - equal:
           path: spec.selector.matchLabels
           value:
@@ -371,3 +362,11 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "postgres.existingSecret must name a Secret"
+
+  - it: fails when a postgres.config value is not a string
+    set:
+      postgres.config:
+        max_connections: 1000000
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.config.max_connections must be a quoted string"

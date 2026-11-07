@@ -13,14 +13,34 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-firstdime-worker
 
-  - it: is hardcoded to 1 replica regardless of values
-    set:
-      worker:
-        replicas: 3
+  - it: runs 1 replica by default
     asserts:
       - equal:
           path: spec.replicas
           value: 1
+
+  - it: renders 0 replicas when worker.replicas is 0
+    set:
+      worker.replicas: 0
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 0
+
+  - it: renders 1 replica when worker.replicas is 1
+    set:
+      worker.replicas: 1
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: fails when worker.replicas is 2
+    set:
+      worker.replicas: 2
+    asserts:
+      - failedTemplate:
+          errorPattern: "worker.replicas must be 0 or 1"
 
   - it: uses Recreate strategy (hardcoded)
     asserts:

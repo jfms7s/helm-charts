@@ -341,3 +341,33 @@ tests:
           content:
             name: TRUST_PROXY
             value: "10.42.0.0/16"
+
+  - it: renders 0 replicas when api.replicas is 0
+    set:
+      api.replicas: 0
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 0
+
+  - it: renders api.replicas as is
+    set:
+      api.replicas: 2
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 2
+
+  - it: fails when api.replicas is negative
+    set:
+      api.replicas: -1
+    asserts:
+      - failedTemplate:
+          errorPattern: "api.replicas must be a whole number"
+
+  - it: fails when api.replicas is not a number
+    set:
+      api.replicas: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "api.replicas must be a whole number"

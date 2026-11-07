@@ -1,0 +1,102 @@
+{{- if and .Values.postgres.enabled .Values.backup.enabled }}
+{{- include "firstdime-helm.validate" . }}
+{{- if or (not .Values.backup.nfs.server) (not .Values.backup.nfs.path) }}
+{{- fail "firstdime-helm: backup.nfs.server and backup.nfs.path must be set (the NAS export for the nightly pg_dump), or set backup.enabled: false" }}
+{{- end }}
+{{- if not (regexMatch "^[1-9][0-9]*$" (toString .Values.backup.retainCount)) }}
+{{- fail (printf "firstdime-helm: backup.retainCount must be a whole number, 1 or more (got %v)" .Values.backup.retainCount) }}
+{{- end }}
+{{- if not .Values.backup.schedule }}
+{{- fail "firstdime-helm: backup.schedule must be set (a cron expression, UTC)" }}
+{{- end }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "firstdime-helm.fullname" . }}-postgres-backup
+  labels:
+    {{- include "firstdime-helm.labels" (dict "context" $ "name" "postgres-backup" "component" "backup") | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      # kube-prometheus-stack's KubeJobFailed fires until a failed Job is gone.
+      ttlSecondsAfterFinished: 86400
+      backoffLimit: 0
+      activeDeadlineSeconds: 3600
+      template:
+        metadata:
+          labels:
+            {{- include "firstdime-helm.podLabels" (dict "context" $ "name" "postgres-backup" "component" "backup") | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: {{ .Values.backup.runAsUser }}
+            runAsGroup: {{ .Values.backup.runAsGroup }}
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: backup
+              # The server's own image: pg_dump must not be older than the server.
+              image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+              imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              command: [sh, -c]
+              # A dump is renamed into place only after pg_restore can read it, and older dumps are pruned
+              # only after a good one. $(...) is shell: Kubernetes leaves an undeclared $(...) alone.
+              args:
+                - |
+                  set -eu
+                  umask 077
+                  out="/backups/firstdime-$(date -u +%Y%m%dT%H%M%SZ).dump"
+                  rm -f /backups/firstdime-*.dump.tmp
+                  trap 'rm -f "$out.tmp"' EXIT
+                  pg_dump --format=custom --no-password --file="$out.tmp"
+                  pg_restore --list "$out.tmp" > /dev/null
+                  mv "$out.tmp" "$out"
+                  ls -1 /backups/firstdime-*.dump | sort -r | tail -n +$((RETAIN_COUNT + 1)) | while IFS= read -r old; do rm -f -- "$old"; done
+                  echo "backup: $out ($(wc -c < "$out") bytes); kept $(ls -1 /backups/firstdime-*.dump | wc -l)"
+              env:
+                - name: PGHOST
+                  value: {{ include "firstdime-helm.postgresHost" . | quote }}
+                - name: PGPORT
+                  value: "5432"
+                - name: PGUSER
+                  value: {{ .Values.postgres.user | quote }}
+                - name: PGDATABASE
+                  value: {{ .Values.postgres.database | quote }}
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.postgres.existingSecret | quote }}
+                      key: POSTGRES_PASSWORD
+                - name: RETAIN_COUNT
+                  value: {{ .Values.backup.retainCount | quote }}
+                - name: TZ
+                  value: "UTC"
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: backups
+              nfs:
+                server: {{ .Values.backup.nfs.server | quote }}
+                path: {{ .Values.backup.nfs.path | quote }}
+            - name: tmp
+              emptyDir: {}
+{{- end }}

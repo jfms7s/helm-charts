@@ -5,6 +5,12 @@
 postgres:
   existingSecret: firstdime-postgres
 
+# backup.enabled stays at its default (true); the CronJob needs an NFS export.
+backup:
+  nfs:
+    server: 192.0.2.10
+    path: /volume1/k8s/volumes/firstdime/postgres-backups
+
 sessionCookieSecret:
   value: "test-session-secret-1234567890abcdefghijklmnop"
 

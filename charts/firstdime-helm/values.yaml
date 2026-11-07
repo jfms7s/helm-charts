@@ -28,7 +28,9 @@ postgres:
   # initdb flags, applied on the first start only (an existing data directory keeps its own).
   # C collation sorts text by bytes, as SQLite's BINARY did.
   initdbArgs: "--locale=C --encoding=UTF8"
-  # Server settings, each rendered as `-c <key>=<value>`. timezone and log_timezone are fixed to UTC by the chart.
+  # Server settings, each rendered as `-c <key>=<value>`, values quoted strings (a bare number fails the
+  # render). A caller's map merges with these defaults (add keys, override them); set a key to null to
+  # drop it. timezone and log_timezone are fixed to UTC by the chart.
   config:
     max_connections: "30"
     shared_buffers: "128MB"
@@ -37,6 +39,60 @@ postgres:
       memory: 256Mi
     limits:
       memory: 512Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Nightly pg_dump of the chart's Postgres to an NFS export (rendered when postgres.enabled and backup.enabled).
+# A dump is renamed into place only after pg_restore can read it; older ones are deleted after each good dump.
+backup:
+  enabled: true
+  schedule: "30 2 * * *"     # UTC (the CronJob's timeZone is fixed to Etc/UTC)
+  retainCount: 14            # dumps kept on the NAS; older ones are deleted after each good dump
+  # NFS export the dumps go to (REQUIRED while backup and postgres are enabled). The directory
+  # must exist before the first run, created by root on the NAS and writable by runAsUser
+  # (e.g. chown 999:999, chmod 0700); a root-squashed export can't be written.
+  nfs:
+    server: ""
+    path: ""
+  # The postgres image's own user. fsGroup is not applied on NFS, so the directory's owner must match.
+  runAsUser: 999
+  runAsGroup: 999
+  resources:
+    requests:
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# One-shot Job that copies the old sqld (libSQL) database into the empty Postgres and verifies it, using
+# First Dime's copy script. Off by default; see the README.
+copyJob:
+  enabled: false
+  # copy: copy sqld into the empty Postgres, then verify. verify: compare only, write nothing (--verify-only).
+  # Each mode has its own Job name (<fullname>-copy, <fullname>-copy-verify).
+  mode: copy
+  # Image with the copy script. Empty repository/tag = the api image (api.image). PR 8 in the
+  # firstdime repo decides which image ships scripts/migrate-sqlite-to-pg; set these if it is not the api's.
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  command:
+    - node
+    - scripts/migrate-sqlite-to-pg/index.mjs
+  # libSQL URL of the sqld being copied. Empty = this chart's own sqld (http://<fullname>-sqld:8080),
+  # which then must be enabled (sqld.enabled: true).
+  sourceUrl: ""
+  # Secret key holding sqld's auth token (REQUIRED when enabled), exposed to the script as COPY_SOURCE_TOKEN.
+  sourceTokenSecret:
+    name: ""
+    key: ""
+  activeDeadlineSeconds: 3600
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 1Gi
   nodeSelector: {}
   tolerations: []
   affinity: {}
@@ -155,9 +211,11 @@ frankfurter:
 # transactions into this release's api through POST /imports (BANK_SYNC_FD_URL
 # is the api Service). One instance per tenant: one PAT, one admin password.
 # Its state is a SQLite file: put it on block storage (iSCSI), never NFS.
-# Exactly 1 replica, Recreate (hardcoded): startup clears the run lease.
+# 0 or 1 replica (never two: startup clears the run lease), Recreate (hardcoded).
 bankSync:
   enabled: false
+  # 0 stops it (cutover); anything above 1 fails the render.
+  replicas: 1
   image:
     repository: ghcr.io/jfms7s/firstdime-bank-sync
     tag: "v0.18.0"
@@ -238,6 +296,7 @@ api:
     repository: ghcr.io/jfms7s/firstdime-api
     tag: "v0.18.0"
     pullPolicy: IfNotPresent
+  # 0 stops it (cutover). A whole number, 0 or more.
   replicas: 1
   resources:
     requests:
@@ -252,8 +311,10 @@ api:
   fsGroup: 1000
 
 # Worker (async tasks, scheduler, outbox relay) configuration.
-# MUST run at exactly 1 replica with Recreate strategy (hardcoded in the template).
+# Never more than 1 replica (scheduler and outbox relay), Recreate strategy (hardcoded in the template).
 worker:
+  # 0 or 1 (anything else fails the render). 0 stops it (cutover).
+  replicas: 1
   image:
     repository: ghcr.io/jfms7s/firstdime-worker
     tag: "v0.18.0"
@@ -283,6 +344,7 @@ web:
     repository: ghcr.io/jfms7s/firstdime-web
     tag: "v0.18.0"
     pullPolicy: IfNotPresent
+  # 0 stops it (cutover). A whole number, 0 or more.
   replicas: 1
   resources:
     requests:

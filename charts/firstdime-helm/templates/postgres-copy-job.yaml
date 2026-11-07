@@ -1,0 +1,132 @@
+{{- if .Values.copyJob.enabled }}
+{{- include "firstdime-helm.validate" . }}
+{{- /*
+A plain Job, not an Argo hook, so a sync never re-runs it. No TTL either: Argo would re-create a deleted
+Job and copy again. To re-run, delete the Job; set copyJob.enabled: false after the cutover to remove it.
+The two mode names keep a mode switch from hitting the Job template's immutability.
+*/ -}}
+{{- $mode := .Values.copyJob.mode -}}
+{{- if not (has $mode (list "copy" "verify")) }}
+{{- fail (printf "firstdime-helm: copyJob.mode must be copy or verify (got %v)" $mode) }}
+{{- end }}
+{{- if and (not .Values.copyJob.sourceUrl) (not .Values.sqld.enabled) }}
+{{- fail "firstdime-helm: copyJob.sourceUrl must be set, or sqld.enabled true to copy from this chart's sqld" }}
+{{- end }}
+{{- if and .Values.copyJob.sourceUrl (not (regexMatch "^(libsql|https?|wss?)://" (toString .Values.copyJob.sourceUrl))) }}
+{{- fail (printf "firstdime-helm: copyJob.sourceUrl must start with libsql://, http(s):// or ws(s):// (got %v)" .Values.copyJob.sourceUrl) }}
+{{- end }}
+{{- if or (not .Values.copyJob.sourceTokenSecret.name) (not .Values.copyJob.sourceTokenSecret.key) }}
+{{- fail "firstdime-helm: copyJob.sourceTokenSecret.name and .key must be set (the Secret key holding sqld's auth token)" }}
+{{- end }}
+{{- if not .Values.copyJob.command }}
+{{- fail "firstdime-helm: copyJob.command must be set (the copy script's command)" }}
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "firstdime-helm.fullname" . }}-copy{{ if eq $mode "verify" }}-verify{{ end }}
+  labels:
+    {{- include "firstdime-helm.labels" (dict "context" $ "name" "postgres-copy" "component" "migration") | nindent 4 }}
+spec:
+  # A human reads the report; a second attempt would find the target non-empty.
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ .Values.copyJob.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "firstdime-helm.podLabels" (dict "context" $ "name" "postgres-copy" "component" "migration") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.copyJob.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.copyJob.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.copyJob.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          command: [sh, -c]
+          args:
+            - 'until pg_isready --dbname="$DATABASE_URL" --timeout=5; do echo "waiting for postgres"; sleep 5; done'
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret | quote }}
+                  key: DATABASE_URL
+          resources:
+            requests:
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+      containers:
+        - name: copy
+          image: {{ .Values.copyJob.image.repository | default .Values.api.image.repository }}:{{ .Values.copyJob.image.tag | default .Values.api.image.tag }}
+          imagePullPolicy: {{ .Values.copyJob.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          command:
+            {{- toYaml .Values.copyJob.command | nindent 12 }}
+          args:
+            - --source
+            - {{ include "firstdime-helm.copySourceUrl" . | quote }}
+            - --source-token-env
+            - COPY_SOURCE_TOKEN
+            - --target-env
+            - DATABASE_URL
+            {{- if eq $mode "verify" }}
+            - --verify-only
+            {{- end }}
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: TZ
+              value: "UTC"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret | quote }}
+                  key: DATABASE_URL
+            - name: COPY_SOURCE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.copyJob.sourceTokenSecret.name | quote }}
+                  key: {{ .Values.copyJob.sourceTokenSecret.key | quote }}
+          resources:
+            {{- toYaml .Values.copyJob.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

@@ -7,11 +7,12 @@ metadata:
   labels:
     {{- include "firstdime-helm.labels" (dict "context" $ "name" "bank-sync" "component" "bank-sync") | nindent 4 }}
   annotations:
-    description: "bank-sync (Enable Banking -> POST /imports, SQLite). MUST run at exactly 1 replica."
+    description: "bank-sync (Enable Banking -> POST /imports, SQLite). Never more than 1 replica."
 spec:
-  # HARDCODED: one process per SQLite file, and startup clears the run lease a
-  # previous pod left, which would break a second live replica's run.
-  replicas: 1
+  # 0 or 1 (validated): one process per SQLite file, and startup clears the run
+  # lease a previous pod left, which would break a second live replica's run.
+  # 0 stops it (cutover).
+  replicas: {{ .Values.bankSync.replicas }}
   strategy:
     type: Recreate
   selector:

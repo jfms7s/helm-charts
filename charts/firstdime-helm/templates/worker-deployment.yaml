@@ -6,10 +6,10 @@ metadata:
   labels:
     {{- include "firstdime-helm.labels" (dict "context" $ "name" "worker" "component" "worker") | nindent 4 }}
   annotations:
-    description: "First Dime async task worker, scheduler, and event relay. Must run at exactly 1 replica."
+    description: "First Dime async task worker, scheduler, and event relay. Never more than 1 replica."
 spec:
-  # HARDCODED: The worker must run at exactly 1 replica (handles scheduler and outbox relay)
-  replicas: 1
+  # 0 or 1 (validated): the worker runs the scheduler and the outbox relay, so never two. 0 stops it (cutover).
+  replicas: {{ .Values.worker.replicas }}
   strategy:
     type: Recreate
   selector:
@@ -48,7 +48,7 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.postgres.existingSecret }}
+                  name: {{ .Values.postgres.existingSecret | quote }}
                   key: DATABASE_URL
             - name: WORKER_JOBS_ENABLED
               value: {{ ternary "true" "false" .Values.worker.jobsEnabled | quote }}

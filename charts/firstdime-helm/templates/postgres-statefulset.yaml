@@ -1,5 +1,10 @@
 {{- if .Values.postgres.enabled }}
 {{- include "firstdime-helm.validate" . }}
+{{- range $key, $value := .Values.postgres.config }}
+{{- if and (not (kindIs "invalid" $value)) (not (kindIs "string" $value)) }}
+{{- fail (printf "firstdime-helm: postgres.config.%s must be a quoted string (got %v)" $key $value) }}
+{{- end }}
+{{- end }}
 {{- if or (not .Values.postgres.storageClass) (not .Values.postgres.size) }}
 {{- fail "firstdime-helm: postgres.storageClass and postgres.size must be set (block storage, e.g. synology-iscsi)" }}
 {{- end }}
@@ -79,7 +84,7 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.postgres.existingSecret }}
+                  name: {{ .Values.postgres.existingSecret | quote }}
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_INITDB_ARGS
               value: {{ .Values.postgres.initdbArgs | quote }}

@@ -137,6 +137,15 @@ credential, a missing database, an unshared attachments volume or a bad origin.
 {{- if not $.Values.postgres.existingSecret -}}
   {{- fail "firstdime-helm: postgres.existingSecret must name a Secret with keys POSTGRES_PASSWORD and DATABASE_URL" -}}
 {{- end -}}
+{{- range $name := list "api" "web" -}}
+  {{- $r := toString (index $.Values $name).replicas -}}
+  {{- if not (regexMatch "^[0-9]+$" $r) -}}
+    {{- fail (printf "firstdime-helm: %s.replicas must be a whole number, 0 or more (0 stops it; got %s)" $name $r) -}}
+  {{- end -}}
+{{- end -}}
+{{- if not (has (toString $.Values.worker.replicas) (list "0" "1")) -}}
+  {{- fail "firstdime-helm: worker.replicas must be 0 or 1 (the worker runs the scheduler and the outbox relay: never two)" -}}
+{{- end -}}
 {{- if not (kindIs "bool" $.Values.worker.jobsEnabled) -}}
   {{- fail (printf "firstdime-helm: worker.jobsEnabled must be true or false (got %v)" $.Values.worker.jobsEnabled) -}}
 {{- end -}}
@@ -162,6 +171,9 @@ than as a crash-looping pod.
 {{- $ := . -}}
 {{- include "firstdime-helm.renamedValues" $ }}
 {{- $bs := $.Values.bankSync -}}
+{{- if not (has (toString $bs.replicas) (list "0" "1")) -}}
+  {{- fail "firstdime-helm: bankSync.replicas must be 0 or 1 (startup clears the run lease a previous pod left: never two)" -}}
+{{- end -}}
 {{- if not $bs.host -}}
   {{- fail "firstdime-helm: bankSync.host must be set (the admin page's ingress host; BANK_SYNC_PUBLIC_URL is https://<host>)" -}}
 {{- end -}}
@@ -200,5 +212,16 @@ than as a crash-looping pod.
       {{- fail (printf "firstdime-helm: bankSync.trustProxy must be a comma-separated list of IP addresses or CIDR ranges, never \"true\" or a hop count (got %q)" $trust) -}}
     {{- end -}}
   {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+libSQL URL the copy Job reads from: copyJob.sourceUrl, else this chart's own sqld.
+*/}}
+{{- define "firstdime-helm.copySourceUrl" -}}
+{{- if .Values.copyJob.sourceUrl -}}
+{{- .Values.copyJob.sourceUrl -}}
+{{- else -}}
+{{- printf "http://%s-sqld:8080" (include "firstdime-helm.fullname" .) -}}
 {{- end -}}
 {{- end -}}

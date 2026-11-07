@@ -34,7 +34,8 @@ Application-specific chart for deploying [First Dime](https://github.com/jfms7s/
 - NATS JetStream message bus deployment + Service
 - Optional Frankfurter exchange-rate API (Deployment + Service + PVC, off by default; the worker gets `FRANKFURTER_URL` when enabled)
 - Optional bank-sync (Enable Banking client feeding `POST /imports`; Deployment + Service + Ingress + PVC, off by default; single replica, Recreate; metrics port never routed)
-- Libsql (Turso) database integration
+- Postgres 18 StatefulSet (iSCSI claim kept on uninstall) + nightly `pg_dump` CronJob to NFS + optional one-shot copy Job (sqld to Postgres)
+- The old sqld, kept behind `sqld.enabled` (off by default) for the move
 - File attachments shared storage
 - Security hardening: non-root containers, read-only root filesystem, dropped capabilities
 
