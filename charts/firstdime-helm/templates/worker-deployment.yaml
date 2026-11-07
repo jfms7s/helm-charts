@@ -45,10 +45,13 @@ spec:
           env:
             - name: NODE_ENV
               value: "production"
-            - name: TURSO_SYNC_URL
-              value: {{ include "firstdime-helm.databaseUrl" . | quote }}
-            - name: TURSO_AUTH_TOKEN
-              {{- include "firstdime-helm.credentialEnv" .Values.database.authToken | nindent 14 }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret }}
+                  key: DATABASE_URL
+            - name: WORKER_JOBS_ENABLED
+              value: {{ ternary "true" "false" .Values.worker.jobsEnabled | quote }}
             - name: APP_ENCRYPTION_KEY
               {{- include "firstdime-helm.credentialEnv" .Values.appEncryptionKey | nindent 14 }}
             - name: NATS_URL

@@ -1,0 +1,147 @@
+{{- if .Values.postgres.enabled }}
+{{- include "firstdime-helm.validate" . }}
+{{- if or (not .Values.postgres.storageClass) (not .Values.postgres.size) }}
+{{- fail "firstdime-helm: postgres.storageClass and postgres.size must be set (block storage, e.g. synology-iscsi)" }}
+{{- end }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "firstdime-helm.postgresHost" . }}
+  labels:
+    {{- include "firstdime-helm.labels" (dict "context" $ "name" "postgres" "component" "database") | nindent 4 }}
+spec:
+  # One server on one RWO volume: never more than one replica.
+  replicas: 1
+  serviceName: {{ include "firstdime-helm.postgresHost" . }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "firstdime-helm.selectorLabels" (dict "context" $ "name" "postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "firstdime-helm.podLabels" (dict "context" $ "name" "postgres" "component" "database") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      # A clean shutdown checkpoints; give it time before SIGKILL.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.postgres.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postgres.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.postgres.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          # The image entrypoint prepends `postgres` when the first argument starts with `-`.
+          args:
+            - -c
+            - "timezone=UTC"
+            - -c
+            - "log_timezone=UTC"
+            {{- range $key := keys (.Values.postgres.config | default dict) | sortAlpha }}
+            - -c
+            - {{ printf "%s=%v" $key (index $.Values.postgres.config $key) | quote }}
+            {{- end }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret }}
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_INITDB_ARGS
+              value: {{ .Values.postgres.initdbArgs | quote }}
+            - name: TZ
+              value: "UTC"
+            # The nested pgdata/pgdata is load-bearing: PGDATA must be a directory owned by uid 999 inside the
+            # root-owned subPath directory the kubelet creates. It also avoids Postgres 18 refusing an old mount
+            # layout when PGDATA is left at the default.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          # Probes check TCP (-h 127.0.0.1), not the socket: during first-start init the entrypoint runs a
+          # temporary server on the socket only, which must not count as ready.
+          startupProbe:
+            exec:
+              command: [pg_isready, -h, "127.0.0.1", -p, "5432", -U, {{ .Values.postgres.user | quote }}, -d, {{ .Values.postgres.database | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            exec:
+              command: [pg_isready, -h, "127.0.0.1", -p, "5432", -U, {{ .Values.postgres.user | quote }}, -d, {{ .Values.postgres.database | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: [pg_isready, -h, "127.0.0.1", -p, "5432", -U, {{ .Values.postgres.user | quote }}, -d, {{ .Values.postgres.database | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+            - name: run
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/name: postgres
+          app.kubernetes.io/part-of: firstdime
+          app.kubernetes.io/component: storage
+        # The claim outlives the release, and Argo CD must never prune or delete it, whatever its tracking
+        # method. The template is immutable: to change storageClass or size later, delete the StatefulSet with
+        # --cascade=orphan and let Argo recreate it.
+        annotations:
+          helm.sh/resource-policy: keep
+          argocd.argoproj.io/sync-options: Prune=false,Delete=false
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: {{ .Values.postgres.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.postgres.size | quote }}
+{{- end }}
