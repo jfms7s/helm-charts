@@ -70,8 +70,10 @@ spec:
             - -c
             - "log_timezone=UTC"
             {{- range $key := keys (.Values.postgres.config | default dict) | sortAlpha }}
+            {{- if not (kindIs "invalid" (index $.Values.postgres.config $key)) }}
             - -c
             - {{ printf "%s=%v" $key (index $.Values.postgres.config $key) | quote }}
+            {{- end }}
             {{- end }}
           ports:
             - name: postgres
@@ -137,8 +139,9 @@ spec:
           app.kubernetes.io/part-of: firstdime
           app.kubernetes.io/component: storage
         # The claim outlives the release, and Argo CD must never prune or delete it, whatever its tracking
-        # method. The template is immutable: to change storageClass or size later, delete the StatefulSet with
-        # --cascade=orphan and let Argo recreate it.
+        # method. The template is immutable. `kubectl delete statefulset --cascade=orphan` only clears Argo's
+        # immutable-field sync error: the recreated StatefulSet adopts the existing pod and claim, so neither
+        # size nor class changes (see the README).
         annotations:
           helm.sh/resource-policy: keep
           argocd.argoproj.io/sync-options: Prune=false,Delete=false

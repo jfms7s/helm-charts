@@ -143,7 +143,7 @@ resource and default PVC name changes on the move to 0.7.0: it is a data migrati
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `postgres.existingSecret` | Secret with keys `POSTGRES_PASSWORD` (initdb only) and `DATABASE_URL` (read by the api, worker and copy Job). Required, also with `postgres.enabled: false` | `""` |
+| `postgres.existingSecret` | Secret with keys `POSTGRES_PASSWORD` (initdb only) and `DATABASE_URL` (read by the api, worker, backup and copy Job). Required, also with `postgres.enabled: false` | `""` |
 | `backup.nfs.{server,path}` | NFS export for the nightly dumps. Required while `backup.enabled` and `postgres.enabled` (else set `backup.enabled: false`) | `""` |
 | `sessionCookieSecret.value` or `valueFrom` | Session cookie encryption secret | `CHANGE_ME` |
 | `appEncryptionKey.value` or `valueFrom` | Encryption key for webhook secrets and 2FA | `CHANGE_ME` |
@@ -171,6 +171,7 @@ resource and default PVC name changes on the move to 0.7.0: it is a data migrati
 | `copyJob.command` | The copy script's command | `node scripts/migrate-sqlite-to-pg/index.mjs` |
 | `copyJob.sourceUrl` | libSQL URL of the sqld being copied (`libsql://`, `http(s)://`, `ws(s)://`); empty = this chart's own sqld, which then needs `sqld.enabled: true` | `""` |
 | `copyJob.sourceTokenSecret.{name,key}` | Secret key with sqld's auth token (required when enabled), exposed as `COPY_SOURCE_TOKEN` | `""` |
+| `copyJob.waitTimeoutSeconds` | Seconds each init container waits (Postgres, then the source) before failing the Job | `600` |
 | `copyJob.activeDeadlineSeconds` / `copyJob.resources` / `copyJob.nodeSelector` / `copyJob.tolerations` / `copyJob.affinity` | Deadline, requests/limits (`256Mi` / `1Gi`) and pod placement | `3600` |
 | `api.replicas` / `web.replicas` | Whole number, 0 or more; 0 stops it (cutover) | `1` |
 | `worker.replicas` / `bankSync.replicas` | 0 or 1 (never two); 0 stops it (cutover) | `1` |
@@ -333,9 +334,9 @@ bankSync:
 
 The api and the worker run on Postgres 18. The chart renders a single-replica StatefulSet (`<fullname>-postgres`) and a Service of the same name, on a ReadWriteOnce block-storage (iSCSI) claim, never NFS.
 
-- **Secret**: `postgres.existingSecret` (required) names a Secret with `POSTGRES_PASSWORD` (used by initdb on the first start only: changing it later does not change the database's password) and `DATABASE_URL`, which the api, worker and copy Job read. The expected URL is `postgres://firstdime:<url-encoded password>@<fullname>-postgres:5432/firstdime`.
+- **Secret**: `postgres.existingSecret` (required) names a Secret with `POSTGRES_PASSWORD` (read by initdb on the first start only: changing it later does not change the database's password) and `DATABASE_URL`, which everything else reads: the api, worker, backup and copy Job. The expected URL is `postgres://firstdime:<url-encoded password>@<fullname>-postgres:5432/firstdime`.
 - **Collation and time zone**: initdb runs with `--locale=C --encoding=UTF8` (text sorts by bytes, as SQLite's BINARY did) and the server runs in UTC.
-- **Claim**: `data-<fullname>-postgres-0`, kept on uninstall (`persistentVolumeClaimRetentionPolicy: Retain`, `helm.sh/resource-policy: keep`, and Argo CD `Prune=false,Delete=false`). The volumeClaimTemplate is immutable: to change `postgres.storageClass` or `postgres.size`, run `kubectl delete statefulset <fullname>-postgres --cascade=orphan` and let Argo CD recreate it.
+- **Claim**: `data-<fullname>-postgres-0`, kept on uninstall (`persistentVolumeClaimRetentionPolicy: Retain`, `helm.sh/resource-policy: keep`, and Argo CD `Prune=false,Delete=false`). The volumeClaimTemplate is immutable, so changing `postgres.storageClass` or `postgres.size` makes Argo CD fail the sync. `kubectl delete statefulset <fullname>-postgres --cascade=orphan` only clears that error: the recreated StatefulSet adopts the existing pod and claim, so neither size nor class changes. A size change needs a manual PVC patch (if the storage class allows expansion); a class change needs a dump and a restore onto a new claim.
 - **Resources**: 256Mi requested, 512Mi limit, `shared_buffers: 128MB` and `max_connections: 30`, sized for a 4 GB Pi.
 - **`database.*` is gone**: `database.url` and `database.authToken` were removed in 0.10.0. Passing a `database` key fails the render.
 
@@ -349,11 +350,15 @@ With `postgres.enabled` and `backup.enabled`, a CronJob (`<fullname>-postgres-ba
 - **Owner action, once**: create the directory on the NAS as root before the first run, owned by the backup uid (999) with mode 0700 (`chown 999:999`, `chmod 0700`). `fsGroup` is not applied on NFS and a root-squashed export can't be written by the pod.
 - **Failed Jobs** are removed after a day (`ttlSecondsAfterFinished: 86400`) so `KubeJobFailed` stops firing.
 
-Restore into an empty or throwaway database first:
+Restore into a throwaway database first (never `--clean` against a URL you did not type out):
 
 ```bash
-pg_restore --clean --if-exists --no-owner -d "$DATABASE_URL" firstdime-20261107T023000Z.dump
+psql "postgres://firstdime:<password>@<host>:5432/firstdime" -c "CREATE DATABASE firstdime_restore_test"
+pg_restore --no-owner --exit-on-error --single-transaction \
+  -d "postgres://firstdime:<password>@<host>:5432/firstdime_restore_test" firstdime-20261107T023000Z.dump
 ```
+
+Restoring over production is a deliberate, separate step: scale the api and worker to 0 first.
 
 Attachments live on a separate volume and need their own backup; the dump and the attachments should be taken together.
 
@@ -363,9 +368,10 @@ Attachments live on a separate volume and need their own backup; the dump and th
 
 - **Modes**: `copyJob.mode: copy` (Job `<fullname>-copy`) passes `--migrate` (applies the Postgres baseline first, since the api is at 0 during the copy), copies, then verifies. `verify` (Job `<fullname>-copy-verify`) passes `--verify-only` and writes nothing. The two flags are mutually exclusive.
 - **Source**: `copyJob.sourceUrl`, or this chart's sqld (`http://<fullname>-sqld:8080`) when empty, which needs `sqld.enabled: true`. The token comes from `copyJob.sourceTokenSecret`.
-- **Image**: PR 8's own image (`copyJob.image.repository`, default `ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg`; the api image drops `@libsql/client`); `copyJob.image.tag` is required. An init container waits for Postgres (`pg_isready`).
+- **Waits**: two init containers run first, each bounded by `copyJob.waitTimeoutSeconds` (default 600): `wait-for-postgres` (`pg_isready`) and `wait-for-source` (a TCP connect to the source host and port). Past the deadline the Job fails before the copy starts.
+- **Image**: PR 8's own image (`copyJob.image.repository`, default `ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg`; the api image drops `@libsql/client`); `copyJob.image.tag` is required.
 - **One-shot**: a plain Job, not an Argo CD hook, with `backoffLimit: 0` and no TTL (Argo CD would re-create a deleted Job and copy again). To re-run, delete the Job. Set `copyJob.enabled: false` after the cutover to remove it.
-- **Immutable pod template**: changing anything under `copyJob.*` (image, resources, sourceUrl, command) while `copyJob.enabled` is true fails the Argo CD sync on that Job (no re-run, just a failed sync). Delete the Job first or set `enabled: false`, and disable it after the cutover.
+- **Immutable pod template**: changing anything under `copyJob.*` (image, resources, sourceUrl, command, waitTimeoutSeconds), or `postgres.image` (init container), `postgres.existingSecret` or `imagePullSecrets`, while `copyJob.enabled` is true fails the Argo CD sync on that Job (no re-run, just a failed sync). Delete the Job first or set `enabled: false`, and disable it after the cutover.
 
 ## sqld (legacy)
 

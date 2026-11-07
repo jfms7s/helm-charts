@@ -118,36 +118,28 @@ tests:
           path: spec.jobTemplate.spec.template.spec.containers[0].image
           value: docker.io/library/postgres:18.6-bookworm
 
-  - it: wires the connection through the environment
+  - it: connects through DATABASE_URL from the Secret
     asserts:
       - contains:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
           content:
-            name: PGHOST
-            value: RELEASE-NAME-firstdime-postgres
-      - contains:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-postgres
+                key: DATABASE_URL
+      - notContains:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
-          content:
-            name: PGPORT
-            value: "5432"
-      - contains:
-          path: spec.jobTemplate.spec.template.spec.containers[0].env
-          content:
-            name: PGUSER
-            value: firstdime
-      - contains:
-          path: spec.jobTemplate.spec.template.spec.containers[0].env
-          content:
-            name: PGDATABASE
-            value: firstdime
-      - contains:
-          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          any: true
           content:
             name: PGPASSWORD
             valueFrom:
               secretKeyRef:
                 name: firstdime-postgres
                 key: POSTGRES_PASSWORD
+      - matchRegex:
+          path: spec.jobTemplate.spec.template.spec.containers[0].args[0]
+          pattern: '--dbname="\$DATABASE_URL"'
       - contains:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
           content:

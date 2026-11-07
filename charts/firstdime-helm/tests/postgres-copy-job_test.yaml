@@ -197,6 +197,103 @@ tests:
                 name: firstdime-postgres
                 key: DATABASE_URL
 
+  - it: waits for postgres and then for the source, bounded
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: wait-for-postgres
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: wait-for-source
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: 'timeout "\$WAIT_TIMEOUT" sh -c'
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: WAIT_TIMEOUT
+            value: "600"
+      - equal:
+          path: spec.template.spec.initContainers[1].image
+          value: ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg:v0.0.0-test
+      - equal:
+          path: spec.template.spec.initContainers[1].imagePullPolicy
+          value: IfNotPresent
+      - equal:
+          path: spec.template.spec.initContainers[1].command[0]
+          value: node
+      - equal:
+          path: spec.template.spec.initContainers[1].command[1]
+          value: -e
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: COPY_SOURCE_URL
+            value: http://RELEASE-NAME-firstdime-sqld:8080
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: WAIT_TIMEOUT
+            value: "600"
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      - equal:
+          path: spec.template.spec.initContainers[1].resources
+          value:
+            requests:
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+
+  - it: passes an explicit source URL and a custom wait timeout to the init containers
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.sourceUrl: libsql://old-sqld.example.com
+      copyJob.waitTimeoutSeconds: 90
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: COPY_SOURCE_URL
+            value: libsql://old-sqld.example.com
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: WAIT_TIMEOUT
+            value: "90"
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: WAIT_TIMEOUT
+            value: "90"
+
+  - it: fails when waitTimeoutSeconds is 0
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.waitTimeoutSeconds: 0
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.waitTimeoutSeconds must be a whole number"
+
+  - it: fails when waitTimeoutSeconds is not a number
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.waitTimeoutSeconds: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.waitTimeoutSeconds must be a whole number"
+
   - it: is a one-shot without a TTL
     values:
       - ../ci/copy-job-values.yaml

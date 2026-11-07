@@ -62,25 +62,17 @@ spec:
                   out="/backups/firstdime-$(date -u +%Y%m%dT%H%M%SZ).dump"
                   rm -f /backups/firstdime-*.dump.tmp
                   trap 'rm -f "$out.tmp"' EXIT
-                  pg_dump --format=custom --no-password --file="$out.tmp"
+                  pg_dump --format=custom --no-password --dbname="$DATABASE_URL" --file="$out.tmp"
                   pg_restore --list "$out.tmp" > /dev/null
                   mv "$out.tmp" "$out"
                   ls -1 /backups/firstdime-*.dump | sort -r | tail -n +$((RETAIN_COUNT + 1)) | while IFS= read -r old; do rm -f -- "$old"; done
                   echo "backup: $out ($(wc -c < "$out") bytes); kept $(ls -1 /backups/firstdime-*.dump | wc -l)"
               env:
-                - name: PGHOST
-                  value: {{ include "firstdime-helm.postgresHost" . | quote }}
-                - name: PGPORT
-                  value: "5432"
-                - name: PGUSER
-                  value: {{ .Values.postgres.user | quote }}
-                - name: PGDATABASE
-                  value: {{ .Values.postgres.database | quote }}
-                - name: PGPASSWORD
+                - name: DATABASE_URL
                   valueFrom:
                     secretKeyRef:
                       name: {{ .Values.postgres.existingSecret | quote }}
-                      key: POSTGRES_PASSWORD
+                      key: DATABASE_URL
                 - name: RETAIN_COUNT
                   value: {{ .Values.backup.retainCount | quote }}
                 - name: TZ

@@ -370,3 +370,17 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "postgres.config.max_connections must be a quoted string"
+
+  - it: skips a null config value (a dropped key)
+    set:
+      postgres.config:
+        work_mem: null
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "work_mem=<nil>"
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "work_mem="

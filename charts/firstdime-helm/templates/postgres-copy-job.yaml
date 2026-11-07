@@ -21,6 +21,9 @@ The two mode names keep a mode switch from hitting the Job template's immutabili
 {{- if or (not .Values.copyJob.image.repository) (not .Values.copyJob.image.tag) }}
 {{- fail "firstdime-helm: copyJob.image.repository and copyJob.image.tag must be set (PR 8's image, ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg)" }}
 {{- end }}
+{{- if not (regexMatch "^[1-9][0-9]*$" (toString .Values.copyJob.waitTimeoutSeconds)) }}
+{{- fail (printf "firstdime-helm: copyJob.waitTimeoutSeconds must be a whole number, 1 or more (got %v)" .Values.copyJob.waitTimeoutSeconds) }}
+{{- end }}
 {{- if not .Values.copyJob.command }}
 {{- fail "firstdime-helm: copyJob.command must be set (the copy script's command)" }}
 {{- end }}
@@ -74,19 +77,81 @@ spec:
               drop:
                 - ALL
           command: [sh, -c]
+          # Bounded: past the deadline the init container fails, and so does the Job (backoffLimit 0),
+          # before the copy starts.
           args:
-            - 'until pg_isready --dbname="$DATABASE_URL" --timeout=5; do echo "waiting for postgres"; sleep 5; done'
+            - |
+              timeout "$WAIT_TIMEOUT" sh -c 'until pg_isready --dbname="$DATABASE_URL" --timeout=5; do echo "waiting for postgres"; sleep 5; done' || { echo "postgres not ready after ${WAIT_TIMEOUT}s"; exit 1; }
           env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.postgres.existingSecret | quote }}
                   key: DATABASE_URL
+            - name: WAIT_TIMEOUT
+              value: {{ .Values.copyJob.waitTimeoutSeconds | quote }}
           resources:
             requests:
               memory: 16Mi
             limits:
               memory: 64Mi
+        # sqld restarts in the same sync and the copy script retries only the target, so wait for the
+        # source to accept connections too. Only host:port is printed, never the URL's credentials.
+        - name: wait-for-source
+          image: {{ .Values.copyJob.image.repository }}:{{ .Values.copyJob.image.tag }}
+          imagePullPolicy: {{ .Values.copyJob.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          command:
+            - node
+            - -e
+            - |
+              const net = require("net");
+              const url = new URL(process.env.COPY_SOURCE_URL);
+              const defaults = { "http:": 80, "ws:": 80, "https:": 443, "wss:": 443, "libsql:": 443 };
+              const host = url.hostname;
+              const port = Number(url.port) || defaults[url.protocol] || 443;
+              const timeout = Number(process.env.WAIT_TIMEOUT);
+              const deadline = Date.now() + timeout * 1000;
+              const attempt = () => {
+                const socket = net.connect({ host, port });
+                let settled = false;
+                const retry = (why) => {
+                  if (settled) return;
+                  settled = true;
+                  socket.destroy();
+                  console.log(`source ${host}:${port} not answering (${why})`);
+                  if (Date.now() >= deadline) {
+                    console.error(`source ${host}:${port} not answering after ${timeout}s`);
+                    process.exit(1);
+                  }
+                  setTimeout(attempt, 2000);
+                };
+                socket.setTimeout(5000);
+                socket.on("connect", () => {
+                  settled = true;
+                  console.log(`source ${host}:${port} is answering`);
+                  socket.destroy();
+                  process.exit(0);
+                });
+                socket.on("timeout", () => retry("timeout"));
+                socket.on("error", (err) => retry(err.code || "error"));
+              };
+              attempt();
+          env:
+            - name: COPY_SOURCE_URL
+              value: {{ include "firstdime-helm.copySourceUrl" . | quote }}
+            - name: WAIT_TIMEOUT
+              value: {{ .Values.copyJob.waitTimeoutSeconds | quote }}
+          resources:
+            requests:
+              memory: 32Mi
+            limits:
+              memory: 128Mi
       containers:
         - name: copy
           image: {{ .Values.copyJob.image.repository }}:{{ .Values.copyJob.image.tag }}

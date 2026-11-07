@@ -20,7 +20,8 @@ postgres:
   user: firstdime            # POSTGRES_USER: the superuser the image creates; owns the database
   database: firstdime        # POSTGRES_DB
   # REQUIRED, also when enabled is false (api, worker and the copy Job read DATABASE_URL from it).
-  # Keys: POSTGRES_PASSWORD (initdb only: changing it later does not change the database's password)
+  # Keys: POSTGRES_PASSWORD (read by initdb on the first start only: changing it later does not change the
+  # database's password; everything else, the backup included, uses DATABASE_URL)
   # and DATABASE_URL, e.g. postgres://firstdime:<url-encoded password>@firstdime-postgres:5432/firstdime
   existingSecret: ""
   storageClass: synology-iscsi   # block storage (iSCSI), never NFS
@@ -89,6 +90,9 @@ copyJob:
     name: ""
     key: ""
   activeDeadlineSeconds: 3600
+  # How long each init container (Postgres, then the source) waits before failing; the Job has
+  # backoffLimit 0, so the copy then never starts. A whole number, 1 or more.
+  waitTimeoutSeconds: 600
   resources:
     requests:
       memory: 256Mi
