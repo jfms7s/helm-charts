@@ -3,6 +3,8 @@
 # stays covered. sourceUrl stays empty: it is derived from the CI sqld (sqld.enabled).
 copyJob:
   enabled: true
+  image:
+    tag: v0.0.0-test
   sourceTokenSecret:
     name: firstdime-secrets
     key: db-auth-token

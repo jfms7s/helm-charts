@@ -68,13 +68,14 @@ backup:
 # First Dime's copy script. Off by default; see the README.
 copyJob:
   enabled: false
-  # copy: copy sqld into the empty Postgres, then verify. verify: compare only, write nothing (--verify-only).
+  # copy: apply the Postgres baseline (--migrate), copy sqld into the empty Postgres, then verify.
+  # verify: compare only, write nothing (--verify-only). The two flags are mutually exclusive.
   # Each mode has its own Job name (<fullname>-copy, <fullname>-copy-verify).
   mode: copy
-  # Image with the copy script. Empty repository/tag = the api image (api.image). PR 8 in the
-  # firstdime repo decides which image ships scripts/migrate-sqlite-to-pg; set these if it is not the api's.
+  # PR 8's image of the copy script (REQUIRED: repository and tag, the render fails while either is empty).
+  # WORKDIR /app, USER node (uid 1000); the script is at scripts/migrate-sqlite-to-pg/index.mjs.
   image:
-    repository: ""
+    repository: ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg
     tag: ""
     pullPolicy: IfNotPresent
   command:

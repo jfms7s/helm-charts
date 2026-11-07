@@ -127,8 +127,8 @@ whether or not bankSync is enabled.
 {{- end -}}
 
 {{/*
-Every chart-wide render-time guard, in one place. Both the api and the worker
-template include it, so neither can ever render on its own with a placeholder
+Every chart-wide render-time guard, in one place. The api, web, worker,
+postgres StatefulSet, backup CronJob and copy Job templates all include it, so none can ever render on its own with a placeholder
 credential, a missing database, an unshared attachments volume or a bad origin.
 */}}
 {{- define "firstdime-helm.validate" -}}

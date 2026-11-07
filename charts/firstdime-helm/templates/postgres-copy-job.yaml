@@ -18,6 +18,9 @@ The two mode names keep a mode switch from hitting the Job template's immutabili
 {{- if or (not .Values.copyJob.sourceTokenSecret.name) (not .Values.copyJob.sourceTokenSecret.key) }}
 {{- fail "firstdime-helm: copyJob.sourceTokenSecret.name and .key must be set (the Secret key holding sqld's auth token)" }}
 {{- end }}
+{{- if or (not .Values.copyJob.image.repository) (not .Values.copyJob.image.tag) }}
+{{- fail "firstdime-helm: copyJob.image.repository and copyJob.image.tag must be set (PR 8's image, ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg)" }}
+{{- end }}
 {{- if not .Values.copyJob.command }}
 {{- fail "firstdime-helm: copyJob.command must be set (the copy script's command)" }}
 {{- end }}
@@ -86,7 +89,7 @@ spec:
               memory: 64Mi
       containers:
         - name: copy
-          image: {{ .Values.copyJob.image.repository | default .Values.api.image.repository }}:{{ .Values.copyJob.image.tag | default .Values.api.image.tag }}
+          image: {{ .Values.copyJob.image.repository }}:{{ .Values.copyJob.image.tag }}
           imagePullPolicy: {{ .Values.copyJob.image.pullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false
@@ -105,6 +108,9 @@ spec:
             - DATABASE_URL
             {{- if eq $mode "verify" }}
             - --verify-only
+            {{- else }}
+            # Applies the Postgres baseline first: the api is at 0 during the copy.
+            - --migrate
             {{- end }}
           env:
             - name: NODE_ENV

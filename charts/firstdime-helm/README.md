@@ -23,7 +23,7 @@ The application stores user attachments in a shared volume. The api and worker r
 
 ## Prerequisites
 
-1. Kubernetes 1.24+
+1. Kubernetes 1.27+ (CronJob `timeZone`, StatefulSet `persistentVolumeClaimRetentionPolicy`)
 2. Helm 3.0+
 3. For production: RWX storage (NFS) for attachments; block storage (iSCSI, RWO) for Postgres, NATS, Frankfurter and bank-sync (if enabled); an NFS export for the nightly Postgres dumps
 
@@ -167,7 +167,7 @@ resource and default PVC name changes on the move to 0.7.0: it is a data migrati
 | `backup.resources` | Requests/limits of the backup container | `64Mi` / `256Mi` memory |
 | `copyJob.enabled` | Render the one-shot copy Job. See [Copy Job](#copy-job) | `false` |
 | `copyJob.mode` | `copy` (copy then verify; Job `<fullname>-copy`) or `verify` (`--verify-only`; Job `<fullname>-copy-verify`) | `copy` |
-| `copyJob.image.{repository,tag,pullPolicy}` | Image with the copy script; empty repository/tag = the api image | `""`, `""`, `IfNotPresent` |
+| `copyJob.image.{repository,tag,pullPolicy}` | PR 8's image with the copy script. Repository and tag are required when enabled (the render fails while either is empty) | `ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg`, `""`, `IfNotPresent` |
 | `copyJob.command` | The copy script's command | `node scripts/migrate-sqlite-to-pg/index.mjs` |
 | `copyJob.sourceUrl` | libSQL URL of the sqld being copied (`libsql://`, `http(s)://`, `ws(s)://`); empty = this chart's own sqld, which then needs `sqld.enabled: true` | `""` |
 | `copyJob.sourceTokenSecret.{name,key}` | Secret key with sqld's auth token (required when enabled), exposed as `COPY_SOURCE_TOKEN` | `""` |
@@ -361,10 +361,11 @@ Attachments live on a separate volume and need their own backup; the dump and th
 
 `copyJob.enabled: true` renders a one-shot Job that runs First Dime's copy script: it copies the legacy sqld database into the (empty) Postgres and verifies the result, as `<command> --source <libsql url> --source-token-env COPY_SOURCE_TOKEN --target-env DATABASE_URL`.
 
-- **Modes**: `copyJob.mode: copy` (Job `<fullname>-copy`) copies, then verifies. `verify` (Job `<fullname>-copy-verify`) adds `--verify-only` and writes nothing.
+- **Modes**: `copyJob.mode: copy` (Job `<fullname>-copy`) passes `--migrate` (applies the Postgres baseline first, since the api is at 0 during the copy), copies, then verifies. `verify` (Job `<fullname>-copy-verify`) passes `--verify-only` and writes nothing. The two flags are mutually exclusive.
 - **Source**: `copyJob.sourceUrl`, or this chart's sqld (`http://<fullname>-sqld:8080`) when empty, which needs `sqld.enabled: true`. The token comes from `copyJob.sourceTokenSecret`.
-- **Image**: the api image unless `copyJob.image.repository` / `.tag` are set. An init container waits for Postgres (`pg_isready`).
+- **Image**: PR 8's own image (`copyJob.image.repository`, default `ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg`; the api image drops `@libsql/client`); `copyJob.image.tag` is required. An init container waits for Postgres (`pg_isready`).
 - **One-shot**: a plain Job, not an Argo CD hook, with `backoffLimit: 0` and no TTL (Argo CD would re-create a deleted Job and copy again). To re-run, delete the Job. Set `copyJob.enabled: false` after the cutover to remove it.
+- **Immutable pod template**: changing anything under `copyJob.*` (image, resources, sourceUrl, command) while `copyJob.enabled` is true fails the Argo CD sync on that Job (no re-run, just a failed sync). Delete the Job first or set `enabled: false`, and disable it after the cutover.
 
 ## sqld (legacy)
 
@@ -550,7 +551,7 @@ Ensure the NFS volume has proper permissions for the workload to write to it. Co
 - **nats**: UID 1000
 - **web**: UID 101 (nginx-unprivileged)
 
-**Important**: On NFS, Kubernetes `fsGroup` is not applied (NFS ignores it). Ensure NFS directories are **writable by UID 1000**. For example, on the Synology:
+**Important**: On NFS, Kubernetes `fsGroup` is not applied (NFS ignores it). Ensure the nats and attachments NFS directories are **writable by UID 1000** (the Postgres backup export is different: it must be owned by uid 999, `backup.runAsUser`). For example, on the Synology:
 ```bash
 chmod 1770 /volume1/k8s/volumes/firstdime/nats
 chmod 1770 /volume1/k8s/volumes/firstdime/attachments

@@ -28,6 +28,10 @@ tests:
             - COPY_SOURCE_TOKEN
             - --target-env
             - DATABASE_URL
+            - --migrate
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --verify-only
 
   - it: an explicit sourceUrl wins over the in-chart sqld
     values:
@@ -69,28 +73,58 @@ tests:
             - --target-env
             - DATABASE_URL
             - --verify-only
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --migrate
 
-  - it: defaults the image to the api image
+  - it: defaults the image to the migrate image with the CI tag
     values:
       - ../ci/copy-job-values.yaml
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/jfms7s/firstdime-api:v0.18.0
+          value: ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg:v0.0.0-test
       - equal:
           path: spec.template.spec.containers[0].imagePullPolicy
           value: IfNotPresent
 
-  - it: overrides the image
+  - it: overrides the tag
     values:
       - ../ci/copy-job-values.yaml
     set:
-      copyJob.image.repository: ghcr.io/jfms7s/firstdime-tools
       copyJob.image.tag: v1.2.3
     asserts:
       - equal:
           path: spec.template.spec.containers[0].image
-          value: ghcr.io/jfms7s/firstdime-tools:v1.2.3
+          value: ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg:v1.2.3
+
+  - it: overrides the repository
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.image.repository: ghcr.io/jfms7s/firstdime-tools
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/firstdime-tools:v0.0.0-test
+
+  - it: fails without an image tag
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.image.tag: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.image.repository and copyJob.image.tag must be set"
+
+  - it: fails without an image repository
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.image.repository: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.image.repository and copyJob.image.tag must be set"
 
   - it: runs the default command and accepts an override
     values:
