@@ -366,3 +366,25 @@ tests:
     asserts:
       - failedTemplate:
           errorPattern: "not emptyDir"
+
+  - it: renders 0 replicas when bankSync.replicas is 0
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.replicas: 0
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 0
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+
+  - it: fails when bankSync.replicas is 2
+    values:
+      - ../ci/bank-sync-values.yaml
+    set:
+      bankSync.replicas: 2
+    asserts:
+      - failedTemplate:
+          errorPattern: "bankSync.replicas must be 0 or 1"

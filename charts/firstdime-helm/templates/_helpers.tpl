@@ -33,6 +33,26 @@ helm.sh/chart: {{ include "firstdime-helm.chart" .context }}
 {{- end -}}
 
 {{/*
+Labels for a pod template: firstdime-helm.labels without helm.sh/chart. Pod
+templates must not change on a chart bump, so a release that leaves a
+workload's spec alone does not restart it. Same arguments as firstdime-helm.labels.
+*/}}
+{{- define "firstdime-helm.podLabels" -}}
+app.kubernetes.io/name: {{ .name }}
+app.kubernetes.io/instance: {{ .context.Release.Name }}
+app.kubernetes.io/component: {{ .component }}
+app.kubernetes.io/part-of: firstdime
+app.kubernetes.io/managed-by: {{ .context.Release.Service }}
+{{- end -}}
+
+{{/*
+Host name of the chart's Postgres Service.
+*/}}
+{{- define "firstdime-helm.postgresHost" -}}
+{{- printf "%s-postgres" (include "firstdime-helm.fullname" .) -}}
+{{- end -}}
+
+{{/*
 Selector labels for a component. Kept separate from
 firstdime-helm.labels because selectors (Deployment
 matchLabels / Service selector) are immutable after creation, so this must
@@ -46,7 +66,7 @@ app.kubernetes.io/instance: {{ .context.Release.Name }}
 
 {{/*
 Render an env var's value/valueFrom body from a {value, valueFrom} map, e.g.
-{{- include "firstdime-helm.credentialEnv" .Values.database.authToken | nindent N }}
+{{- include "firstdime-helm.credentialEnv" .Values.sessionCookieSecret | nindent N }}
 valueFrom (a standard corev1 EnvVarSource body, e.g. secretKeyRef) takes
 precedence over value when both are set. value defaults to "CHANGE_ME",
 since Argo CD does not support Helm's `lookup` function, so -- unlike a
@@ -65,8 +85,8 @@ value: {{ .value | default "CHANGE_ME" | quote }}
 Fail the render if a required credential is not properly set.
 For credentials with {value, valueFrom}: fail if both are empty/CHANGE_ME/missing.
 For simple values: fail if empty/CHANGE_ME.
-Pass: (dict "context" $ "credentialName" "database.authToken" "credential" .Values.database.authToken)
-or:   (dict "context" $ "credentialName" "database.url" "value" .Values.database.url)
+Pass: (dict "context" $ "credentialName" "sessionCookieSecret" "credential" .Values.sessionCookieSecret)
+or:   (dict "context" $ "credentialName" "name" "value" .Values.something)
 */}}
 {{- define "firstdime-helm.requiredCredential" -}}
 {{- $name := .credentialName -}}
@@ -77,7 +97,7 @@ or:   (dict "context" $ "credentialName" "database.url" "value" .Values.database
   {{- end -}}
 {{- else if .value -}}
   {{- if or (eq (.value | default "") "") (eq (.value | default "") "CHANGE_ME") -}}
-    {{- fail (printf "firstdime-helm: %s must be set, e.g. http://firstdime-sqld:8080" $name) -}}
+    {{- fail (printf "firstdime-helm: %s must be set" $name) -}}
   {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -101,20 +121,34 @@ whether or not bankSync is enabled.
 {{- if hasKey (.Values.bankSync | default dict) "bmToken" -}}
   {{- fail "firstdime-helm: bankSync.bmToken was renamed to bankSync.fdToken (0.8.0)" -}}
 {{- end -}}
+{{- if hasKey .Values "database" -}}
+  {{- fail "firstdime-helm: database.url and database.authToken were removed in 0.10.0: api and worker read DATABASE_URL from postgres.existingSecret" -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
-Every chart-wide render-time guard, in one place. Both the api and the worker
-template include it, so neither can ever render on its own with a placeholder
+Every chart-wide render-time guard, in one place. The api, web, worker,
+postgres StatefulSet, backup CronJob and copy Job templates all include it, so none can ever render on its own with a placeholder
 credential, a missing database, an unshared attachments volume or a bad origin.
 */}}
 {{- define "firstdime-helm.validate" -}}
 {{- $ := . -}}
 {{- include "firstdime-helm.renamedValues" $ }}
-{{- if and (eq $.Values.database.url "") (not $.Values.sqld.enabled) -}}
-  {{- fail "firstdime-helm: database.url must be set (or enable sqld.enabled)" -}}
+{{- if not $.Values.postgres.existingSecret -}}
+  {{- fail "firstdime-helm: postgres.existingSecret must name a Secret with keys POSTGRES_PASSWORD and DATABASE_URL" -}}
 {{- end -}}
-{{- include "firstdime-helm.requiredCredential" (dict "context" $ "credentialName" "database.authToken" "credential" $.Values.database.authToken) }}
+{{- range $name := list "api" "web" -}}
+  {{- $r := toString (index $.Values $name).replicas -}}
+  {{- if not (regexMatch "^[0-9]+$" $r) -}}
+    {{- fail (printf "firstdime-helm: %s.replicas must be a whole number, 0 or more (0 stops it; got %s)" $name $r) -}}
+  {{- end -}}
+{{- end -}}
+{{- if not (has (toString $.Values.worker.replicas) (list "0" "1")) -}}
+  {{- fail "firstdime-helm: worker.replicas must be 0 or 1 (the worker runs the scheduler and the outbox relay: never two)" -}}
+{{- end -}}
+{{- if not (kindIs "bool" $.Values.worker.jobsEnabled) -}}
+  {{- fail (printf "firstdime-helm: worker.jobsEnabled must be true or false (got %v)" $.Values.worker.jobsEnabled) -}}
+{{- end -}}
 {{- include "firstdime-helm.requiredCredential" (dict "context" $ "credentialName" "sessionCookieSecret" "credential" $.Values.sessionCookieSecret) }}
 {{- include "firstdime-helm.requiredCredential" (dict "context" $ "credentialName" "appEncryptionKey" "credential" $.Values.appEncryptionKey) }}
 {{- include "firstdime-helm.validateOrigin" (dict "context" $ "originName" "webOrigin" "origin" $.Values.webOrigin) }}
@@ -129,19 +163,6 @@ credential, a missing database, an unshared attachments volume or a bad origin.
 {{- end -}}
 
 {{/*
-The database URL the api AND the worker connect to: an explicit database.url,
-else the in-chart sqld. One helper so the two can never disagree (the worker
-once rendered an empty URL while the api derived the sqld one).
-*/}}
-{{- define "firstdime-helm.databaseUrl" -}}
-{{- if .Values.database.url -}}
-{{- .Values.database.url -}}
-{{- else if .Values.sqld.enabled -}}
-http://{{ include "firstdime-helm.fullname" . }}-sqld:8080
-{{- end -}}
-{{- end -}}
-
-{{/*
 bank-sync's render-time guards (bankSync.enabled only): every value it can't
 start without, checked here so a misconfigured release fails at render rather
 than as a crash-looping pod.
@@ -150,6 +171,9 @@ than as a crash-looping pod.
 {{- $ := . -}}
 {{- include "firstdime-helm.renamedValues" $ }}
 {{- $bs := $.Values.bankSync -}}
+{{- if not (has (toString $bs.replicas) (list "0" "1")) -}}
+  {{- fail "firstdime-helm: bankSync.replicas must be 0 or 1 (startup clears the run lease a previous pod left: never two)" -}}
+{{- end -}}
 {{- if not $bs.host -}}
   {{- fail "firstdime-helm: bankSync.host must be set (the admin page's ingress host; BANK_SYNC_PUBLIC_URL is https://<host>)" -}}
 {{- end -}}
@@ -188,5 +212,16 @@ than as a crash-looping pod.
       {{- fail (printf "firstdime-helm: bankSync.trustProxy must be a comma-separated list of IP addresses or CIDR ranges, never \"true\" or a hop count (got %q)" $trust) -}}
     {{- end -}}
   {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+libSQL URL the copy Job reads from: copyJob.sourceUrl, else this chart's own sqld.
+*/}}
+{{- define "firstdime-helm.copySourceUrl" -}}
+{{- if .Values.copyJob.sourceUrl -}}
+{{- .Values.copyJob.sourceUrl -}}
+{{- else -}}
+{{- printf "http://%s-sqld:8080" (include "firstdime-helm.fullname" .) -}}
 {{- end -}}
 {{- end -}}

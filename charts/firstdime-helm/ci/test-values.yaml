@@ -1,10 +1,15 @@
 # Test values for CI/CD - contains valid dummy credentials for rendering and testing
 # This file is used by: .github/workflows/lint-test.yml, Makefile, and helm-unittest
 
-# Leave database.url empty to test derived URL (sqld.enabled=true → http://...-firstdime-sqld:8080)
-database:
-  authToken:
-    value: "test-auth-token-1234567890abcdef"
+# postgres.existingSecret is required; postgres.enabled stays at its default (true) so the StatefulSet renders.
+postgres:
+  existingSecret: firstdime-postgres
+
+# backup.enabled stays at its default (true); the CronJob needs an NFS export.
+backup:
+  nfs:
+    server: 192.0.2.10
+    path: /volume1/k8s/volumes/firstdime/postgres-backups
 
 sessionCookieSecret:
   value: "test-session-secret-1234567890abcdefghijklmnop"
@@ -12,7 +17,9 @@ sessionCookieSecret:
 appEncryptionKey:
   value: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
 
+# The old libSQL server stays renderable (lint/kubeconform) until it is removed.
 sqld:
+  enabled: true
   persistence:
     volume:
       persistentVolumeClaim:

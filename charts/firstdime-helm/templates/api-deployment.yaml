@@ -8,7 +8,7 @@ metadata:
   annotations:
     description: "First Dime API server"
 spec:
-  replicas: {{ .Values.api.replicas | default 1 }}
+  replicas: {{ .Values.api.replicas }}
   selector:
     matchLabels:
       {{- include "firstdime-helm.selectorLabels" (dict "context" $ "name" "api") | nindent 6 }}
@@ -47,10 +47,11 @@ spec:
               value: {{ .Values.api.port | quote }}
             - name: NODE_ENV
               value: "production"
-            - name: TURSO_SYNC_URL
-              value: {{ include "firstdime-helm.databaseUrl" . | quote }}
-            - name: TURSO_AUTH_TOKEN
-              {{- include "firstdime-helm.credentialEnv" .Values.database.authToken | nindent 14 }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret | quote }}
+                  key: DATABASE_URL
             - name: SESSION_COOKIE_SECRET
               {{- include "firstdime-helm.credentialEnv" .Values.sessionCookieSecret | nindent 14 }}
             - name: APP_ENCRYPTION_KEY

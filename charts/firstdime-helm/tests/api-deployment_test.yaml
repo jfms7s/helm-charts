@@ -18,11 +18,6 @@ tests:
       - contains:
           path: spec.template.spec.containers[0].env
           content:
-            name: TURSO_SYNC_URL
-            value: "http://firstdime-sqld:8080"
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
             name: NATS_URL
             value: "nats://firstdime-nats:4222"
 
@@ -71,20 +66,6 @@ tests:
       - failedTemplate:
           errorPattern: "bankSync.bmToken was renamed to bankSync.fdToken \\(0.8.0\\)"
 
-  - it: fails when database.authToken is unset
-    set:
-      database.authToken.value: ""
-    asserts:
-      - failedTemplate:
-          errorPattern: "database.authToken must be set \\(value or valueFrom\\)"
-
-  - it: fails when database.authToken is still CHANGE_ME
-    set:
-      database.authToken.value: CHANGE_ME
-    asserts:
-      - failedTemplate:
-          errorPattern: "database.authToken must be set"
-
   - it: fails when sessionCookieSecret is unset
     set:
       sessionCookieSecret.value: ""
@@ -99,48 +80,80 @@ tests:
       - failedTemplate:
           errorPattern: "appEncryptionKey must be set"
 
-  - it: fails when database.url is empty and the in-chart sqld is disabled
+  - it: reads DATABASE_URL from the postgres.existingSecret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-postgres
+                key: DATABASE_URL
+
+  - it: reads DATABASE_URL from the Secret when the in-chart Postgres is disabled
     set:
-      sqld.enabled: false
+      postgres.enabled: false
+      postgres.existingSecret: external-db
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: external-db
+                key: DATABASE_URL
+
+  - it: sets none of the libSQL variables the app refuses
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_SYNC_URL
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TURSO_AUTH_TOKEN
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: LOCAL_DB_PATH
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_PRIMARY_DIRECT
+          any: true
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DB_EMBEDDED_REPLICA
+          any: true
+
+  - it: fails when postgres.existingSecret is empty
+    set:
+      postgres.existingSecret: ""
     asserts:
       - failedTemplate:
-          errorPattern: "database.url must be set"
+          errorPattern: "postgres.existingSecret must name a Secret with keys POSTGRES_PASSWORD and DATABASE_URL"
 
-  - it: derives database.url from the in-chart sqld
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: TURSO_SYNC_URL
-            value: "http://RELEASE-NAME-firstdime-sqld:8080"
-
-  - it: an explicit database.url wins over the derived one
+  - it: fails when a removed database key is passed
     set:
-      database.url: http://external-db:8080
+      database.url: x
     asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: TURSO_SYNC_URL
-            value: "http://external-db:8080"
+      - failedTemplate:
+          errorPattern: "database.url and database.authToken were removed in 0.10.0: api and worker read DATABASE_URL from postgres.existingSecret"
 
   - it: uses valueFrom for credentials when set
     set:
-      database.authToken.valueFrom.secretKeyRef.name: firstdime-secrets
-      database.authToken.valueFrom.secretKeyRef.key: db-auth-token
       sessionCookieSecret.valueFrom.secretKeyRef.name: firstdime-secrets
       sessionCookieSecret.valueFrom.secretKeyRef.key: session-cookie-secret
       appEncryptionKey.valueFrom.secretKeyRef.name: firstdime-secrets
       appEncryptionKey.valueFrom.secretKeyRef.key: app-encryption-key
     asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: TURSO_AUTH_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: firstdime-secrets
-                key: db-auth-token
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -328,3 +341,33 @@ tests:
           content:
             name: TRUST_PROXY
             value: "10.42.0.0/16"
+
+  - it: renders 0 replicas when api.replicas is 0
+    set:
+      api.replicas: 0
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 0
+
+  - it: renders api.replicas as is
+    set:
+      api.replicas: 2
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 2
+
+  - it: fails when api.replicas is negative
+    set:
+      api.replicas: -1
+    asserts:
+      - failedTemplate:
+          errorPattern: "api.replicas must be a whole number"
+
+  - it: fails when api.replicas is not a number
+    set:
+      api.replicas: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "api.replicas must be a whole number"

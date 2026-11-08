@@ -7,9 +7,107 @@ registrationEnabled: true
 # Time zone for the application (used by api and worker)
 tz: UTC
 
-# LibSQL (sqld) database server (in-cluster, Kubernetes-native, strategy: Recreate)
-sqld:
+# Postgres 18, the database of the api and the worker: one StatefulSet replica
+# on one block-storage (iSCSI) volume. Set
+# enabled to false to use a Postgres outside the chart; the api and worker
+# still read DATABASE_URL from existingSecret.
+postgres:
   enabled: true
+  image:
+    repository: docker.io/library/postgres
+    tag: "18.6-bookworm"     # Postgres 18 (PGlite's and meiun's major); multi-arch (amd64, arm64). Callers pin a digest.
+    pullPolicy: IfNotPresent
+  user: firstdime            # POSTGRES_USER: the superuser the image creates; owns the database
+  database: firstdime        # POSTGRES_DB
+  # REQUIRED, also when enabled is false (api, worker and the copy Job read DATABASE_URL from it).
+  # Keys: POSTGRES_PASSWORD (read by initdb on the first start only: changing it later does not change the
+  # database's password; everything else, the backup included, uses DATABASE_URL)
+  # and DATABASE_URL, e.g. postgres://firstdime:<url-encoded password>@firstdime-postgres:5432/firstdime
+  existingSecret: ""
+  storageClass: synology-iscsi   # block storage (iSCSI), never NFS
+  size: 2Gi
+  # initdb flags, applied on the first start only (an existing data directory keeps its own).
+  # C collation sorts text by bytes, as SQLite's BINARY did.
+  initdbArgs: "--locale=C --encoding=UTF8"
+  # Server settings, each rendered as `-c <key>=<value>`, values quoted strings (a bare number fails the
+  # render). A caller's map merges with these defaults (add keys, override them); set a key to null to
+  # drop it. timezone and log_timezone are fixed to UTC by the chart.
+  config:
+    max_connections: "30"
+    shared_buffers: "128MB"
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Nightly pg_dump of the chart's Postgres to an NFS export (rendered when postgres.enabled and backup.enabled).
+# A dump is renamed into place only after pg_restore can read it; older ones are deleted after each good dump.
+backup:
+  enabled: true
+  schedule: "30 2 * * *"     # UTC (the CronJob's timeZone is fixed to Etc/UTC)
+  retainCount: 14            # dumps kept on the NAS; older ones are deleted after each good dump
+  # NFS export the dumps go to (REQUIRED while backup and postgres are enabled). The directory
+  # must exist before the first run, created by root on the NAS and writable by runAsUser
+  # (e.g. chown 999:999, chmod 0700); a root-squashed export can't be written.
+  nfs:
+    server: ""
+    path: ""
+  # The postgres image's own user. fsGroup is not applied on NFS, so the directory's owner must match.
+  runAsUser: 999
+  runAsGroup: 999
+  resources:
+    requests:
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# One-shot Job that copies the old sqld (libSQL) database into the empty Postgres and verifies it, using
+# First Dime's copy script. Off by default; see the README.
+copyJob:
+  enabled: false
+  # copy: apply the Postgres baseline (--migrate), copy sqld into the empty Postgres, then verify.
+  # verify: compare only, write nothing (--verify-only). The two flags are mutually exclusive.
+  # Each mode has its own Job name (<fullname>-copy, <fullname>-copy-verify).
+  mode: copy
+  # PR 8's image of the copy script (REQUIRED: repository and tag, the render fails while either is empty).
+  # WORKDIR /app, USER node (uid 1000); the script is at scripts/migrate-sqlite-to-pg/index.mjs.
+  image:
+    repository: ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg
+    tag: ""
+    pullPolicy: IfNotPresent
+  command:
+    - node
+    - scripts/migrate-sqlite-to-pg/index.mjs
+  # libSQL URL of the sqld being copied. Empty = this chart's own sqld (http://<fullname>-sqld:8080),
+  # which then must be enabled (sqld.enabled: true).
+  sourceUrl: ""
+  # Secret key holding sqld's auth token (REQUIRED when enabled), exposed to the script as COPY_SOURCE_TOKEN.
+  sourceTokenSecret:
+    name: ""
+    key: ""
+  activeDeadlineSeconds: 3600
+  # How long each init container (Postgres, then the source) waits before failing; the Job has
+  # backoffLimit 0, so the copy then never starts. A whole number, 1 or more.
+  waitTimeoutSeconds: 600
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# LibSQL (sqld) database server (in-cluster, strategy: Recreate). The old
+# database, kept only for the move to Postgres: the copy Job reads it and a
+# rollback runs on its volume. The api and worker no longer connect to it. Set
+# true during the cutover window, false after.
+sqld:
+  enabled: false
   image:
     repository: ghcr.io/tursodatabase/libsql-server
     tag: "v0.24.33"
@@ -94,7 +192,8 @@ frankfurter:
   extraEnv: []
   # Volume source for Frankfurter's SQLite database (REQUIRED when enabled),
   # mounted at /app/data (DATABASE_URL is set to sqlite:///app/data/frankfurter.sqlite3).
-  # Same shape as sqld.persistence. Size the claim at 5Gi or more: a partial
+  # A {volume, claim, subPath} map: `volume` is the body of a Kubernetes volume
+  # source (nfs, persistentVolumeClaim, ...), as in sqld.persistence. Size the claim at 5Gi or more: a partial
   # backfill (9 of 104 providers) was already 170 MB. claim.name overrides the
   # chart-created PVC's name (default <fullname>-frankfurter-data),
   # e.g. to move to another storage class: a claim's class can't be changed in
@@ -117,9 +216,11 @@ frankfurter:
 # transactions into this release's api through POST /imports (BANK_SYNC_FD_URL
 # is the api Service). One instance per tenant: one PAT, one admin password.
 # Its state is a SQLite file: put it on block storage (iSCSI), never NFS.
-# Exactly 1 replica, Recreate (hardcoded): startup clears the run lease.
+# 0 or 1 replica (never two: startup clears the run lease), Recreate (hardcoded).
 bankSync:
   enabled: false
+  # 0 stops it (cutover); anything above 1 fails the render.
+  replicas: 1
   image:
     repository: ghcr.io/jfms7s/firstdime-bank-sync
     tag: "v0.18.0"
@@ -142,7 +243,7 @@ bankSync:
   trustProxy: ""
   logLevel: info
   # Credentials (REQUIRED when enabled). Each is a standard Kubernetes
-  # EnvVarSource like database.*: `value` for a literal, or `valueFrom`
+  # EnvVarSource like sessionCookieSecret: `value` for a literal, or `valueFrom`
   # (e.g. secretKeyRef); valueFrom wins when both are set.
   # Enable Banking application id (BANK_SYNC_EB_APP_ID).
   ebAppId:
@@ -180,8 +281,9 @@ bankSync:
   fsGroup: 1000
   extraEnv: []
   # Volume source for the SQLite database (REQUIRED when enabled), mounted at
-  # /app/.data (BANK_SYNC_DB_PATH=/app/.data/bank-sync.db). Same shape as
-  # sqld.persistence; claim.name defaults to <fullname>-bank-sync-data.
+  # /app/.data (BANK_SYNC_DB_PATH=/app/.data/bank-sync.db). A {volume, claim,
+  # subPath} map, `volume` being the body of a Kubernetes volume source;
+  # claim.name defaults to <fullname>-bank-sync-data.
   persistence:
     volume:
     claim:
@@ -199,6 +301,7 @@ api:
     repository: ghcr.io/jfms7s/firstdime-api
     tag: "v0.18.0"
     pullPolicy: IfNotPresent
+  # 0 stops it (cutover). A whole number, 0 or more.
   replicas: 1
   resources:
     requests:
@@ -213,8 +316,10 @@ api:
   fsGroup: 1000
 
 # Worker (async tasks, scheduler, outbox relay) configuration.
-# MUST run at exactly 1 replica with Recreate strategy (hardcoded in the template).
+# Never more than 1 replica (scheduler and outbox relay), Recreate strategy (hardcoded in the template).
 worker:
+  # 0 or 1 (anything else fails the render). 0 stops it (cutover).
+  replicas: 1
   image:
     repository: ghcr.io/jfms7s/firstdime-worker
     tag: "v0.18.0"
@@ -226,6 +331,11 @@ worker:
       memory: 384Mi
   # Log level for the worker
   logLevel: info
+  # WORKER_JOBS_ENABLED. false runs no scheduled job and no outbound runner
+  # (webhooks, email, notifications) while the relay and the event consumers
+  # keep running; the cutover starts the Postgres worker with false until the
+  # owner's go. Must be a boolean (true/false): anything else fails the render.
+  jobsEnabled: true
   # Allow webhooks to call private network addresses
   webhookAllowPrivateNetworks: false
   # Non-root user ID (numeric; the 'node' user in the image maps to uid 1000)
@@ -239,6 +349,7 @@ web:
     repository: ghcr.io/jfms7s/firstdime-web
     tag: "v0.18.0"
     pullPolicy: IfNotPresent
+  # 0 stops it (cutover). A whole number, 0 or more.
   replicas: 1
   resources:
     requests:
@@ -291,20 +402,6 @@ nats:
     # Optional subdirectory of the volume to mount (keeps ext4's lost+found
     # out of the data dir on block-backed PVCs).
     subPath: ""
-
-# Database (Turso / libSQL) credentials. Each is a standard Kubernetes
-# EnvVarSource: set `value` for a plain literal, or `valueFrom`
-# (e.g. secretKeyRef) to source it from a Secret.
-# valueFrom takes precedence when both are set.
-database:
-  # URL to the libSQL (Turso) server. If empty and sqld.enabled=true,
-  # derived as http://<fullname>-sqld:8080. If empty and
-  # sqld.enabled=false, chart render fails.
-  url: ""
-  # Authentication token for the libSQL server
-  authToken:
-    value: "CHANGE_ME"
-    valueFrom: {}
 
 # Session cookie secret (required credential)
 sessionCookieSecret:

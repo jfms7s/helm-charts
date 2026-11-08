@@ -1,0 +1,10 @@
+# Layered on top of test-values.yaml (helm lint/template/kubeconform in CI): renders the
+# one-shot copy Job (sqld to Postgres), which test-values.yaml leaves off so that default-off
+# stays covered. sourceUrl stays empty: it is derived from the CI sqld (sqld.enabled).
+copyJob:
+  enabled: true
+  image:
+    tag: v0.0.0-test
+  sourceTokenSecret:
+    name: firstdime-secrets
+    key: db-auth-token

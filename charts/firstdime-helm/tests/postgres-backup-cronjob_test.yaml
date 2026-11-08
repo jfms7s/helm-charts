@@ -1,0 +1,244 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-backup-cronjob
+templates:
+  - templates/postgres-backup-cronjob.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: renders the CronJob with CI values
+    asserts:
+      - isKind:
+          of: CronJob
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-firstdime-postgres-backup
+      - equal:
+          path: spec.schedule
+          value: "30 2 * * *"
+      - equal:
+          path: spec.timeZone
+          value: Etc/UTC
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Forbid
+      - equal:
+          path: spec.startingDeadlineSeconds
+          value: 3600
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: 3
+      - equal:
+          path: spec.failedJobsHistoryLimit
+          value: 1
+      - equal:
+          path: spec.jobTemplate.spec.ttlSecondsAfterFinished
+          value: 86400
+      - equal:
+          path: spec.jobTemplate.spec.backoffLimit
+          value: 0
+      - equal:
+          path: spec.jobTemplate.spec.activeDeadlineSeconds
+          value: 3600
+
+  - it: renders nothing when backup.enabled is false
+    set:
+      backup.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders nothing when postgres.enabled is false
+    set:
+      postgres.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: honours a custom schedule
+    set:
+      backup.schedule: "0 4 * * 0"
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "0 4 * * 0"
+
+  - it: pod labels carry no helm.sh/chart, metadata labels do
+    asserts:
+      - isNull:
+          path: spec.jobTemplate.spec.template.metadata.labels["helm.sh/chart"]
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: postgres-backup
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: backup
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+
+  - it: hardens the pod and the container
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.restartPolicy
+          value: Never
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+  - it: overrides the uid and gid
+    set:
+      backup.runAsUser: 1234
+      backup.runAsGroup: 4321
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.securityContext.runAsUser
+          value: 1234
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.securityContext.runAsGroup
+          value: 4321
+
+  - it: uses the postgres image
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].image
+          value: docker.io/library/postgres:18.6-bookworm
+
+  - it: connects through DATABASE_URL from the Secret
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-postgres
+                key: DATABASE_URL
+      - notContains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          any: true
+          content:
+            name: PGPASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-postgres
+                key: POSTGRES_PASSWORD
+      - matchRegex:
+          path: spec.jobTemplate.spec.template.spec.containers[0].args[0]
+          pattern: '--dbname="\$DATABASE_URL"'
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: RETAIN_COUNT
+            value: "14"
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: TZ
+            value: UTC
+
+  - it: passes a custom retainCount
+    set:
+      backup.retainCount: 30
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: RETAIN_COUNT
+            value: "30"
+
+  - it: dumps in custom format and checks the dump before keeping it
+    asserts:
+      - matchRegex:
+          path: spec.jobTemplate.spec.template.spec.containers[0].args[0]
+          pattern: 'pg_dump --format=custom --no-password'
+      - matchRegex:
+          path: spec.jobTemplate.spec.template.spec.containers[0].args[0]
+          pattern: 'pg_restore --list'
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command
+          value: [sh, -c]
+
+  - it: mounts the NFS export at /backups and an emptyDir at /tmp
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content:
+            name: backups
+            nfs:
+              server: 192.0.2.10
+              path: /volume1/k8s/volumes/firstdime/postgres-backups
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content:
+            name: tmp
+            emptyDir: {}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts
+          content:
+            name: backups
+            mountPath: /backups
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+
+  - it: sets the container resources
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].resources
+          value:
+            requests:
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+
+  - it: fails when backup.nfs.server is empty
+    set:
+      backup.nfs.server: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "backup.nfs.server and backup.nfs.path must be set"
+
+  - it: fails when backup.nfs.path is empty
+    set:
+      backup.nfs.path: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "backup.nfs.server and backup.nfs.path must be set"
+
+  - it: fails when backup.retainCount is 0
+    set:
+      backup.retainCount: 0
+    asserts:
+      - failedTemplate:
+          errorPattern: "backup.retainCount must be a whole number"
+
+  - it: fails when backup.retainCount is not a number
+    set:
+      backup.retainCount: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "backup.retainCount must be a whole number"
+
+  - it: fails when backup.schedule is empty
+    set:
+      backup.schedule: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "backup.schedule must be set"

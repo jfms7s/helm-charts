@@ -1,0 +1,386 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-statefulset
+templates:
+  - templates/postgres-statefulset.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: renders with CI values
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-firstdime-postgres
+      - equal:
+          path: spec.serviceName
+          value: RELEASE-NAME-firstdime-postgres
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.updateStrategy.type
+          value: RollingUpdate
+      - equal:
+          path: spec.persistentVolumeClaimRetentionPolicy
+          value:
+            whenDeleted: Retain
+            whenScaled: Retain
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/library/postgres:18.6-bookworm
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 5432
+
+  - it: renders nothing when postgres.enabled is false
+    set:
+      postgres.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: pod labels carry no helm.sh/chart, metadata labels do
+    asserts:
+      - isNull:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: postgres
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: database
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: postgres
+            app.kubernetes.io/instance: RELEASE-NAME
+
+  - it: hardens the pod and the container
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 60
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      - isNull:
+          path: spec.template.spec.imagePullSecrets
+
+  - it: passes the default server settings as -c flags, sorted
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - -c
+            - timezone=UTC
+            - -c
+            - log_timezone=UTC
+            - -c
+            - max_connections=30
+            - -c
+            - shared_buffers=128MB
+
+  - it: sorts a custom config by key (merged with the defaults)
+    set:
+      postgres.config:
+        work_mem: 8MB
+        max_connections: "50"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - -c
+            - timezone=UTC
+            - -c
+            - log_timezone=UTC
+            - -c
+            - max_connections=50
+            - -c
+            - shared_buffers=128MB
+            - -c
+            - work_mem=8MB
+
+  - it: renders only the fixed time zone flags with an empty config
+    set:
+      postgres.config:
+        max_connections: null
+        shared_buffers: null
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - -c
+            - timezone=UTC
+            - -c
+            - log_timezone=UTC
+
+  - it: sets the environment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_USER
+            value: firstdime
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_DB
+            value: firstdime
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-postgres
+                key: POSTGRES_PASSWORD
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_INITDB_ARGS
+            value: "--locale=C --encoding=UTF8"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGDATA
+            value: /var/lib/postgresql/data/pgdata
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TZ
+            value: UTC
+
+  - it: TZ stays UTC whatever tz says
+    set:
+      tz: Europe/Lisbon
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: TZ
+            value: UTC
+
+  - it: overrides user, database, initdb args and the Secret
+    set:
+      postgres.user: fd
+      postgres.database: fddb
+      postgres.initdbArgs: "--locale=C.UTF-8"
+      postgres.existingSecret: other-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_USER
+            value: fd
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_DB
+            value: fddb
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_INITDB_ARGS
+            value: "--locale=C.UTF-8"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: other-secret
+                key: POSTGRES_PASSWORD
+
+  - it: probes check TCP on 127.0.0.1 as the configured user and database
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe
+          value:
+            exec:
+              command: [pg_isready, -h, 127.0.0.1, -p, "5432", -U, firstdime, -d, firstdime]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            exec:
+              command: [pg_isready, -h, 127.0.0.1, -p, "5432", -U, firstdime, -d, firstdime]
+            periodSeconds: 10
+            timeoutSeconds: 5
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            exec:
+              command: [pg_isready, -h, 127.0.0.1, -p, "5432", -U, firstdime, -d, firstdime]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+
+  - it: probes follow a custom user and database
+    set:
+      postgres.user: fd
+      postgres.database: fddb
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value: [pg_isready, -h, 127.0.0.1, -p, "5432", -U, fd, -d, fddb]
+
+  - it: mounts the data subPath, run and tmp
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts
+          value:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+            - name: run
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+      - equal:
+          path: spec.template.spec.volumes
+          value:
+            - name: run
+              emptyDir: {}
+            - name: tmp
+              emptyDir: {}
+
+  - it: sizes the container from postgres.resources
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            requests:
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+
+  - it: has a retained block-storage claim template
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates
+          value:
+            - metadata:
+                name: data
+                labels:
+                  app.kubernetes.io/name: postgres
+                  app.kubernetes.io/part-of: firstdime
+                  app.kubernetes.io/component: storage
+                annotations:
+                  helm.sh/resource-policy: keep
+                  argocd.argoproj.io/sync-options: Prune=false,Delete=false
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                storageClassName: synology-iscsi
+                resources:
+                  requests:
+                    storage: 2Gi
+
+  - it: overrides the storage class and size
+    set:
+      postgres.storageClass: fast-block
+      postgres.size: 10Gi
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: fast-block
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 10Gi
+
+  - it: passes nodeSelector, tolerations and affinity through
+    set:
+      postgres.nodeSelector:
+        disk: ssd
+      postgres.tolerations:
+        - key: dedicated
+          operator: Equal
+          value: db
+          effect: NoSchedule
+      postgres.affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution: []
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            disk: ssd
+      - equal:
+          path: spec.template.spec.tolerations[0].key
+          value: dedicated
+      - exists:
+          path: spec.template.spec.affinity.podAntiAffinity
+
+  - it: sets no placement by default
+    asserts:
+      - isNull:
+          path: spec.template.spec.nodeSelector
+      - isNull:
+          path: spec.template.spec.tolerations
+      - isNull:
+          path: spec.template.spec.affinity
+
+  - it: fails when postgres.storageClass is empty
+    set:
+      postgres.storageClass: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.storageClass and postgres.size must be set"
+
+  - it: fails when postgres.size is empty
+    set:
+      postgres.size: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.storageClass and postgres.size must be set"
+
+  - it: fails when postgres.existingSecret is empty
+    set:
+      postgres.existingSecret: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.existingSecret must name a Secret"
+
+  - it: fails when a postgres.config value is not a string
+    set:
+      postgres.config:
+        max_connections: 1000000
+    asserts:
+      - failedTemplate:
+          errorPattern: "postgres.config.max_connections must be a quoted string"
+
+  - it: skips a null config value (a dropped key)
+    set:
+      postgres.config:
+        work_mem: null
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "work_mem=<nil>"
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          any: true
+          content: "work_mem="

@@ -1,0 +1,453 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-copy-job
+templates:
+  - templates/postgres-copy-job.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: copies from the chart's own sqld in mode copy
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-firstdime-copy
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --source
+            - http://RELEASE-NAME-firstdime-sqld:8080
+            - --source-token-env
+            - COPY_SOURCE_TOKEN
+            - --target-env
+            - DATABASE_URL
+            - --migrate
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --verify-only
+
+  - it: an explicit sourceUrl wins over the in-chart sqld
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.sourceUrl: libsql://old-sqld.example.com
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args[1]
+          value: libsql://old-sqld.example.com
+
+  - it: accepts an explicit sourceUrl with sqld disabled
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      sqld.enabled: false
+      copyJob.sourceUrl: https://sqld.example.com
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].args[1]
+          value: https://sqld.example.com
+
+  - it: verify mode adds --verify-only and its own Job name
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.mode: verify
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-firstdime-copy-verify
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --source
+            - http://RELEASE-NAME-firstdime-sqld:8080
+            - --source-token-env
+            - COPY_SOURCE_TOKEN
+            - --target-env
+            - DATABASE_URL
+            - --verify-only
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: --migrate
+
+  - it: defaults the image to the migrate image with the CI tag
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg:v0.0.0-test
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: IfNotPresent
+
+  - it: overrides the tag
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.image.tag: v1.2.3
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg:v1.2.3
+
+  - it: overrides the repository
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.image.repository: ghcr.io/jfms7s/firstdime-tools
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/firstdime-tools:v0.0.0-test
+
+  - it: fails without an image tag
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.image.tag: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.image.repository and copyJob.image.tag must be set"
+
+  - it: fails without an image repository
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.image.repository: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.image.repository and copyJob.image.tag must be set"
+
+  - it: runs the default command and accepts an override
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value:
+            - node
+            - scripts/migrate-sqlite-to-pg/index.mjs
+
+  - it: overrides the command
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.command: [node, other.mjs]
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value: [node, other.mjs]
+
+  - it: reads both URLs from Secrets
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-postgres
+                key: DATABASE_URL
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: COPY_SOURCE_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-secrets
+                key: db-auth-token
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: NODE_ENV
+            value: production
+
+  - it: waits for postgres in an init container
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: wait-for-postgres
+      - equal:
+          path: spec.template.spec.initContainers[0].image
+          value: docker.io/library/postgres:18.6-bookworm
+      - equal:
+          path: spec.template.spec.initContainers[0].command
+          value: [sh, -c]
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: 'pg_isready --dbname="\$DATABASE_URL"'
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-postgres
+                key: DATABASE_URL
+
+  - it: waits for postgres and then for the source, bounded
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: wait-for-postgres
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: wait-for-source
+      - matchRegex:
+          path: spec.template.spec.initContainers[0].args[0]
+          pattern: 'timeout "\$WAIT_TIMEOUT" sh -c'
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: WAIT_TIMEOUT
+            value: "600"
+      - equal:
+          path: spec.template.spec.initContainers[1].image
+          value: ghcr.io/jfms7s/firstdime-migrate-sqlite-to-pg:v0.0.0-test
+      - equal:
+          path: spec.template.spec.initContainers[1].imagePullPolicy
+          value: IfNotPresent
+      - equal:
+          path: spec.template.spec.initContainers[1].command[0]
+          value: node
+      - equal:
+          path: spec.template.spec.initContainers[1].command[1]
+          value: -e
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: COPY_SOURCE_URL
+            value: http://RELEASE-NAME-firstdime-sqld:8080
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: WAIT_TIMEOUT
+            value: "600"
+      - equal:
+          path: spec.template.spec.initContainers[1].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      - equal:
+          path: spec.template.spec.initContainers[1].resources
+          value:
+            requests:
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+
+  - it: passes an explicit source URL and a custom wait timeout to the init containers
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.sourceUrl: libsql://old-sqld.example.com
+      copyJob.waitTimeoutSeconds: 90
+    asserts:
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: COPY_SOURCE_URL
+            value: libsql://old-sqld.example.com
+      - contains:
+          path: spec.template.spec.initContainers[1].env
+          content:
+            name: WAIT_TIMEOUT
+            value: "90"
+      - contains:
+          path: spec.template.spec.initContainers[0].env
+          content:
+            name: WAIT_TIMEOUT
+            value: "90"
+
+  - it: fails when waitTimeoutSeconds is 0
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.waitTimeoutSeconds: 0
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.waitTimeoutSeconds must be a whole number"
+
+  - it: fails when waitTimeoutSeconds is not a number
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.waitTimeoutSeconds: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.waitTimeoutSeconds must be a whole number"
+
+  - it: is a one-shot without a TTL
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - equal:
+          path: spec.backoffLimit
+          value: 0
+      - isNull:
+          path: spec.ttlSecondsAfterFinished
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 3600
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Never
+
+  - it: overrides the deadline
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.activeDeadlineSeconds: 600
+    asserts:
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 600
+
+  - it: passes imagePullSecrets through
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      imagePullSecrets:
+        - name: ghcr
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets
+          value:
+            - name: ghcr
+
+  - it: pod labels carry no helm.sh/chart, metadata labels do
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - isNull:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: postgres-copy
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: migration
+      - exists:
+          path: metadata.labels["helm.sh/chart"]
+
+  - it: hardens the pod and the containers
+    values:
+      - ../ci/copy-job-values.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+  - it: places the pod
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.nodeSelector: {disk: ssd}
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value: {disk: ssd}
+
+  - it: fails on an unknown mode
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.mode: copyy
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.mode must be copy or verify \\(got copyy\\)"
+
+  - it: fails on an empty mode
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.mode: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.mode must be copy or verify"
+
+  - it: fails without a source when sqld is disabled
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      sqld.enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.sourceUrl must be set, or sqld.enabled true"
+
+  - it: fails on a non-libSQL source URL
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.sourceUrl: ftp://x
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.sourceUrl must start with"
+
+  - it: fails without the token Secret name
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.sourceTokenSecret.name: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.sourceTokenSecret.name and .key must be set"
+
+  - it: fails without the token Secret key
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.sourceTokenSecret.key: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.sourceTokenSecret.name and .key must be set"
+
+  - it: fails without a command
+    values:
+      - ../ci/copy-job-values.yaml
+    set:
+      copyJob.command: []
+    asserts:
+      - failedTemplate:
+          errorPattern: "copyJob.command must be set"

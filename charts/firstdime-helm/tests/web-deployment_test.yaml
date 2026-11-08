@@ -103,3 +103,25 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
           value: 128Mi
+
+  - it: renders 0 replicas when web.replicas is 0
+    set:
+      web.replicas: 0
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 0
+
+  - it: fails when web.replicas is negative
+    set:
+      web.replicas: -1
+    asserts:
+      - failedTemplate:
+          errorPattern: "web.replicas must be a whole number"
+
+  - it: fails when web.replicas is not a number
+    set:
+      web.replicas: x
+    asserts:
+      - failedTemplate:
+          errorPattern: "web.replicas must be a whole number"
