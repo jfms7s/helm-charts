@@ -1,0 +1,37 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: server-ingress
+templates:
+  - templates/server-ingress.yaml
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: routes the host to the server service
+    set:
+      ingress.enabled: true
+      ingress.className: traefik
+      ingress.hosts:
+        - host: volley.example.com
+          paths: [{path: /, pathType: Prefix, port: 8080}]
+      ingress.tls:
+        - secretName: volley-tls
+          hosts: [volley.example.com]
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: spec.ingressClassName
+          value: traefik
+      - equal:
+          path: spec.rules[0].host
+          value: volley.example.com
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service
+          value:
+            name: RELEASE-NAME-volley-server
+            port: {number: 8080}
+      - equal:
+          path: spec.tls[0].secretName
+          value: volley-tls

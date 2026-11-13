@@ -12,6 +12,7 @@ helm-charts/
 │   ├── patchmon-helm/   # Chart for PatchMon application
 │   ├── tompero-helm/    # Chart for Chez Tomperô recipe manager
 │   ├── padel-score-helm/ # Chart for padel-score match scorer
+│   ├── volley-helm/     # Chart for volley browser arena brawler
 │   ├── meiun-helm/      # Chart for meiun, the LLM-villager village sim
 │   ├── eng-metrics-lab-helm/  # Chart for the eng-metrics-lab code-quality reporting stack
 │   ├── ticket-live-event-scanner-helm/  # Chart for Ticket Live Event Scanner
@@ -76,6 +77,11 @@ Application-specific chart for deploying [padel-score](https://github.com/jfms7s
 - Server deployment (single replica, Recreate; SQLite single writer) + Service + optional Ingress
 - `/data` volume for the SQLite database, with an optional chart-created PVC (kept on uninstall)
 - Public image, so no pull secret by default
+
+### volley-helm
+Application-specific chart for deploying [volley](https://github.com/jfms7s/volley), a browser arena brawler (WebSocket game server). Modeled on padel-score-helm. Includes:
+- Server deployment (single replica, Recreate; rooms live in memory) + Service + optional Ingress
+- Stateless: no volume; probes on `/healthz`
 
 ### ticket-live-event-scanner-helm
 Application-specific chart for deploying [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings. Modeled on upstream's own [deploy/k8s](https://github.com/jfms7s/ticket-live-event-scanner/tree/master/deploy/k8s) manifests. Includes:

@@ -1,0 +1,14 @@
+# CI-only: turns on every off-by-default branch so kubeconform -strict sees it
+# (layered on the defaults by the Makefile's validate loop).
+imagePullSecrets:
+  - name: regcred
+server:
+  extraEnv:
+    - name: VOLLEY_LAYOUT
+      value: crumble-1
+ingress:
+  enabled: true
+  className: traefik
+  tls:
+    - secretName: volley-tls
+      hosts: [volley.example.local]

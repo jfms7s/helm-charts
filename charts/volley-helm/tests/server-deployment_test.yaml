@@ -1,0 +1,88 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: server-deployment
+templates:
+  - templates/server-deployment.yaml
+tests:
+  - it: runs one replica with Recreate, because rooms live in memory
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-volley-server
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
+          path: spec.revisionHistoryLimit
+          value: 3
+
+  - it: uses the image and listens on 8080
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/volley:v0.1.0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: PORT, value: "8080"}
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 8080
+
+  - it: probes the /healthz endpoint
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
+          value: /healthz
+
+  - it: hardened security defaults with a numeric uid
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+            seccompProfile: {type: RuntimeDefault}
+
+  - it: has no volumes
+    asserts:
+      - notExists:
+          path: spec.template.spec.volumes
+
+  - it: no pull secrets by default
+    asserts:
+      - notExists:
+          path: spec.template.spec.imagePullSecrets
+
+  - it: passes pull secrets and extra env through
+    set:
+      imagePullSecrets: [{name: ghcr-pull}]
+      server.extraEnv:
+        - {name: VOLLEY_LAYOUT, value: crumble-1}
+        - name: SECRET
+          valueFrom: {secretKeyRef: {name: s, key: k}}
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets
+          value: [{name: ghcr-pull}]
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: VOLLEY_LAYOUT, value: crumble-1}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SECRET
+            valueFrom: {secretKeyRef: {name: s, key: k}}
