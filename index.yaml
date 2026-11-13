@@ -1829,4 +1829,25 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-08T15:21:59.327380148Z"
+  volley-helm:
+  - apiVersion: v2
+    appVersion: v0.1.0
+    created: "2026-11-13T19:26:56.058017683Z"
+    description: A Helm chart for volley, a browser arena brawler for 2-10 players
+    digest: fa8b39ae3a6a78aee487aaac94d72a0254b47394b7ab9fa277e87fad30946e79
+    keywords:
+    - volley
+    - game
+    - websocket
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: volley-helm
+    sources:
+    - https://github.com/jfms7s/volley
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/volley-helm-0.1.0/volley-helm-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-11-13T19:26:56.058187172Z"
