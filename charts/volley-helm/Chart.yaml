@@ -1,0 +1,16 @@
+apiVersion: v2
+name: volley-helm
+description: A Helm chart for volley, a browser arena brawler for 2-10 players
+type: application
+version: 0.1.0
+appVersion: "v0.1.0"
+keywords:
+  - volley
+  - game
+  - websocket
+sources:
+  - https://github.com/jfms7s/volley
+  - https://github.com/jfms7s/helm-charts
+maintainers:
+  - name: jfms7s
+    url: https://github.com/jfms7s

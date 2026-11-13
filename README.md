@@ -22,6 +22,9 @@ Deploys [Chez Tomperô](https://github.com/jfms7s/tompero), a self-hosted recipe
 ### padel-score-helm
 Deploys [padel-score](https://github.com/jfms7s/padel-score), a padel match scorer with live spectator links, as a single server container with SQLite. See [charts/padel-score-helm/README.md](charts/padel-score-helm/README.md).
 
+### volley-helm
+Deploys [volley](https://github.com/jfms7s/volley), a browser arena brawler for 2-10 players, as a single stateless server container (rooms live in memory, so one replica). See [charts/volley-helm/README.md](charts/volley-helm/README.md).
+
 ### ticket-live-event-scanner-helm
 Deploys [Ticket Live Event Scanner](https://github.com/jfms7s/ticket-live-event-scanner), a scraper/notifier pipeline for ticketline.pt event listings. See [charts/ticket-live-event-scanner-helm/README.md](charts/ticket-live-event-scanner-helm/README.md).
 
