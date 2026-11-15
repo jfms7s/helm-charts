@@ -1,0 +1,8 @@
+# postgres_exporter Deployment on (layered on test-values.yaml) so kubeconform checks it.
+# The PodMonitor needs the monitoring.coreos.com/v1 CRD in the render's API versions, which CI's plain
+# `helm template` does not pass, so it is covered by tests/postgres-podmonitor_test.yaml instead.
+postgres:
+  exporter:
+    enabled: true
+monitoring:
+  enabled: true

@@ -1,0 +1,88 @@
+{{- if and .Values.postgres.enabled .Values.postgres.exporter.enabled }}
+{{- include "firstdime-helm.validate" . }}
+{{- $exporter := .Values.postgres.exporter }}
+{{- if not $exporter.dsnSecret.key }}
+{{- fail "firstdime-helm: postgres.exporter.dsnSecret.key must name the Secret key holding the exporter's connection URL" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "firstdime-helm.postgresHost" . }}-exporter
+  labels:
+    {{- include "firstdime-helm.labels" (dict "context" $ "name" "postgres-exporter" "component" "metrics") | nindent 4 }}
+spec:
+  # A separate pod, not a sidecar of the StatefulSet: adding, changing or removing it never restarts Postgres,
+  # and a bad image cannot take the database down. It connects through the Service.
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "firstdime-helm.selectorLabels" (dict "context" $ "name" "postgres-exporter") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "firstdime-helm.podLabels" (dict "context" $ "name" "postgres-exporter" "component" "metrics") | nindent 8 }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      securityContext:
+        # The image's user, nobody.
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with $exporter.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $exporter.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $exporter.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: postgres-exporter
+          image: {{ $exporter.image.repository }}:{{ $exporter.image.tag }}
+          imagePullPolicy: {{ $exporter.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: DATA_SOURCE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $exporter.dsnSecret.name | default .Values.postgres.existingSecret | quote }}
+                  key: {{ $exporter.dsnSecret.key | quote }}
+            # The chart's Postgres serves no TLS, and the exporter's driver otherwise tries it first.
+            - name: PGSSLMODE
+              value: "disable"
+          ports:
+            - name: metrics
+              containerPort: 9187
+          # The landing page answers without touching the database, so a Postgres outage shows as pg_up 0
+          # (which the alerts read), not as a restarting exporter.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: metrics
+            periodSeconds: 30
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: metrics
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            {{- toYaml $exporter.resources | nindent 12 }}
+{{- end }}

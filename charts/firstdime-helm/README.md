@@ -13,6 +13,7 @@ This chart deploys a complete First Dime stack on Kubernetes, including:
 - **Worker**: Async task processor, scheduler, and event bus relay (Deployment)
 - **Database (Postgres 18)**: StatefulSet + Service on a block-storage (iSCSI) volume, used by the api and the worker. See [Postgres](#postgres)
 - **Backups**: nightly `pg_dump` CronJob to an NFS export. See [Backups](#backups)
+- **postgres_exporter** (optional): Prometheus metrics for the chart's Postgres (Deployment, plus a PodMonitor with `monitoring.enabled`; off by default). See [Postgres metrics](#postgres-metrics)
 - **Database (sqld, legacy)** (optional): the old LibSQL server (Deployment + Service, off by default, strategy: Recreate), kept only for the move to Postgres. See [sqld](#sqld-legacy)
 - **Copy Job** (optional): one-shot Job that copies sqld into Postgres and verifies it. See [Copy Job](#copy-job)
 - **NATS JetStream**: In-cluster message bus for webhooks and events (Deployment + Service)
@@ -160,6 +161,13 @@ resource and default PVC name changes on the move to 0.7.0: it is a data migrati
 | `postgres.config` | Server settings, each `-c key=value`, values quoted strings (a bare number fails the render). Merges with the defaults; a `null` drops a key | `max_connections: "30"`, `shared_buffers: "128MB"` |
 | `postgres.resources` | Requests/limits (sized for a 4 GB Pi) | `256Mi` / `512Mi` memory |
 | `postgres.nodeSelector` / `postgres.tolerations` / `postgres.affinity` | Pod placement | `{}` / `[]` / `{}` |
+| `postgres.exporter.enabled` | Deploy `postgres_exporter` as its own Deployment (`<fullname>-postgres-exporter`, needs `postgres.enabled`). See [Postgres metrics](#postgres-metrics) | `false` |
+| `postgres.exporter.image.{repository,tag,pullPolicy}` | Exporter image (callers may pin a digest) | `quay.io/prometheuscommunity/postgres-exporter`, `v0.20.1`, `IfNotPresent` |
+| `postgres.exporter.dsnSecret.{name,key}` | Secret and key holding the exporter's connection URL (`DATA_SOURCE_NAME`). An empty name means `postgres.existingSecret`, so by default the exporter logs in as the application user through `DATABASE_URL`. The key is required | `""`, `DATABASE_URL` |
+| `postgres.exporter.resources` | Requests/limits of the exporter | `16Mi` / `64Mi` memory |
+| `postgres.exporter.nodeSelector` / `postgres.exporter.tolerations` / `postgres.exporter.affinity` | Pod placement for the exporter | `{}` / `[]` / `{}` |
+| `monitoring.enabled` | Render Prometheus Operator monitors: today the exporter's `PodMonitor` (needs `postgres.exporter.enabled`). Rendered only when the cluster serves `monitoring.coreos.com/v1/PodMonitor` | `false` |
+| `monitoring.interval` / `monitoring.labels` | Scrape interval, and extra labels on the monitors (e.g. for a Prometheus `podMonitorSelector`) | `30s` / `{}` |
 | `backup.enabled` | Render the nightly `pg_dump` CronJob (needs `postgres.enabled`) | `true` |
 | `backup.schedule` | Cron expression, always UTC | `30 2 * * *` |
 | `backup.retainCount` | Dumps kept on the NAS (whole number, 1 or more) | `14` |
@@ -339,6 +347,26 @@ The api and the worker run on Postgres 18. The chart renders a single-replica St
 - **Claim**: `data-<fullname>-postgres-0`, kept on uninstall (`persistentVolumeClaimRetentionPolicy: Retain`, `helm.sh/resource-policy: keep`, and Argo CD `Prune=false,Delete=false`). The volumeClaimTemplate is immutable, so changing `postgres.storageClass` or `postgres.size` makes Argo CD fail the sync. `kubectl delete statefulset <fullname>-postgres --cascade=orphan` only clears that error: the recreated StatefulSet adopts the existing pod and claim, so neither size nor class changes. A size change needs a manual PVC patch (if the storage class allows expansion); a class change needs a dump and a restore onto a new claim.
 - **Resources**: 256Mi requested, 512Mi limit, `shared_buffers: 128MB` and `max_connections: 30`, sized for a 4 GB Pi.
 - **`database.*` is gone**: `database.url` and `database.authToken` were removed in 0.10.0. Passing a `database` key fails the render.
+
+## Postgres metrics
+
+With `postgres.exporter.enabled`, the chart runs [postgres_exporter](https://github.com/prometheus-community/postgres_exporter) as a one-replica Deployment, `<fullname>-postgres-exporter`, serving metrics on port `metrics` (9187). It is a separate pod, not a container in the StatefulSet: turning it on, changing it or removing it never restarts Postgres, and a bad exporter image cannot take the database down. It connects through the `<fullname>-postgres` Service with `PGSSLMODE=disable` (the chart's Postgres serves no TLS). Its probes read the landing page, which does not touch the database: when Postgres is unreachable the exporter stays up and reports `pg_up 0`.
+
+With `monitoring.enabled` as well, a `PodMonitor` of the same name scrapes it every `monitoring.interval`. The PodMonitor renders only when the cluster serves the `monitoring.coreos.com/v1` CRDs (kube-prometheus-stack). The alert rules live with the Prometheus configuration, not in this chart.
+
+Series the alerts use (checked against v0.20.1 and Postgres 18): `pg_up`, `pg_stat_database_xact_commit{datname}`, `pg_stat_database_deadlocks{datname}`, `pg_settings_max_connections`, `pg_stat_activity_count{datname,state}` and `pg_stat_activity_max_tx_duration{datname,state}` (seconds). The exporter's own scrape queries count as commits.
+
+**Login.** By default the exporter reads `DATABASE_URL` from `postgres.existingSecret` and logs in as the application user (the database owner). To give it a dedicated read-only monitoring login instead:
+
+1. On the database, as the owner:
+
+   ```sql
+   CREATE ROLE fd_monitor LOGIN PASSWORD '<new password>';
+   GRANT pg_monitor TO fd_monitor;
+   ```
+
+2. Add a Secret key holding the full URL, the password URL-encoded: `postgres://fd_monitor:<url-encoded password>@<fullname>-postgres:5432/<database>`.
+3. Set `postgres.exporter.dsnSecret.name` and `postgres.exporter.dsnSecret.key` to that Secret and key. Changing them restarts only the exporter.
 
 ## Backups
 
