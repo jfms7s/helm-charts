@@ -99,6 +99,24 @@ tests:
           path: spec.podMetricsEndpoints[0].interval
           value: 60s
 
+  - it: keeps the chart's labels when monitoring.labels repeats one
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      postgres.exporter.enabled: true
+      monitoring.enabled: true
+      monitoring.labels:
+        app.kubernetes.io/name: other
+        release: kube-prometheus-stack
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: postgres-exporter
+      - equal:
+          path: metadata.labels.release
+          value: kube-prometheus-stack
+
   - it: renders nothing when the cluster has no PodMonitor CRD
     set:
       postgres.exporter.enabled: true

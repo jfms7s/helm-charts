@@ -118,6 +118,14 @@ tests:
       - failedTemplate:
           errorMessage: "firstdime-helm: postgres.exporter.dsnSecret.key must name the Secret key holding the exporter's connection URL"
 
+  - it: fails with the friendly message when dsnSecret is null
+    set:
+      postgres.exporter.enabled: true
+      postgres.exporter.dsnSecret: null
+    asserts:
+      - failedTemplate:
+          errorMessage: "firstdime-helm: postgres.exporter.dsnSecret.key must name the Secret key holding the exporter's connection URL"
+
   - it: fails without postgres.existingSecret
     set:
       postgres.exporter.enabled: true

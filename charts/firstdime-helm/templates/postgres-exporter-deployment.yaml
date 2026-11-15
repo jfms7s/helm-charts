@@ -1,7 +1,8 @@
 {{- if and .Values.postgres.enabled .Values.postgres.exporter.enabled }}
 {{- include "firstdime-helm.validate" . }}
 {{- $exporter := .Values.postgres.exporter }}
-{{- if not $exporter.dsnSecret.key }}
+{{- $dsnSecret := $exporter.dsnSecret | default dict }}
+{{- if not $dsnSecret.key }}
 {{- fail "firstdime-helm: postgres.exporter.dsnSecret.key must name the Secret key holding the exporter's connection URL" }}
 {{- end }}
 apiVersion: apps/v1
@@ -60,8 +61,8 @@ spec:
             - name: DATA_SOURCE_NAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ $exporter.dsnSecret.name | default .Values.postgres.existingSecret | quote }}
-                  key: {{ $exporter.dsnSecret.key | quote }}
+                  name: {{ $dsnSecret.name | default .Values.postgres.existingSecret | quote }}
+                  key: {{ $dsnSecret.key | quote }}
             # The chart's Postgres serves no TLS, and the exporter's driver otherwise tries it first.
             - name: PGSSLMODE
               value: "disable"

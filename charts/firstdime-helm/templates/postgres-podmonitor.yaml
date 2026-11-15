@@ -4,10 +4,9 @@ kind: PodMonitor
 metadata:
   name: {{ include "firstdime-helm.postgresHost" . }}-exporter
   labels:
-    {{- include "firstdime-helm.labels" (dict "context" $ "name" "postgres-exporter" "component" "metrics") | nindent 4 }}
-    {{- with .Values.monitoring.labels }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
+    {{- /* The chart's own labels win over a monitoring.labels key of the same name (no duplicate keys). */}}
+    {{- $labels := include "firstdime-helm.labels" (dict "context" $ "name" "postgres-exporter" "component" "metrics") | fromYaml }}
+    {{- toYaml (merge $labels (.Values.monitoring.labels | default dict)) | nindent 4 }}
 spec:
   selector:
     matchLabels:
