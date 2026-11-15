@@ -808,6 +808,25 @@ entries:
   firstdime-helm:
   - apiVersion: v2
     appVersion: 0.18.0
+    created: "2026-11-15T20:04:33.631977251Z"
+    description: A Helm chart for deploying First Dime (Number One Dime) on Kubernetes
+    digest: 3b91d25490d9bbf5544e88a2abd1289a85b03705077dd0ffe7de26adbb59413d
+    keywords:
+    - firstdime
+    - personal-finance
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: firstdime-helm
+    sources:
+    - https://github.com/jfms7s/firstdime
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/firstdime-helm-0.11.0/firstdime-helm-0.11.0.tgz
+    version: 0.11.0
+  - apiVersion: v2
+    appVersion: 0.18.0
     created: "2026-11-08T15:21:59.327202732Z"
     description: A Helm chart for deploying First Dime (Number One Dime) on Kubernetes
     digest: 24ebd5e0c3ace168ba3703e8de627d26f81b11d168dcce9bd703245c4996dbd7
@@ -1850,4 +1869,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/volley-helm-0.1.0/volley-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-13T19:26:56.058187172Z"
+generated: "2026-11-15T20:04:33.632088552Z"
