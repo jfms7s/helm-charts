@@ -1,0 +1,156 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-exporter-deployment
+templates:
+  - templates/postgres-exporter-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+chart:
+  version: 0.0.0-test
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders nothing when postgres.enabled is false, even with the exporter on
+    set:
+      postgres.enabled: false
+      postgres.exporter.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders its own Deployment when enabled
+    set:
+      postgres.exporter.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-firstdime-postgres-exporter
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: metadata.labels["helm.sh/chart"]
+          value: firstdime-helm-0.0.0-test
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: postgres-exporter
+            app.kubernetes.io/instance: RELEASE-NAME
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: metrics
+              containerPort: 9187
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATA_SOURCE_NAME
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-postgres
+                key: DATABASE_URL
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGSSLMODE
+            value: disable
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            requests:
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+
+  - it: is hardened like the other pods
+    set:
+      postgres.exporter.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+  - it: reads the connection URL from dsnSecret when it is set
+    set:
+      postgres.exporter.enabled: true
+      postgres.exporter.dsnSecret.name: firstdime-postgres-monitor
+      postgres.exporter.dsnSecret.key: MONITOR_DATABASE_URL
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATA_SOURCE_NAME
+            valueFrom:
+              secretKeyRef:
+                name: firstdime-postgres-monitor
+                key: MONITOR_DATABASE_URL
+
+  - it: fails when dsnSecret.key is empty
+    set:
+      postgres.exporter.enabled: true
+      postgres.exporter.dsnSecret.key: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "firstdime-helm: postgres.exporter.dsnSecret.key must name the Secret key holding the exporter's connection URL"
+
+  - it: fails with the friendly message when dsnSecret is null
+    set:
+      postgres.exporter.enabled: true
+      postgres.exporter.dsnSecret: null
+    asserts:
+      - failedTemplate:
+          errorMessage: "firstdime-helm: postgres.exporter.dsnSecret.key must name the Secret key holding the exporter's connection URL"
+
+  - it: fails without postgres.existingSecret
+    set:
+      postgres.exporter.enabled: true
+      postgres.existingSecret: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "firstdime-helm: postgres.existingSecret must name a Secret with keys POSTGRES_PASSWORD and DATABASE_URL"
+
+  - it: places the pod with the exporter's own nodeSelector, tolerations and affinity
+    set:
+      postgres.exporter.enabled: true
+      postgres.exporter.nodeSelector:
+        kubernetes.io/arch: arm64
+      postgres.exporter.tolerations:
+        - key: dedicated
+          operator: Exists
+      postgres.exporter.affinity:
+        nodeAffinity: {}
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            kubernetes.io/arch: arm64
+      - equal:
+          path: spec.template.spec.tolerations[0].key
+          value: dedicated
+      - exists:
+          path: spec.template.spec.affinity.nodeAffinity

@@ -43,6 +43,36 @@ postgres:
   nodeSelector: {}
   tolerations: []
   affinity: {}
+  # postgres_exporter as its own small Deployment (rendered when postgres.enabled and exporter.enabled). It reaches
+  # Postgres through the Service, so turning it on or off never restarts the database. Metrics on port 9187;
+  # Prometheus finds it through the PodMonitor (monitoring.enabled).
+  exporter:
+    enabled: false
+    image:
+      repository: quay.io/prometheuscommunity/postgres-exporter
+      tag: "v0.20.1"         # CI-tested against Postgres 13-18; multi-arch (amd64, arm64). Callers may pin a digest.
+      pullPolicy: IfNotPresent
+    # Secret key holding the exporter's connection URL (DATA_SOURCE_NAME). name "" = postgres.existingSecret, so
+    # by default it logs in as the application user via DATABASE_URL. For a dedicated pg_monitor login, point
+    # this at a key holding postgres://fd_monitor:<url-encoded password>@<fullname>-postgres:5432/<database>
+    # (see the README). TLS is off (PGSSLMODE=disable): the chart's Postgres serves no TLS.
+    dsnSecret:
+      name: ""
+      key: DATABASE_URL
+    resources:
+      requests:
+        memory: 16Mi
+      limits:
+        memory: 64Mi
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+# Prometheus Operator objects (PodMonitor), rendered only when the cluster serves the monitoring.coreos.com/v1 CRDs.
+monitoring:
+  enabled: false
+  interval: 30s
+  labels: {}               # extra labels on the monitors, e.g. for a Prometheus podMonitorSelector
 
 # Nightly pg_dump of the chart's Postgres to an NFS export (rendered when postgres.enabled and backup.enabled).
 # A dump is renamed into place only after pg_restore can read it; older ones are deleted after each good dump.

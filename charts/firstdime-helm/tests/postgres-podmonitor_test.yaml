@@ -1,0 +1,126 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: postgres-podmonitor
+templates:
+  - templates/postgres-podmonitor.yaml
+values:
+  - ../ci/test-values.yaml
+chart:
+  version: 0.0.0-test
+tests:
+  - it: renders nothing by default
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders nothing with only the exporter on
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      postgres.exporter.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders nothing with only monitoring on
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders nothing when postgres.enabled is false
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      postgres.enabled: false
+      postgres.exporter.enabled: true
+      monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a PodMonitor for the exporter pod when both switches are on
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      postgres.exporter.enabled: true
+      monitoring.enabled: true
+    release:
+      namespace: firstdime
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PodMonitor
+      - isAPIVersion:
+          of: monitoring.coreos.com/v1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-firstdime-postgres-exporter
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: postgres-exporter
+            app.kubernetes.io/instance: RELEASE-NAME
+      - equal:
+          path: spec.namespaceSelector.matchNames
+          value: [firstdime]
+      - equal:
+          path: spec.podMetricsEndpoints
+          value:
+            - port: metrics
+              path: /metrics
+              interval: 30s
+
+  - it: adds monitoring.labels and monitoring.interval
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      postgres.exporter.enabled: true
+      monitoring.enabled: true
+      monitoring.interval: 60s
+      monitoring.labels:
+        release: kube-prometheus-stack
+    asserts:
+      - equal:
+          path: metadata.labels.release
+          value: kube-prometheus-stack
+      - equal:
+          path: spec.podMetricsEndpoints[0].interval
+          value: 60s
+
+  - it: keeps the chart's labels when monitoring.labels repeats one
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      postgres.exporter.enabled: true
+      monitoring.enabled: true
+      monitoring.labels:
+        app.kubernetes.io/name: other
+        release: kube-prometheus-stack
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: postgres-exporter
+      - equal:
+          path: metadata.labels.release
+          value: kube-prometheus-stack
+
+  - it: renders nothing when the cluster has no PodMonitor CRD
+    set:
+      postgres.exporter.enabled: true
+      monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
