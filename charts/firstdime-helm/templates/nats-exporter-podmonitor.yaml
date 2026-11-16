@@ -1,0 +1,21 @@
+{{- if and .Values.nats.exporter.enabled .Values.monitoring.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor") }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "firstdime-helm.fullname" . }}-nats-exporter
+  labels:
+    {{- /* The chart's own labels win over a monitoring.labels key of the same name (no duplicate keys). */}}
+    {{- $labels := include "firstdime-helm.labels" (dict "context" $ "name" "nats-exporter" "component" "metrics") | fromYaml }}
+    {{- toYaml (merge $labels (.Values.monitoring.labels | default dict)) | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "firstdime-helm.selectorLabels" (dict "context" $ "name" "nats-exporter") | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.monitoring.interval }}
+{{- end }}

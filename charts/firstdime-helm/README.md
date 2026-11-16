@@ -17,6 +17,7 @@ This chart deploys a complete First Dime stack on Kubernetes, including:
 - **Database (sqld, legacy)** (optional): the old LibSQL server (Deployment + Service, off by default, strategy: Recreate), kept only for the move to Postgres. See [sqld](#sqld-legacy)
 - **Copy Job** (optional): one-shot Job that copies sqld into Postgres and verifies it. See [Copy Job](#copy-job)
 - **NATS JetStream**: In-cluster message bus for webhooks and events (Deployment + Service)
+- **Health metrics** (optional): the worker's Prometheus `/metrics` port and a `prometheus-nats-exporter` Deployment for JetStream consumer lag, each with a PodMonitor under `monitoring.enabled` (all off by default). See [Health metrics](#health-metrics)
 - **Frankfurter** (optional): exchange-rate API for the worker's hourly rate feed (Deployment + Service + PVC, disabled by default, strategy: Recreate)
 - **bank-sync** (optional): [Enable Banking](https://enablebanking.com) client that pushes booked bank transactions into the api through `POST /imports` (Deployment + Service + Ingress + PVC, disabled by default, strategy: Recreate). See [Bank sync](#bank-sync)
 
@@ -166,7 +167,7 @@ resource and default PVC name changes on the move to 0.7.0: it is a data migrati
 | `postgres.exporter.dsnSecret.{name,key}` | Secret and key holding the exporter's connection URL (`DATA_SOURCE_NAME`). An empty name means `postgres.existingSecret`, so by default the exporter logs in as the application user through `DATABASE_URL`. The key is required | `""`, `DATABASE_URL` |
 | `postgres.exporter.resources` | Requests/limits of the exporter | `16Mi` / `64Mi` memory |
 | `postgres.exporter.nodeSelector` / `postgres.exporter.tolerations` / `postgres.exporter.affinity` | Pod placement for the exporter | `{}` / `[]` / `{}` |
-| `monitoring.enabled` | Render Prometheus Operator monitors: today the exporter's `PodMonitor` (needs `postgres.exporter.enabled`). Rendered only when the cluster serves `monitoring.coreos.com/v1/PodMonitor` | `false` |
+| `monitoring.enabled` | Render Prometheus Operator monitors: one `PodMonitor` each for `postgres.exporter`, `worker.metrics` and `nats.exporter`, for whichever of them is enabled. Rendered only when the cluster serves `monitoring.coreos.com/v1/PodMonitor` | `false` |
 | `monitoring.interval` / `monitoring.labels` | Scrape interval, and extra labels on the monitors (e.g. for a Prometheus `podMonitorSelector`) | `30s` / `{}` |
 | `backup.enabled` | Render the nightly `pg_dump` CronJob (needs `postgres.enabled`) | `true` |
 | `backup.schedule` | Cron expression, always UTC | `30 2 * * *` |
@@ -183,6 +184,10 @@ resource and default PVC name changes on the move to 0.7.0: it is a data migrati
 | `copyJob.activeDeadlineSeconds` / `copyJob.resources` / `copyJob.nodeSelector` / `copyJob.tolerations` / `copyJob.affinity` | Deadline, requests/limits (`256Mi` / `1Gi`) and pod placement | `3600` |
 | `api.replicas` / `web.replicas` | Whole number, 0 or more; 0 stops it (cutover) | `1` |
 | `worker.replicas` / `bankSync.replicas` | 0 or 1 (never two); 0 stops it (cutover) | `1` |
+| `worker.metrics.enabled` / `worker.metrics.port` | Declare the worker's `metrics` container port and set `WORKER_METRICS_PORT`, so the worker serves Prometheus `/metrics` there (never routed by an Ingress). Needs a worker image that has the metrics server. See [Health metrics](#health-metrics) | `false` / `9464` |
+| `nats.exporter.enabled` | Deploy `prometheus-nats-exporter` as its own Deployment (`<fullname>-nats-exporter`). See [Health metrics](#health-metrics) | `false` |
+| `nats.exporter.image.{repository,tag,pullPolicy}` | Exporter image (Docker Hub only; `mirror.gcr.io/natsio/prometheus-nats-exporter` serves the same tags). Callers may pin a digest | `docker.io/natsio/prometheus-nats-exporter`, `0.20.3`, `IfNotPresent` |
+| `nats.exporter.resources` / `nats.exporter.nodeSelector` / `nats.exporter.tolerations` / `nats.exporter.affinity` | Requests/limits and pod placement of the exporter | `16Mi` / `64Mi` memory; `{}` / `[]` / `{}` |
 | `worker.jobsEnabled` | `WORKER_JOBS_ENABLED`: `false` runs no scheduled job and no outbound runner (webhooks, email, notifications) while the relay and the event consumers keep running. Must be a boolean | `true` |
 | `sqld.enabled` | Deploy the legacy sqld (copy source during the cutover window; rollback). The api and worker never connect to it | `false` |
 | `registrationEnabled` | Allow new user registration via sign-up form | `true` |
@@ -367,6 +372,19 @@ Series the alerts use (checked against v0.20.1 and Postgres 18): `pg_up`, `pg_st
 
 2. Add a Secret key holding the full URL, the password URL-encoded: `postgres://fd_monitor:<url-encoded password>@<fullname>-postgres:5432/<database>`.
 3. Set `postgres.exporter.dsnSecret.name` and `postgres.exporter.dsnSecret.key` to that Secret and key. Changing them restarts only the exporter.
+
+## Health metrics
+
+Two optional sources, both off by default, feed the First Dime health alerts (the rules live with the Prometheus configuration, not in this chart):
+
+- **Worker.** `worker.metrics.enabled` declares container port `metrics` (`worker.metrics.port`, 9464) and sets `WORKER_METRICS_PORT`, so the worker serves `/metrics`: `firstdime_dead_events{consumer,reason}`, `firstdime_outbox_pending`, `firstdime_outbox_oldest_pending_age_seconds`, `firstdime_job_last_success_timestamp_seconds{job_name}` and `firstdime_job_failures_total{job_name}`. The port has no Service and no Ingress. A worker image older than the metrics server ignores the variable, so its target shows as down: turn this on only with an image that has it. Turning it on or off restarts the worker once (its pod spec changes).
+- **NATS exporter.** `nats.exporter.enabled` runs [prometheus-nats-exporter](https://github.com/nats-io/prometheus-nats-exporter) as a one-replica Deployment, `<fullname>-nats-exporter`, with `-jsz=consumers -varz` against `http://<fullname>-nats:8222`, serving on port `metrics` (7777). It is a separate pod, not a sidecar: the NATS pod (strategy `Recreate`) is never restarted by it, and a bad exporter image cannot take the event bus down. Its probes are TCP checks, so a NATS outage shows as a failed scrape rather than a restarting exporter. It runs as `nobody` with a read-only root filesystem.
+
+With `monitoring.enabled` as well, a `PodMonitor` named after each (`<fullname>-worker`, `<fullname>-nats-exporter`) scrapes it every `monitoring.interval`, rendered only when the cluster serves the `monitoring.coreos.com/v1` CRDs.
+
+Consumer series (checked against 0.20.3 and NATS 2.15.0, one per durable, labelled `consumer_name` and `stream_name`): `jetstream_consumer_num_pending`, `jetstream_consumer_num_ack_pending`, `jetstream_consumer_num_redelivered`, `jetstream_consumer_num_waiting`, `jetstream_consumer_delivered_stream_seq`, `jetstream_consumer_delivered_consumer_seq`, `jetstream_consumer_ack_floor_stream_seq` and `jetstream_consumer_ack_floor_consumer_seq`.
+
+**Image.** The exporter is published on Docker Hub only (no ghcr.io or quay.io copy). Where Docker Hub is unreachable, set `nats.exporter.image.repository` to `mirror.gcr.io/natsio/prometheus-nats-exporter` (Google's Docker Hub mirror, same tags) or to your own mirror.
 
 ## Backups
 

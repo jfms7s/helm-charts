@@ -1,0 +1,12 @@
+# Worker metrics port and the NATS exporter Deployment on (layered on test-values.yaml) so kubeconform checks them.
+# The PodMonitors need the monitoring.coreos.com/v1 CRD in the render's API versions, which CI's plain
+# `helm template` does not pass, so they are covered by tests/worker-podmonitor_test.yaml and
+# tests/nats-exporter-podmonitor_test.yaml instead.
+worker:
+  metrics:
+    enabled: true
+nats:
+  exporter:
+    enabled: true
+monitoring:
+  enabled: true

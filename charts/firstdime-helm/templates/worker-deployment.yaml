@@ -90,6 +90,17 @@ spec:
               value: {{ .Values.tz | quote }}
             - name: WORKER_HEARTBEAT_FILE
               value: "/tmp/worker-heartbeat"
+            {{- if .Values.worker.metrics.enabled }}
+            # Prometheus /metrics (firstdime >= the release with infra-health-metrics-app; older images ignore it).
+            - name: WORKER_METRICS_PORT
+              value: {{ .Values.worker.metrics.port | quote }}
+            {{- end }}
+          {{- if .Values.worker.metrics.enabled }}
+          # Scraped by the worker PodMonitor (monitoring.enabled); no Service or Ingress routes it.
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.worker.metrics.port }}
+          {{- end }}
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           startupProbe:

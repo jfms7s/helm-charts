@@ -68,7 +68,8 @@ postgres:
     tolerations: []
     affinity: {}
 
-# Prometheus Operator objects (PodMonitor), rendered only when the cluster serves the monitoring.coreos.com/v1 CRDs.
+# Prometheus Operator objects (PodMonitors for postgres.exporter, worker.metrics and nats.exporter), rendered only
+# when the cluster serves the monitoring.coreos.com/v1 CRDs.
 monitoring:
   enabled: false
   interval: 30s
@@ -372,6 +373,13 @@ worker:
   runAsUser: 1000
   runAsGroup: 1000
   fsGroup: 1000
+  # Prometheus /metrics on the worker (dead events, outbox backlog, scheduled-fetch freshness). On, the container
+  # declares port `metrics` and gets WORKER_METRICS_PORT; with monitoring.enabled a PodMonitor scrapes it. Never
+  # routed through an Ingress. Needs a worker image from the release that added the metrics server; an older one
+  # ignores the variable (the PodMonitor target then shows as down).
+  metrics:
+    enabled: false
+    port: 9464
 
 # Web UI (frontend) configuration
 web:
@@ -394,6 +402,27 @@ web:
 
 # NATS JetStream message bus (handles webhooks, events, scheduling)
 nats:
+  # prometheus-nats-exporter as its own small Deployment (<fullname>-nats-exporter), never a sidecar: the NATS pod
+  # (Recreate) is not restarted by turning it on or off, and a bad exporter image cannot take the event bus down.
+  # It reads the NATS monitoring port (8222) through the Service and serves JetStream consumer metrics
+  # (-jsz=consumers: jetstream_consumer_num_pending, jetstream_consumer_num_ack_pending, ... with a consumer_name
+  # label) on port `metrics` (7777). Prometheus finds it through the PodMonitor (monitoring.enabled).
+  exporter:
+    enabled: false
+    image:
+      # Published on Docker Hub only (no ghcr.io or quay.io copy). mirror.gcr.io/natsio/prometheus-nats-exporter
+      # serves the same tags where Docker Hub is unreachable. Multi-arch (amd64, arm64). Callers may pin a digest.
+      repository: docker.io/natsio/prometheus-nats-exporter
+      tag: "0.20.3"
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: 16Mi
+      limits:
+        memory: 64Mi
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
   image:
     repository: nats
     tag: "2.15.0-alpine"

@@ -1,0 +1,80 @@
+{{- if .Values.nats.exporter.enabled }}
+{{- $exporter := .Values.nats.exporter }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "firstdime-helm.fullname" . }}-nats-exporter
+  labels:
+    {{- include "firstdime-helm.labels" (dict "context" $ "name" "nats-exporter" "component" "metrics") | nindent 4 }}
+spec:
+  # A separate pod, not a sidecar of the NATS Deployment (strategy Recreate): adding, changing or removing it never
+  # restarts the event bus, and a bad image cannot take it down. It reads the monitoring port through the Service.
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "firstdime-helm.selectorLabels" (dict "context" $ "name" "nats-exporter") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "firstdime-helm.podLabels" (dict "context" $ "name" "nats-exporter" "component" "metrics") | nindent 8 }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      securityContext:
+        # The image sets no user; run as nobody.
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with $exporter.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $exporter.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $exporter.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: nats-exporter
+          image: {{ $exporter.image.repository }}:{{ $exporter.image.tag }}
+          imagePullPolicy: {{ $exporter.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          args:
+            # JetStream consumer metrics (jetstream_consumer_num_pending, ..._num_ack_pending, ..._ack_floor_stream_seq,
+            # labelled consumer_name and stream_name), plus the server's varz.
+            - -jsz=consumers
+            - -varz
+            - -port=7777
+            - "http://{{ include "firstdime-helm.fullname" . }}-nats:8222"
+          ports:
+            - name: metrics
+              containerPort: 7777
+          # The exporter serves only /metrics, and a scrape calls NATS. A TCP check keeps a NATS outage from
+          # restarting the exporter; the outage shows as a failed scrape instead.
+          readinessProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 30
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            {{- toYaml $exporter.resources | nindent 12 }}
+{{- end }}
