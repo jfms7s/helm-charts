@@ -1,0 +1,127 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: nats-exporter-deployment
+templates:
+  - templates/nats-exporter-deployment.yaml
+values:
+  - ../ci/test-values.yaml
+chart:
+  version: 0.0.0-test
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders its own Deployment when enabled
+    set:
+      nats.exporter.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-firstdime-nats-exporter
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: metadata.labels["helm.sh/chart"]
+          value: firstdime-helm-0.0.0-test
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: nats-exporter
+            app.kubernetes.io/instance: RELEASE-NAME
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/natsio/prometheus-nats-exporter:0.20.3
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - -jsz=consumers
+            - -varz
+            - -port=7777
+            - http://RELEASE-NAME-firstdime-nats:8222
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: metrics
+              containerPort: 7777
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.tcpSocket.port
+          value: metrics
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.tcpSocket.port
+          value: metrics
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            requests:
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+
+  - it: is hardened like the NATS pod
+    set:
+      nats.exporter.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+  - it: takes the image and pull secrets from values
+    set:
+      nats.exporter.enabled: true
+      nats.exporter.image.repository: mirror.gcr.io/natsio/prometheus-nats-exporter
+      nats.exporter.image.tag: "0.20.2"
+      imagePullSecrets:
+        - name: regcred
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: mirror.gcr.io/natsio/prometheus-nats-exporter:0.20.2
+      - equal:
+          path: spec.template.spec.imagePullSecrets
+          value:
+            - name: regcred
+
+  - it: places the pod with the exporter's own nodeSelector, tolerations and affinity
+    set:
+      nats.exporter.enabled: true
+      nats.exporter.nodeSelector:
+        kubernetes.io/arch: arm64
+      nats.exporter.tolerations:
+        - key: dedicated
+          operator: Exists
+      nats.exporter.affinity:
+        nodeAffinity: {}
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value:
+            kubernetes.io/arch: arm64
+      - equal:
+          path: spec.template.spec.tolerations[0].key
+          value: dedicated
+      - exists:
+          path: spec.template.spec.affinity.nodeAffinity

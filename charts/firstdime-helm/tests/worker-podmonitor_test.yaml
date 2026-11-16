@@ -1,0 +1,103 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: worker-podmonitor
+templates:
+  - templates/worker-podmonitor.yaml
+values:
+  - ../ci/test-values.yaml
+chart:
+  version: 0.0.0-test
+tests:
+  - it: renders nothing by default
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders nothing with only worker.metrics.enabled on
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      worker.metrics.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders nothing with only monitoring on
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders a PodMonitor for the worker pod when both switches are on
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      worker.metrics.enabled: true
+      monitoring.enabled: true
+    release:
+      namespace: firstdime
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PodMonitor
+      - isAPIVersion:
+          of: monitoring.coreos.com/v1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-firstdime-worker
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: metrics
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: worker
+            app.kubernetes.io/instance: RELEASE-NAME
+      - equal:
+          path: spec.namespaceSelector.matchNames
+          value: [firstdime]
+      - equal:
+          path: spec.podMetricsEndpoints
+          value:
+            - port: metrics
+              path: /metrics
+              interval: 30s
+
+  - it: adds monitoring.labels and monitoring.interval, keeping the chart's own labels
+    capabilities:
+      apiVersions:
+        - monitoring.coreos.com/v1/PodMonitor
+    set:
+      worker.metrics.enabled: true
+      monitoring.enabled: true
+      monitoring.interval: 60s
+      monitoring.labels:
+        app.kubernetes.io/name: other
+        release: kube-prometheus-stack
+    asserts:
+      - equal:
+          path: metadata.labels.release
+          value: kube-prometheus-stack
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: worker
+      - equal:
+          path: spec.podMetricsEndpoints[0].interval
+          value: 60s
+
+  - it: renders nothing when the cluster has no PodMonitor CRD
+    set:
+      worker.metrics.enabled: true
+      monitoring.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0

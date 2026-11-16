@@ -348,3 +348,42 @@ tests:
           any: true
           content:
             name: FRANKFURTER_URL
+
+  - it: declares no metrics port and no WORKER_METRICS_PORT by default
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].ports
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WORKER_METRICS_PORT
+          any: true
+
+  - it: declares the metrics port and sets WORKER_METRICS_PORT when worker.metrics.enabled
+    set:
+      worker.metrics.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: metrics
+              containerPort: 9464
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WORKER_METRICS_PORT
+            value: "9464"
+
+  - it: uses worker.metrics.port for both the port and the variable
+    set:
+      worker.metrics.enabled: true
+      worker.metrics.port: 9500
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 9500
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: WORKER_METRICS_PORT
+            value: "9500"
