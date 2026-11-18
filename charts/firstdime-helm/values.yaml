@@ -345,6 +345,26 @@ api:
   runAsUser: 1000
   runAsGroup: 1000
   fsGroup: 1000
+  # Probe timings; all three probes GET /health. /health makes no database call, so a slow
+  # answer means a starved event loop. Readiness reacts fast (it only drops the pod from the
+  # Service); liveness is forgiving (10 s x 6 failures at a 30 s period, about 3 minutes)
+  # so a slow but alive API is not restarted.
+  probes:
+    startup:
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 30
+    readiness:
+      initialDelaySeconds: 0
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    liveness:
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 6
 
 # Worker (async tasks, scheduler, outbox relay) configuration.
 # Never more than 1 replica (scheduler and outbox relay), Recreate strategy (hardcoded in the template).
