@@ -89,24 +89,17 @@ spec:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 0
-            periodSeconds: 10
-            failureThreshold: 30
-            timeoutSeconds: 1
+            {{- toYaml .Values.api.probes.startup | nindent 12 }}
           readinessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 0
-            periodSeconds: 10
-            timeoutSeconds: 1
+            {{- toYaml .Values.api.probes.readiness | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 60
-            periodSeconds: 30
-            timeoutSeconds: 1
+            {{- toYaml .Values.api.probes.liveness | nindent 12 }}
           volumeMounts:
             - name: attachments
               mountPath: /data/attachments

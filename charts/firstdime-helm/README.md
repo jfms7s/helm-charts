@@ -183,6 +183,9 @@ resource and default PVC name changes on the move to 0.7.0: it is a data migrati
 | `copyJob.waitTimeoutSeconds` | Seconds each init container waits (Postgres, then the source) before failing the Job | `600` |
 | `copyJob.activeDeadlineSeconds` / `copyJob.resources` / `copyJob.nodeSelector` / `copyJob.tolerations` / `copyJob.affinity` | Deadline, requests/limits (`256Mi` / `1Gi`) and pod placement | `3600` |
 | `api.replicas` / `web.replicas` | Whole number, 0 or more; 0 stops it (cutover) | `1` |
+| `api.probes.startup.{initialDelaySeconds,periodSeconds,timeoutSeconds,failureThreshold}` | Startup probe (`GET /health`) timing | `0`, `10`, `3`, `30` |
+| `api.probes.readiness.{initialDelaySeconds,periodSeconds,timeoutSeconds,failureThreshold}` | Readiness probe timing; a slow pod leaves the Service within seconds | `0`, `10`, `3`, `3` |
+| `api.probes.liveness.{initialDelaySeconds,periodSeconds,timeoutSeconds,failureThreshold}` | Liveness probe timing; tolerates about 3 minutes of slow answers before a restart | `60`, `30`, `10`, `6` |
 | `worker.replicas` / `bankSync.replicas` | 0 or 1 (never two); 0 stops it (cutover) | `1` |
 | `worker.metrics.enabled` / `worker.metrics.port` | Declare the worker's `metrics` container port and set `WORKER_METRICS_PORT`, so the worker serves Prometheus `/metrics` there (never routed by an Ingress). Needs a worker image that has the metrics server. See [Health metrics](#health-metrics) | `false` / `9464` |
 | `nats.exporter.enabled` | Deploy `prometheus-nats-exporter` as its own Deployment (`<fullname>-nats-exporter`). See [Health metrics](#health-metrics) | `false` |
