@@ -69,6 +69,14 @@ scraper:
   userAgent: "ticket-live-event-scanner (+https://github.com/jfms7s/ticket-live-event-scanner)"
   requestDelayMs: 1500
 
+# The weekly digest: the week's events posted to the Telegram chat on Sunday
+# at 19:00 Europe/Lisbon.
+digest:
+  # false sets DIGEST_ENABLED=false: no digest, the scraper keeps running
+  # (app >= v0.16.0; an older image ignores it). scraper.enabled false turns
+  # the digest off as well.
+  enabled: true
+
 webUiApi:
   image:
     repository: ghcr.io/jfms7s/ticket-live-event-scanner-web-ui-api

@@ -54,6 +54,11 @@ spec:
             - name: SCRAPER_ENABLED
               value: "false"
             {{- end }}
+            {{- if not .Values.digest.enabled }}
+            # Only the weekly digest off; the scraper keeps running (app >= v0.16.0).
+            - name: DIGEST_ENABLED
+              value: "false"
+            {{- end }}
             - name: TICKETLINE_HUB_PAGES
               value: {{ .Values.scraper.hubPages | quote }}
             - name: USER_AGENT

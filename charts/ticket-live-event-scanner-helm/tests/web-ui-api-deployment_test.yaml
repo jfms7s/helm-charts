@@ -119,6 +119,8 @@ tests:
           path: spec.template.spec.containers[0].env[?(@.name == "USER_AGENT")]
       - notExists:
           path: spec.template.spec.containers[0].env[?(@.name == "SCRAPER_ENABLED")]
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "DIGEST_ENABLED")]
 
   - it: turns the scraper and digest off with scraper.enabled false
     set:
@@ -129,6 +131,18 @@ tests:
           content:
             name: SCRAPER_ENABLED
             value: "false"
+
+  - it: turns only the digest off with digest.enabled false
+    set:
+      digest.enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DIGEST_ENABLED
+            value: "false"
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name == "SCRAPER_ENABLED")]
 
   - it: uses a custom CORS origin
     set:
