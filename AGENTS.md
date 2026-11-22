@@ -183,3 +183,7 @@ Agents never run this; they re-run the workflow and wait, or stop and report. Re
    ```
    `cr upload` creates the GitHub Releases from `.cr-release-packages/`; `cr index` adds them to `gh-pages` `index.yaml` and pushes it. `.cr-release-packages/` and `.cr-index/` are scratch: delete them afterwards.
 5. Record the manual publish (chart, version, commit, why) in the PR that merged the change or in the release notes. The next green `release` job skips the versions that already exist.
+
+## Review before merge
+
+Run the `platform-reviewer` agent on infrastructure changes (Helm charts, Terraform, Ansible, Argo CD manifests) before merging. Its findings are input to weigh: each names where the rule comes from and can be rejected.
