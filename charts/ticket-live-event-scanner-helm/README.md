@@ -41,6 +41,7 @@ without a `valueFrom` (since 0.7.0); see the note below.
 | `scraper.userAgent` | HTTP User-Agent sent by the scraper; add your own contact to it | `ticket-live-event-scanner (+https://github.com/jfms7s/ticket-live-event-scanner)` |
 | `scraper.requestDelayMs` | Delay between scrape requests, in milliseconds | `1500` |
 | `scraper.enabled` | Run the scraper (a scrape at start-up and every hour) and the weekly digest (Sunday 19:00 Europe/Lisbon) inside web-ui-api (app >= v0.11.0); `false` sets `SCRAPER_ENABLED=false` | `true` |
+| `digest.enabled` | Post the weekly digest to the Telegram chat (Sunday 19:00 Europe/Lisbon); `false` sets `DIGEST_ENABLED=false`, which turns off the digest only and leaves the scraper running (app >= v0.16.0) | `true` |
 | `smtp.host` / `smtp.port` | SMTP relay address for web-ui-api's email channel | `smtp.gmail.com` / `587` |
 | `smtp.username` / `smtp.password` | SMTP auth credentials, each a standard Kubernetes EnvVarSource (see note below) | `value: "CHANGE_ME"` |
 | `smtp.from` / `smtp.to` | From address and comma-separated recipient list for the calendar-invite email | `CHANGE_ME` |
