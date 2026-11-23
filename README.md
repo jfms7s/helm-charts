@@ -34,6 +34,9 @@ Deploys eng-metrics-lab, a code-quality reporting stack: a small Postgres, a Pos
 ### data-lab-helm
 Shared infrastructure for the Spark and Flink learning labs: `spark`/`flink` namespaces with scoped RBAC. The object store both a local Spark driver and in-cluster executors reach over `s3a://` (RustFS) is provisioned by helm-argo-cd and terraform-provision, not this chart. See [charts/data-lab-helm/README.md](charts/data-lab-helm/README.md).
 
+### synology-csi
+Vendored, unchanged copy of the [synology-csi chart](https://github.com/christian-schlichtherle/synology-csi-chart) (Synology's CSI driver, 0.11.3), so an upstream republish cannot change what the cluster runs. See [charts/synology-csi/VENDORED.md](charts/synology-csi/VENDORED.md).
+
 ## Installation
 
 Add the repository:

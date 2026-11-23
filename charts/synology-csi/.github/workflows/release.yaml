@@ -1,0 +1,25 @@
+# See https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions
+# and https://github.com/peaceiris/actions-gh-pages#%EF%B8%8F-static-site-generators-with-nodejs :
+---
+jobs:
+  release:
+    env:
+      GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+      GITHUB_REPOSITORY_NAME: ${{ github.event.repository.name }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # https://github.com/actions/checkout
+      - uses: azure/setup-helm@v4 # https://github.com/azure/setup-helm
+      - name: Package and index Helm chart
+        run: make dist
+      - uses: peaceiris/actions-gh-pages@v4 # https://github.com/peaceiris/actions-gh-pages
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          keep_files: true
+          publish_dir: dist
+on:
+  push:
+    # Publish semver tags as releases:
+    tags: [ 'v*.*.*' ]
