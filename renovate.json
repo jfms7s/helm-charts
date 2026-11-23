@@ -1,10 +1,21 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Keeps CI pins fresh: Actions (by SHA) and the tool versions in the Makefile and lint-test.yml. Chart image defaults are not covered yet. Nothing automerges.",
+  "description": "Keeps CI pins fresh: Actions (by SHA) and the tool versions in the Makefile and lint-test.yml. Chart image defaults are not covered yet. Nothing automerges. charts/synology-csi is vendored unchanged from upstream, so Renovate never edits it (ignorePaths repeats the preset defaults, which setting it replaces).",
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "dependencyDashboard": true,
   "automerge": false,
   "minimumReleaseAge": "14 days",
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
+    "charts/synology-csi/**"
+  ],
   "enabledManagers": ["github-actions", "custom.regex"],
   "customManagers": [
     {

@@ -16,6 +16,7 @@ helm-charts/
 │   ├── meiun-helm/      # Chart for meiun, the LLM-villager village sim
 │   ├── eng-metrics-lab-helm/  # Chart for the eng-metrics-lab code-quality reporting stack
 │   ├── ticket-live-event-scanner-helm/  # Chart for Ticket Live Event Scanner
+│   ├── synology-csi/    # Vendored upstream chart (Synology CSI driver), unchanged
 │   └── common/          # Generic chart for multiple applications
 └── .github/workflows/   # CI/CD pipelines
 ```
@@ -94,6 +95,9 @@ Application-specific chart for deploying [Ticket Live Event Scanner](https://git
 - Web UI frontend deployment + Service
 - Ingress configuration
 - Security hardening: every pod non-root (uid/gid 1000), read-only root filesystem, dropped capabilities, no service account token
+
+### synology-csi
+A vendored, unchanged copy of christian-schlichtherle's [synology-csi chart](https://github.com/christian-schlichtherle/synology-csi-chart) (owner decision, 2026-10-09: a republish of the chart or image upstream must not change what runs without a commit in the owner's repos). Its `version` follows upstream (0.11.3, so the release tag `synology-csi-0.11.3` is new), and it keeps its upstream `LICENSE` (Apache-2.0). Do not edit its files (bump it by re-vendoring, per `charts/synology-csi/VENDORED.md`); its nested `CLAUDE.md`, `Makefile` and `.github/` are upstream's and do not apply to this repo. helm-argo-cd pins its images by digest through values.
 
 ### common
 Generic chart for one application (one Deployment) per release, consumed from helm-argo-cd. Its scope has a written limit (see "Choosing a composition model"). Provides:
