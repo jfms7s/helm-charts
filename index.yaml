@@ -1401,6 +1401,27 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/patchmon-helm-0.1.0/patchmon-helm-0.1.0.tgz
     version: 0.1.0
+  synology-csi:
+  - apiVersion: v2
+    appVersion: v1.3.1
+    created: "2026-11-23T22:21:50.903175166Z"
+    description: A Helm chart for the Synology CSI Driver
+    digest: 00843d2c47513a15cae727b792fdcebe29a13db7abb487ea32af37af6b6102c5
+    home: https://github.com/christian-schlichtherle/synology-csi-chart
+    keywords:
+    - Synology
+    - CSI Driver
+    kubeVersion: '>= 1.20.0'
+    maintainers:
+    - name: Christian Schlichtherle
+      url: https://github.com/christian-schlichtherle
+    name: synology-csi
+    sources:
+    - https://github.com/christian-schlichtherle/synology-csi-chart/tree/main
+    - https://github.com/SynologyOpenSource/synology-csi/tree/main
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/synology-csi-0.11.3/synology-csi-0.11.3.tgz
+    version: 0.11.3
   ticket-live-event-scanner-helm:
   - apiVersion: v2
     appVersion: latest
@@ -1928,4 +1949,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/volley-helm-0.1.0/volley-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-22T00:15:37.878234518Z"
+generated: "2026-11-23T22:21:50.903254853Z"
