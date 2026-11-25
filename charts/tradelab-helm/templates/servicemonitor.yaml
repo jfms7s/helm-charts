@@ -1,0 +1,25 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-tradelab
+  labels:
+    {{- include "tradelab-helm.labels" (dict "context" $ "name" "tradelab" "component" "metrics") | nindent 4 }}
+    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  # The app's Service, on its http port. /metrics passes the app's Host check
+  # because Prometheus sends the pod IP as Host and the pod IP is in
+  # TRADELAB_ALLOWED_HOSTS.
+  selector:
+    matchLabels:
+      {{- include "tradelab-helm.selectorLabels" (dict "context" $ "name" "tradelab") | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+{{- end }}

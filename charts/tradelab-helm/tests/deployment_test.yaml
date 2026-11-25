@@ -1,0 +1,307 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: deployment
+templates:
+  - templates/deployment.yaml
+values:
+  - ../ci/test-values.yaml
+tests:
+  - it: one replica, Recreate, a minute to stop
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-tradelab
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.strategy
+          value: {type: Recreate}
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 60
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: tradelab
+            app.kubernetes.io/instance: RELEASE-NAME
+
+  - it: runs api, worker and live from one image with their commands
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 3
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: api
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: [serve, --host, 0.0.0.0, --allow-remote]
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/tradelab:v0.1.0
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: worker
+      - equal:
+          path: spec.template.spec.containers[1].args
+          value: [worker]
+      - equal:
+          path: spec.template.spec.containers[2].name
+          value: live
+      - equal:
+          path: spec.template.spec.containers[2].args
+          value: [live]
+
+  - it: worker.enabled=false drops the worker
+    set:
+      worker.enabled: false
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+      - notExists:
+          path: spec.template.spec.containers[?(@.name=="worker")]
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: live
+
+  - it: live.enabled=false drops live
+    set:
+      live.enabled: false
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.containers
+          count: 2
+      - notExists:
+          path: spec.template.spec.containers[?(@.name=="live")]
+
+  - it: every container uses /data (with subPath) and a /tmp emptyDir
+    set:
+      persistence.subPath: data
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: data, mountPath: /data, subPath: data}
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content: {name: data, mountPath: /data, subPath: data}
+      - contains:
+          path: spec.template.spec.containers[2].volumeMounts
+          content: {name: data, mountPath: /data, subPath: data}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: tmp, mountPath: /tmp}
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content: {name: tmp, mountPath: /tmp}
+      - contains:
+          path: spec.template.spec.containers[2].volumeMounts
+          content: {name: tmp, mountPath: /tmp}
+      - contains:
+          path: spec.template.spec.volumes
+          content: {name: tmp, emptyDir: {}}
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            persistentVolumeClaim: {claimName: test-release-tradelab-data}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: TRADELAB_DATA_DIR, value: /data}
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: {name: TRADELAB_DATA_DIR, value: /data}
+      - contains:
+          path: spec.template.spec.containers[2].env
+          content: {name: TRADELAB_DATA_DIR, value: /data}
+
+  - it: no subPath by default
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content: {name: data, mountPath: /data}
+
+  - it: the api has POD_IP first, then the allowed hosts with the ingress host
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[0]
+          value:
+            name: POD_IP
+            valueFrom: {fieldRef: {fieldPath: status.podIP}}
+      - equal:
+          path: spec.template.spec.containers[0].env[1]
+          value: {name: TRADELAB_ALLOWED_HOSTS, value: "$(POD_IP),tradelab.example.local"}
+
+  - it: without a host the api allows only its pod IP
+    set:
+      host: ""
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[1]
+          value: {name: TRADELAB_ALLOWED_HOSTS, value: "$(POD_IP)"}
+
+  - it: Alpaca keys only on worker and live, from the existing Secret
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name=="APCA_API_KEY_ID")]
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name=="APCA_API_SECRET_KEY")]
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: APCA_API_KEY_ID
+            valueFrom: {secretKeyRef: {name: tradelab-alpaca, key: APCA_API_KEY_ID}}
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: APCA_API_SECRET_KEY
+            valueFrom: {secretKeyRef: {name: tradelab-alpaca, key: APCA_API_SECRET_KEY}}
+      - contains:
+          path: spec.template.spec.containers[2].env
+          content:
+            name: APCA_API_KEY_ID
+            valueFrom: {secretKeyRef: {name: tradelab-alpaca, key: APCA_API_KEY_ID}}
+      - contains:
+          path: spec.template.spec.containers[2].env
+          content:
+            name: APCA_API_SECRET_KEY
+            valueFrom: {secretKeyRef: {name: tradelab-alpaca, key: APCA_API_SECRET_KEY}}
+
+  - it: request rates per container
+    set:
+      worker.requestsPerMinute: 100
+      live.requestsPerMinute: 50
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: {name: TRADELAB_ALPACA_REQUESTS_PER_MINUTE, value: "100"}
+      - contains:
+          path: spec.template.spec.containers[2].env
+          content: {name: TRADELAB_ALPACA_REQUESTS_PER_MINUTE, value: "50"}
+      - notExists:
+          path: spec.template.spec.containers[0].env[?(@.name=="TRADELAB_ALPACA_REQUESTS_PER_MINUTE")]
+
+  - it: default request rates are 110 and 60
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content: {name: TRADELAB_ALPACA_REQUESTS_PER_MINUTE, value: "110"}
+      - contains:
+          path: spec.template.spec.containers[2].env
+          content: {name: TRADELAB_ALPACA_REQUESTS_PER_MINUTE, value: "60"}
+
+  - it: live refuses to render without the keys' Secret
+    set:
+      alpaca.existingSecret: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: live needs the Alpaca keys: set alpaca.existingSecret (a Secret with APCA_API_KEY_ID and APCA_API_SECRET_KEY), or live.enabled=false"
+
+  - it: the worker alone runs without keys (stored prices only)
+    set:
+      alpaca.existingSecret: ""
+      live.enabled: false
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[1].env[?(@.name=="APCA_API_KEY_ID")]
+
+  - it: probes the api on /api/health, liveness on a route that reads no database
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value: [{name: http, containerPort: 8080, protocol: TCP}]
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.httpGet
+          value: {path: /api/health, port: http}
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet
+          value: {path: /api/health, port: http}
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet
+          value: {path: /, port: http}
+      - notExists:
+          path: spec.template.spec.containers[1].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[2].livenessProbe
+
+  - it: fails without a data volume
+    set:
+      persistence.volume: null
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: set persistence.volume (or persistence.claim.size and point volume at <release>-tradelab-data)"
+
+  - it: hardened security defaults
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+            seccompProfile: {type: RuntimeDefault}
+      - equal:
+          path: spec.template.spec.containers[2].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.securityContext
+          value: {fsGroup: 65532, fsGroupChangePolicy: OnRootMismatch}
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
+  - it: seLinuxLevel lands in the pod security context
+    set:
+      seLinuxLevel: "s0:c123,c456"
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.seLinuxOptions
+          value: {level: "s0:c123,c456"}
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 65532
+
+  - it: passes placement, pull secrets and resources through
+    set:
+      imagePullSecrets: [{name: ghcr-pull}]
+      nodeSelector: {kubernetes.io/arch: amd64}
+      tolerations: [{key: k, operator: Exists}]
+      affinity: {nodeAffinity: {}}
+      api.resources: {requests: {cpu: 10m}}
+      worker.resources: {requests: {cpu: 20m}}
+      live.resources: {requests: {cpu: 30m}}
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets
+          value: [{name: ghcr-pull}]
+      - equal:
+          path: spec.template.spec.nodeSelector
+          value: {kubernetes.io/arch: amd64}
+      - equal:
+          path: spec.template.spec.tolerations
+          value: [{key: k, operator: Exists}]
+      - equal:
+          path: spec.template.spec.affinity
+          value: {nodeAffinity: {}}
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value: {requests: {cpu: 10m}}
+      - equal:
+          path: spec.template.spec.containers[1].resources
+          value: {requests: {cpu: 20m}}
+      - equal:
+          path: spec.template.spec.containers[2].resources
+          value: {requests: {cpu: 30m}}
+
+  - it: pod labels carry no chart version
+    asserts:
+      - notExists:
+          path: spec.template.metadata.labels["helm.sh/chart"]
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: tradelab

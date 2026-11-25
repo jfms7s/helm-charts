@@ -12,6 +12,7 @@ helm-charts/
 │   ├── patchmon-helm/   # Chart for PatchMon application
 │   ├── tompero-helm/    # Chart for Chez Tomperô recipe manager
 │   ├── padel-score-helm/ # Chart for padel-score match scorer
+│   ├── tradelab-helm/   # Chart for tradelab, the investment-agent test bench
 │   ├── volley-helm/     # Chart for volley browser arena brawler
 │   ├── meiun-helm/      # Chart for meiun, the LLM-villager village sim
 │   ├── eng-metrics-lab-helm/  # Chart for the eng-metrics-lab code-quality reporting stack
@@ -81,6 +82,13 @@ Application-specific chart for deploying [padel-score](https://github.com/jfms7s
 - `/data` volume for the SQLite database, with an optional chart-created PVC (kept on uninstall)
 - Public image, so no pull secret by default
 
+### tradelab-helm
+Application-specific chart for deploying [tradelab](https://github.com/jfms7s/tradelab), a platform to test investment agents on simulated and live (fake-money) markets. Modeled on padel-score-helm. Includes:
+- One Deployment (single replica, Recreate) with three containers from one private image sharing one SQLite volume: `api` (dashboard, `/api/health`, `/metrics`), `worker` (replay runs) and `live` (the live driver); Alpaca keys from an existing Secret on worker and live only
+- `/data` on a ReadWriteOnce volume (SQLite WAL, never NFS), with an optional chart-created PVC (kept on uninstall); the render fails without a volume
+- The api's `TRADELAB_ALLOWED_HOSTS` is `$(POD_IP),<host>`, so probes and Prometheus pass the app's Host check
+- Optional nightly backup CronJob (`tradelab-app backup`, copy made in a local emptyDir, kept on its own volume; pod affinity to the app pod and a shared SELinux level), optional Ingress and ServiceMonitor
+
 ### volley-helm
 Application-specific chart for deploying [volley](https://github.com/jfms7s/volley), a browser arena brawler (WebSocket game server). Modeled on padel-score-helm. Includes:
 - Server deployment (single replica, Recreate; rooms live in memory) + Service + optional Ingress
@@ -148,7 +156,7 @@ make check-version                               # version-bump check CI runs on
 helm lint charts/data-lab-helm
 helm template my-release charts/data-lab-helm
 
-# common, firstdime-helm, meiun-helm, padel-score-helm, patchmon-helm and
+# common, firstdime-helm, meiun-helm, padel-score-helm, patchmon-helm, tradelab-helm and
 # ticket-live-event-scanner-helm refuse to render on their defaults by design (required image, credential and volume guards): pass
 # their CI values
 helm lint charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml

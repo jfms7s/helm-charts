@@ -1,0 +1,32 @@
+{{- if .Values.ingress.enabled -}}
+{{- if not .Values.host }}
+{{- fail "tradelab-helm: ingress.enabled needs host" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-tradelab
+  labels:
+    {{- include "tradelab-helm.labels" (dict "context" $ "name" "tradelab" "component" "app") | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-tradelab
+                port:
+                  name: http
+{{- end }}

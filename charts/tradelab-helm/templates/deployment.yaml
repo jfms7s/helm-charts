@@ -1,0 +1,151 @@
+{{- if and .Values.live.enabled (not .Values.alpaca.existingSecret) }}
+{{- fail "tradelab-helm: live needs the Alpaca keys: set alpaca.existingSecret (a Secret with APCA_API_KEY_ID and APCA_API_SECRET_KEY), or live.enabled=false" }}
+{{- end }}
+{{- $image := printf "%s:%s" .Values.image.repository .Values.image.tag }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-tradelab
+  labels:
+    {{- include "tradelab-helm.labels" (dict "context" $ "name" "tradelab" "component" "app") | nindent 4 }}
+spec:
+  # One pod with api, worker and live sharing one SQLite database on a
+  # ReadWriteOnce volume: only this pod ever writes it, so one replica and
+  # Recreate (never two pods at once).
+  replicas: 1
+  revisionHistoryLimit: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "tradelab-helm.selectorLabels" (dict "context" $ "name" "tradelab") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tradelab-helm.podLabels" (dict "context" $ "name" "tradelab" "component" "app") | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      # live stops after the current minute is stored on SIGTERM.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        {{- include "tradelab-helm.podSecurityContext" . | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: api
+          image: {{ $image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [serve, --host, 0.0.0.0, --allow-remote]
+          env:
+            # POD_IP comes first so $(POD_IP) expands below: the kubelet's
+            # probes and Prometheus send the pod IP as Host, and the app's
+            # Host check answers only to the names listed here.
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: TRADELAB_ALLOWED_HOSTS
+              value: {{ if .Values.host }}{{ printf "$(POD_IP),%s" .Values.host | quote }}{{ else }}"$(POD_IP)"{{ end }}
+            - name: TRADELAB_DATA_DIR
+              value: /data
+            - name: TRADELAB_PORT
+              value: "8080"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          # /api/health reads the database and answers 500 when it cannot:
+          # right for readiness, wrong for liveness (a passing database error
+          # would restart the pod). Liveness asks for the dashboard's page,
+          # which reads no database.
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 5
+          volumeMounts:
+            {{- include "tradelab-helm.dataMount" . | nindent 12 }}
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+        {{- if .Values.worker.enabled }}
+        - name: worker
+          image: {{ $image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [worker]
+          env:
+            - name: TRADELAB_DATA_DIR
+              value: /data
+            - name: TRADELAB_ALPACA_REQUESTS_PER_MINUTE
+              value: {{ .Values.worker.requestsPerMinute | quote }}
+            {{- if .Values.alpaca.existingSecret }}
+            {{- include "tradelab-helm.alpacaEnv" . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            {{- include "tradelab-helm.dataMount" . | nindent 12 }}
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+        {{- end }}
+        {{- if .Values.live.enabled }}
+        - name: live
+          image: {{ $image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [live]
+          env:
+            - name: TRADELAB_DATA_DIR
+              value: /data
+            - name: TRADELAB_ALPACA_REQUESTS_PER_MINUTE
+              value: {{ .Values.live.requestsPerMinute | quote }}
+            {{- if .Values.alpaca.existingSecret }}
+            {{- include "tradelab-helm.alpacaEnv" . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            {{- include "tradelab-helm.dataMount" . | nindent 12 }}
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            {{- toYaml .Values.live.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+        {{- end }}
+      volumes:
+        {{- include "tradelab-helm.dataVolume" . | nindent 8 }}
+        - name: tmp
+          emptyDir: {}

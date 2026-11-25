@@ -1,0 +1,49 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: backup-pvc
+templates:
+  - templates/backup-pvc.yaml
+tests:
+  - it: renders no claim by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no claim without a size
+    set:
+      backup.enabled: true
+      backup.claim: {storageClassName: nfs-client}
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no claim while backups are off
+    set:
+      backup.claim: {storageClassName: nfs-client, size: 10Gi}
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: a claim with a size is kept on uninstall and prune
+    set:
+      backup.enabled: true
+      backup.claim: {storageClassName: nfs-client, size: 10Gi}
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-tradelab-backup
+      - equal:
+          path: spec.storageClassName
+          value: nfs-client
+      - equal:
+          path: spec.resources.requests.storage
+          value: 10Gi
+      - equal:
+          path: metadata.annotations["helm.sh/resource-policy"]
+          value: keep
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-options"]
+          value: Prune=false,Delete=false

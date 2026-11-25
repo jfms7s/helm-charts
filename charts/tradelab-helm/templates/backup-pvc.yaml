@@ -1,0 +1,23 @@
+{{- $claim := .Values.backup.claim | default dict }}
+{{- if and .Values.backup.enabled $claim.size }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-tradelab-backup
+  labels:
+    {{- include "tradelab-helm.labels" (dict "context" $ "name" "tradelab-backup" "component" "backup") | nindent 4 }}
+  annotations:
+    # The copies outlive the release: never delete on uninstall, prune, or
+    # Application deletion.
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if $claim.storageClassName }}
+  storageClassName: {{ $claim.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $claim.size | quote }}
+{{- end }}

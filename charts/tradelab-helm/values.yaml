@@ -1,0 +1,114 @@
+image:
+  repository: ghcr.io/jfms7s/tradelab
+  tag: v0.1.0
+  pullPolicy: IfNotPresent
+# The image is private on ghcr.io: name its docker-registry pull Secret here.
+imagePullSecrets: []
+
+# The Ingress host. It also goes into the api's TRADELAB_ALLOWED_HOSTS, after
+# the pod's own IP (the kubelet's probes and Prometheus send the pod IP as Host).
+host: ""
+
+alpaca:
+  # A Secret with the keys APCA_API_KEY_ID and APCA_API_SECRET_KEY (Alpaca's
+  # paper account). Only the worker and live containers get them; the api never
+  # does. Rendering fails while live is enabled and this is empty; the worker
+  # alone runs without keys on stored prices only.
+  existingSecret: ""
+
+# `tradelab-app serve`: the dashboard and its API on port 8080.
+api:
+  resources: {}
+
+# `tradelab-app worker`: queued replay runs.
+worker:
+  enabled: true
+  # TRADELAB_ALPACA_REQUESTS_PER_MINUTE. The worker and live share one Alpaca
+  # account limit of 200 a minute: keep the two below it together.
+  requestsPerMinute: 110
+  resources: {}
+
+# `tradelab-app live`: the live driver (live prices, fake money).
+live:
+  enabled: true
+  requestsPerMinute: 60
+  resources: {}
+
+# /data: the SQLite database and the price store, shared by all three
+# containers of the one pod. SQLite in WAL mode needs a local (block) volume:
+# a ReadWriteOnce iSCSI claim, never NFS or RWX. Rendering fails while
+# `volume` is empty, so data is never silently lost on an emptyDir.
+persistence:
+  # Full body of a Kubernetes volume source (without `name`), e.g.
+  #   volume:
+  #     persistentVolumeClaim:
+  #       claimName: <release>-tradelab-data
+  volume: {}
+  # Optional: have the chart create a PVC named <release>-tradelab-data (RWO,
+  # kept on uninstall and prune), when size is set; empty class = cluster
+  # default. Point `volume` at it.
+  claim:
+    storageClassName: ""
+    size: ""
+  # Optional subdirectory of the volume to mount as /data (keeps ext4's
+  # lost+found out of the data dir on block-backed claims).
+  subPath: ""
+
+# SELinux level (e.g. "s0:c123,c456") for the app pod and the backup Job,
+# which share the data volume. Set it on SELinux nodes: with a random level
+# per pod, the Job's start relabels the volume and locks the app out of it.
+seLinuxLevel: ""
+
+# Nightly `tradelab-app backup` (SQLite online backup) as a CronJob. It runs
+# on the app pod's node (required pod affinity: the data volume is RWO),
+# makes its copy in a local emptyDir, keeps the newest `keep` copies on
+# `volume` (NFS is fine there) and is killed after 15 minutes.
+backup:
+  enabled: false
+  schedule: "30 2 * * *"
+  keep: 14
+  # Volume source (without `name`) for /backup; required when enabled.
+  volume: {}
+  # Optional: a chart-made PVC <release>-tradelab-backup (when enabled and
+  # size is set; kept on uninstall and prune). Point `volume` at it.
+  claim:
+    storageClassName: ""
+    size: ""
+  resources: {}
+
+metrics:
+  # A ServiceMonitor for GET /metrics on the Service's http port (needs the
+  # Prometheus Operator's CRD).
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    labels: {}
+
+nodeSelector: {}
+affinity: {}
+tolerations: []
+
+# The image runs as uid 65532 with a read-only root; only /data and /tmp are
+# written.
+podSecurityContext:
+  fsGroup: 65532
+  fsGroupChangePolicy: OnRootMismatch
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+  seccompProfile:
+    type: RuntimeDefault
+
+# One rule: `host` on path / to the Service. There is no login in the app:
+# put it behind an authenticating proxy (Authentik forward-auth) or keep it
+# LAN only.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}

@@ -1,0 +1,50 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: pvc
+templates:
+  - templates/pvc.yaml
+tests:
+  - it: renders no claim by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no claim when only a class is set
+    set:
+      persistence.claim: {storageClassName: synology-iscsi}
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: a claim with a size is RWO and kept on uninstall and prune
+    set:
+      persistence.claim: {storageClassName: synology-iscsi, size: 5Gi}
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-tradelab-data
+      - equal:
+          path: spec.accessModes
+          value: [ReadWriteOnce]
+      - equal:
+          path: spec.storageClassName
+          value: synology-iscsi
+      - equal:
+          path: spec.resources.requests.storage
+          value: 5Gi
+      - equal:
+          path: metadata.annotations["helm.sh/resource-policy"]
+          value: keep
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-options"]
+          value: Prune=false,Delete=false
+
+  - it: the default class when only a size is set
+    set:
+      persistence.claim: {size: 5Gi}
+    asserts:
+      - notExists:
+          path: spec.storageClassName
