@@ -1928,6 +1928,28 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/tompero-helm-0.1.0/tompero-helm-0.1.0.tgz
     version: 0.1.0
+  tradelab-helm:
+  - apiVersion: v2
+    appVersion: v0.1.0
+    created: "2026-11-25T19:21:47.162431917Z"
+    description: A Helm chart for tradelab, a platform to test investment agents on
+      simulated and live (fake-money) markets
+    digest: 55fa4a9d43df9d590e4a3500e4c549009717d7201eb4291624c64db461062488
+    keywords:
+    - tradelab
+    - trading
+    - backtesting
+    maintainers:
+    - name: jfms7s
+      url: https://github.com/jfms7s
+    name: tradelab-helm
+    sources:
+    - https://github.com/jfms7s/tradelab
+    - https://github.com/jfms7s/helm-charts
+    type: application
+    urls:
+    - https://github.com/jfms7s/helm-charts/releases/download/tradelab-helm-0.1.0/tradelab-helm-0.1.0.tgz
+    version: 0.1.0
   volley-helm:
   - apiVersion: v2
     appVersion: v0.1.0
@@ -1949,4 +1971,4 @@ entries:
     urls:
     - https://github.com/jfms7s/helm-charts/releases/download/volley-helm-0.1.0/volley-helm-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-23T22:21:50.903254853Z"
+generated: "2026-11-25T19:21:47.162551448Z"
