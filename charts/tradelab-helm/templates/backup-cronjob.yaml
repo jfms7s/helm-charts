@@ -2,6 +2,9 @@
 {{- if not .Values.backup.volume }}
 {{- fail "tradelab-helm: set backup.volume (or backup.claim.size and point volume at <release>-tradelab-backup) when backup.enabled" }}
 {{- end }}
+{{- if not .Values.seLinuxLevel }}
+{{- fail "tradelab-helm: backup.enabled needs seLinuxLevel (e.g. \"s0:c123,c456\"): with a random level per pod, the backup Job relabels the data volume and locks the app out of it; a level is ignored on nodes without SELinux" }}
+{{- end }}
 # Nightly `tradelab-app backup`: SQLite's online backup of the database, safe
 # while the app writes (it never blocks the live driver; the WAL only grows
 # meanwhile). The copy is made in /work (a local emptyDir: SQLite's WAL index
@@ -89,7 +92,7 @@ spec:
               {{- toYaml .Values.backup.volume | nindent 14 }}
             # Local disk for the copy before it goes to /backup.
             - name: work
-              emptyDir: {}
+              {{- include "tradelab-helm.emptyDir" (dict "sizeLimit" .Values.backup.workSizeLimit) | nindent 14 }}
             - name: tmp
-              emptyDir: {}
+              {{- include "tradelab-helm.emptyDir" (dict "sizeLimit" .Values.tmpSizeLimit) | nindent 14 }}
 {{- end }}

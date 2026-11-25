@@ -1,6 +1,7 @@
 {{- if and .Values.live.enabled (not .Values.alpaca.existingSecret) }}
 {{- fail "tradelab-helm: live needs the Alpaca keys: set alpaca.existingSecret (a Secret with APCA_API_KEY_ID and APCA_API_SECRET_KEY), or live.enabled=false" }}
 {{- end }}
+{{- include "tradelab-helm.checkHost" . }}
 {{- $image := printf "%s:%s" .Values.image.repository .Values.image.tag }}
 apiVersion: apps/v1
 kind: Deployment
@@ -148,4 +149,4 @@ spec:
       volumes:
         {{- include "tradelab-helm.dataVolume" . | nindent 8 }}
         - name: tmp
-          emptyDir: {}
+          {{- include "tradelab-helm.emptyDir" (dict "sizeLimit" .Values.tmpSizeLimit) | nindent 10 }}

@@ -4,6 +4,9 @@ templates:
   - templates/backup-cronjob.yaml
 values:
   - ../ci/test-values.yaml
+# Every rendered backup needs an SELinux level (see the failedTemplate test).
+set:
+  seLinuxLevel: "s0:c123,c456"
 tests:
   - it: is absent by default
     asserts:
@@ -16,6 +19,15 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: "tradelab-helm: set backup.volume (or backup.claim.size and point volume at <release>-tradelab-backup) when backup.enabled"
+
+  - it: fails without an SELinux level, so the Job never relabels the data volume
+    set:
+      backup.enabled: true
+      backup.volume: {persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+      seLinuxLevel: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: backup.enabled needs seLinuxLevel (e.g. \"s0:c123,c456\"): with a random level per pod, the backup Job relabels the data volume and locks the app out of it; a level is ignored on nodes without SELinux"
 
   - it: runs a daily backup that never overlaps and has a deadline
     set:
@@ -101,9 +113,27 @@ tests:
       - contains:
           path: spec.jobTemplate.spec.template.spec.volumes
           content: {name: tmp, emptyDir: {}}
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.volumes[?(@.name=="work")].emptyDir.sizeLimit
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.volumes[?(@.name=="tmp")].emptyDir.sizeLimit
       - contains:
           path: spec.jobTemplate.spec.template.spec.containers[0].env
           content: {name: TRADELAB_DATA_DIR, value: /data}
+
+  - it: size-limits /work and /tmp when set
+    set:
+      backup.enabled: true
+      backup.volume: {persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+      backup.workSizeLimit: 4Gi
+      tmpSizeLimit: 256Mi
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content: {name: work, emptyDir: {sizeLimit: 4Gi}}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content: {name: tmp, emptyDir: {sizeLimit: 256Mi}}
 
   - it: runs on the app pod's node (RWO volume)
     set:
@@ -144,7 +174,7 @@ tests:
           value: true
       - equal:
           path: spec.jobTemplate.spec.template.spec.securityContext
-          value: {fsGroup: 65532, fsGroupChangePolicy: OnRootMismatch}
+          value: {fsGroup: 65532, fsGroupChangePolicy: OnRootMismatch, seLinuxOptions: {level: "s0:c123,c456"}}
       - equal:
           path: spec.jobTemplate.spec.template.spec.automountServiceAccountToken
           value: false

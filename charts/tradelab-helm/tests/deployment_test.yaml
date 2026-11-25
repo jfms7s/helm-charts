@@ -102,6 +102,8 @@ tests:
       - contains:
           path: spec.template.spec.volumes
           content: {name: tmp, emptyDir: {}}
+      - notExists:
+          path: spec.template.spec.volumes[?(@.name=="tmp")].emptyDir.sizeLimit
       - contains:
           path: spec.template.spec.volumes
           content:
@@ -116,6 +118,14 @@ tests:
       - contains:
           path: spec.template.spec.containers[2].env
           content: {name: TRADELAB_DATA_DIR, value: /data}
+
+  - it: size-limits /tmp when set
+    set:
+      tmpSizeLimit: 256Mi
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content: {name: tmp, emptyDir: {sizeLimit: 256Mi}}
 
   - it: no subPath by default
     asserts:
@@ -141,6 +151,49 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].env[1]
           value: {name: TRADELAB_ALLOWED_HOSTS, value: "$(POD_IP)"}
+
+  - it: takes a bare DNS name as host
+    set:
+      host: tradelab.k3s.example-lab.net
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[1]
+          value: {name: TRADELAB_ALLOWED_HOSTS, value: "$(POD_IP),tradelab.k3s.example-lab.net"}
+
+  - it: refuses a host with a scheme
+    set:
+      host: "https://tradelab.example.com"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"https://tradelab.example.com\""
+
+  - it: refuses a host with a port
+    set:
+      host: "tradelab.example.com:443"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"tradelab.example.com:443\""
+
+  - it: refuses a host with a slash
+    set:
+      host: "tradelab.example.com/app"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"tradelab.example.com/app\""
+
+  - it: refuses a host with a wildcard
+    set:
+      host: "*.example.com"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"*.example.com\""
+
+  - it: refuses a host with whitespace
+    set:
+      host: "tradelab .example.com"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"tradelab .example.com\""
 
   - it: Alpaca keys only on worker and live, from the existing Secret
     asserts:

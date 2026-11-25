@@ -51,3 +51,43 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: "tradelab-helm: ingress.enabled needs host"
+
+  - it: refuses a host with a scheme
+    set:
+      ingress.enabled: true
+      host: "https://tradelab.example.com"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"https://tradelab.example.com\""
+
+  - it: refuses a host with a port
+    set:
+      ingress.enabled: true
+      host: "tradelab.example.com:443"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"tradelab.example.com:443\""
+
+  - it: refuses a host with a slash
+    set:
+      ingress.enabled: true
+      host: "tradelab.example.com/app"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"tradelab.example.com/app\""
+
+  - it: refuses a host with a wildcard
+    set:
+      ingress.enabled: true
+      host: "*.example.com"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"*.example.com\""
+
+  - it: refuses a host with whitespace
+    set:
+      ingress.enabled: true
+      host: "tradelab .example.com"
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got \"tradelab .example.com\""

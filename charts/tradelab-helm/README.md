@@ -15,8 +15,10 @@ image is private, so set a pull secret.
 
 ## Prerequisites
 
-- Kubernetes 1.19+
+- Kubernetes 1.23+ (`batch/v1` CronJob, `ttlSecondsAfterFinished`)
 - Helm 3.0+
+- linux/amd64 nodes: the image is built for amd64 only, so on a cluster with
+  other architectures set `nodeSelector: {kubernetes.io/arch: amd64}`
 - A Secret with the Alpaca paper keys `APCA_API_KEY_ID` and
   `APCA_API_SECRET_KEY` (needed while `live.enabled`)
 
@@ -36,7 +38,7 @@ helm install my-release . \
 |-----------|-------------|---------|
 | `image.repository` / `image.tag` / `image.pullPolicy` | tradelab image, for every container and the backup | `ghcr.io/jfms7s/tradelab:v0.1.0` |
 | `imagePullSecrets` | Pull secrets (the image is private) | `[]` |
-| `host` | Ingress host; also in the api's `TRADELAB_ALLOWED_HOSTS` after the pod IP | `""` |
+| `host` | Ingress host, a bare DNS name; also in the api's `TRADELAB_ALLOWED_HOSTS` after the pod IP. Rendering fails on a scheme, port, path, wildcard or whitespace | `""` |
 | `alpaca.existingSecret` | Secret with `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY`, for worker and live only (never the api). Rendering fails while `live.enabled` and this is empty | `""` |
 | `api.resources` | api container resources | `{}` |
 | `worker.enabled` / `worker.requestsPerMinute` / `worker.resources` | The worker container and its Alpaca pace (`TRADELAB_ALPACA_REQUESTS_PER_MINUTE`) | `true` / `110` / `{}` |
@@ -44,13 +46,15 @@ helm install my-release . \
 | `persistence.volume` | Volume source (excl. `name`) for `/data`; rendering fails while empty | `{}` |
 | `persistence.claim` | `{storageClassName, size}`: when `size` is set, render a PVC `<release>-tradelab-data` (RWO, kept on uninstall/prune; empty class = cluster default); point `persistence.volume` at it | unset |
 | `persistence.subPath` | Subdirectory of the volume to mount as `/data` | `""` |
-| `seLinuxLevel` | `seLinuxOptions.level` for the app pod and the backup Job | `""` |
+| `seLinuxLevel` | `seLinuxOptions.level` for the app pod and the backup Job; required while `backup.enabled` | `""` |
+| `tmpSizeLimit` | `sizeLimit` of every `/tmp` emptyDir (app pod and backup Job) | unset |
 | `backup.enabled` / `backup.schedule` / `backup.keep` | Nightly backup CronJob, its schedule and the copies kept | `false` / `30 2 * * *` / `14` |
 | `backup.volume` | Volume source (excl. `name`) for `/backup`; required when enabled | `{}` |
 | `backup.claim` | `{storageClassName, size}`: when enabled and `size` is set, render a PVC `<release>-tradelab-backup` (kept on uninstall/prune) | unset |
+| `backup.workSizeLimit` | `sizeLimit` of the `/work` emptyDir (one copy of the database) | unset |
 | `backup.resources` | Backup container resources | `{}` |
 | `metrics.serviceMonitor.enabled` / `.interval` / `.labels` | ServiceMonitor for `GET /metrics` on the Service's `http` port | `false` / `30s` / `{}` |
-| `nodeSelector` / `affinity` / `tolerations` | App pod placement (the backup Job takes `nodeSelector` and `tolerations`, and follows the app pod by affinity) | unset |
+| `nodeSelector` / `affinity` / `tolerations` | App pod placement (the backup Job takes `nodeSelector` and `tolerations`, and follows the app pod by affinity). The image is amd64 only: set `kubernetes.io/arch: amd64` on mixed clusters | unset |
 | `securityContext` / `podSecurityContext` | Container/pod settings, for every container and the backup | hardened (uid/gid 65532, read-only root, drop ALL, seccomp RuntimeDefault, fsGroup 65532) |
 | `ingress.enabled` / `ingress.className` / `ingress.annotations` | Ingress for `host` on `/`; rendering fails without `host` | disabled |
 
@@ -79,6 +83,11 @@ which reads no database) instead: a passing database error takes the pod out of
 the Service, it does not restart it. The worker and live containers have no
 probes.
 
+The three containers are one pod, so a pod is Ready only while all three are.
+When `worker` or `live` crash-loops, the pod turns NotReady and the Service and
+Ingress drop it: the dashboard is unreachable exactly when you would look at
+it. Read the failing container's logs (`kubectl logs <pod> -c live`) then.
+
 ### Alpaca keys
 
 Only `worker` and `live` get the keys, from `alpaca.existingSecret`. The live
@@ -97,9 +106,11 @@ copies. `concurrencyPolicy: Forbid`, `activeDeadlineSeconds: 900` (a SIGTERM is
 only handled once SQLite's copy call returns, so the deadline is the backstop),
 `backoffLimit: 2`, finished Jobs deleted after a day. `/data` is mounted
 read-write, since SQLite's WAL needs its `-shm` file even to read. The data
-claim is RWO, so the Job has a required pod affinity to the app pod's node;
-set `seLinuxLevel` on SELinux nodes so the Job shares the app pod's level and
-never relabels the volume.
+claim is RWO, so the Job has a required pod affinity to the app pod's node.
+`seLinuxLevel` is required while `backup.enabled` (the render fails without
+it): the Job shares the app pod's level, so its start never relabels the volume
+and locks the running app out of `/data`. Nodes without SELinux ignore the
+level. `backup.workSizeLimit` and `tmpSizeLimit` cap `/work` and `/tmp`.
 
 ### Hardening
 

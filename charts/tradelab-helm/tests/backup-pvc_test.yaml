@@ -36,6 +36,9 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-tradelab-backup
       - equal:
+          path: spec.accessModes
+          value: [ReadWriteOnce]
+      - equal:
           path: spec.storageClassName
           value: nfs-client
       - equal:

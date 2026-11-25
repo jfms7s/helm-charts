@@ -5,9 +5,12 @@ imagePullSecrets:
   - name: regcred
 persistence:
   subPath: data
+# Required while backup.enabled (the render fails without it).
 seLinuxLevel: "s0:c123,c456"
+tmpSizeLimit: 256Mi
 backup:
   enabled: true
+  workSizeLimit: 4Gi
   claim:
     storageClassName: nfs-client
     size: 5Gi

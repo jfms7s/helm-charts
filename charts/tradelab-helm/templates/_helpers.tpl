@@ -38,6 +38,30 @@ app.kubernetes.io/instance: {{ .context.Release.Name }}
 {{- end -}}
 
 {{/*
+Fails unless host is empty or a bare DNS name. The app's Host check compares
+names only, so a scheme, port, path, wildcard or whitespace would make `serve`
+exit at start (the api crash-loops) while the Ingress still accepts it.
+*/}}
+{{- define "tradelab-helm.checkHost" -}}
+{{- if and .Values.host (regexMatch "[:/*[:space:]]" .Values.host) }}
+{{- fail (printf "tradelab-helm: host must be a bare DNS name such as tradelab.example.com (no scheme, port, path, wildcard or whitespace), got %q" .Values.host) }}
+{{- end }}
+{{- end -}}
+
+{{/*
+An emptyDir volume source, with sizeLimit when the given limit is set.
+Pass (dict "sizeLimit" <value or "">).
+*/}}
+{{- define "tradelab-helm.emptyDir" -}}
+{{- if .sizeLimit -}}
+emptyDir:
+  sizeLimit: {{ .sizeLimit | quote }}
+{{- else -}}
+emptyDir: {}
+{{- end -}}
+{{- end -}}
+
+{{/*
 The pod security context, with seLinuxOptions.level from seLinuxLevel when set.
 The app pod and the backup Job use the same one, so the Job never relabels the
 shared data volume.
