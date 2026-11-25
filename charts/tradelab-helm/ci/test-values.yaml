@@ -1,0 +1,12 @@
+# CI-only values: the chart refuses to render without a data volume, and with
+# the live container on, without the Alpaca keys' Secret.
+host: tradelab.example.local
+alpaca:
+  existingSecret: tradelab-alpaca
+persistence:
+  claim:
+    storageClassName: standard
+    size: 1Gi
+  volume:
+    persistentVolumeClaim:
+      claimName: test-release-tradelab-data

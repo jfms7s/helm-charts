@@ -1,0 +1,98 @@
+{{- if .Values.backup.enabled }}
+{{- if not .Values.backup.volume }}
+{{- fail "tradelab-helm: set backup.volume (or backup.claim.size and point volume at <release>-tradelab-backup) when backup.enabled" }}
+{{- end }}
+{{- if not .Values.seLinuxLevel }}
+{{- fail "tradelab-helm: backup.enabled needs seLinuxLevel (e.g. \"s0:c123,c456\"): with a random level per pod, the backup Job relabels the data volume and locks the app out of it; a level is ignored on nodes without SELinux" }}
+{{- end }}
+# Nightly `tradelab-app backup`: SQLite's online backup of the database, safe
+# while the app writes (it never blocks the live driver; the WAL only grows
+# meanwhile). The copy is made in /work (a local emptyDir: SQLite's WAL index
+# does not work on a network share), checked, then kept on /backup with the
+# newest `keep` copies. Exit 8 on failure.
+#
+# The data claim is RWO, so the Job runs on the app pod's node (required pod
+# affinity) and shares its SELinux level, so its start never relabels the
+# volume. /data is mounted read-write: SQLite's WAL needs its -shm file even to
+# read. A SIGTERM is handled only when SQLite's copy call returns, so
+# activeDeadlineSeconds (then kubelet's SIGKILL) is the backstop.
+#
+# The name holds "backup" and the schedule is daily, so helm-argo-cd's
+# CronJobNoRecentSuccess and BackupCronJobMissed alerts cover it.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-tradelab-backup
+  labels:
+    {{- include "tradelab-helm.labels" (dict "context" $ "name" "tradelab-backup" "component" "backup") | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      # Finished Jobs are deleted after a day: KubeJobFailed fires for each
+      # failed Job until it is gone, and CronJobNoRecentSuccess covers a
+      # CronJob that stopped succeeding.
+      ttlSecondsAfterFinished: 86400
+      activeDeadlineSeconds: 900
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "tradelab-helm.podLabels" (dict "context" $ "name" "tradelab-backup" "component" "backup") | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          automountServiceAccountToken: false
+          securityContext:
+            {{- include "tradelab-helm.podSecurityContext" . | nindent 12 }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - topologyKey: kubernetes.io/hostname
+                  labelSelector:
+                    matchLabels:
+                      {{- include "tradelab-helm.selectorLabels" (dict "context" $ "name" "tradelab") | nindent 22 }}
+          containers:
+            - name: backup
+              image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args: [backup, --to, /backup, --work, /work, --keep, {{ .Values.backup.keep | quote }}]
+              env:
+                - name: TRADELAB_DATA_DIR
+                  value: /data
+              volumeMounts:
+                {{- include "tradelab-helm.dataMount" . | nindent 16 }}
+                - name: backup
+                  mountPath: /backup
+                - name: work
+                  mountPath: /work
+                - name: tmp
+                  mountPath: /tmp
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+          volumes:
+            {{- include "tradelab-helm.dataVolume" . | nindent 12 }}
+            - name: backup
+              {{- toYaml .Values.backup.volume | nindent 14 }}
+            # Local disk for the copy before it goes to /backup.
+            - name: work
+              {{- include "tradelab-helm.emptyDir" (dict "sizeLimit" .Values.backup.workSizeLimit) | nindent 14 }}
+            - name: tmp
+              {{- include "tradelab-helm.emptyDir" (dict "sizeLimit" .Values.tmpSizeLimit) | nindent 14 }}
+{{- end }}

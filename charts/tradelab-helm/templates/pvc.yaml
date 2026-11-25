@@ -1,0 +1,24 @@
+{{- $claim := .Values.persistence.claim | default dict }}
+{{- if $claim.size }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-tradelab-data
+  labels:
+    {{- include "tradelab-helm.labels" (dict "context" $ "name" "tradelab" "component" "storage") | nindent 4 }}
+  annotations:
+    # Data outlives the release: never delete on uninstall, prune, or
+    # Application deletion. Removing a claim is a deliberate manual step.
+    helm.sh/resource-policy: keep
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  # SQLite in WAL mode: a block volume (iSCSI) mounted by the one app pod.
+  accessModes:
+    - ReadWriteOnce
+  {{- if $claim.storageClassName }}
+  storageClassName: {{ $claim.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $claim.size | quote }}
+{{- end }}

@@ -1,0 +1,182 @@
+# $schema: https://raw.githubusercontent.com/helm-unittest/helm-unittest/refs/heads/main/schema/helm-testsuite.json
+suite: backup-cronjob
+templates:
+  - templates/backup-cronjob.yaml
+values:
+  - ../ci/test-values.yaml
+# Every rendered backup needs an SELinux level (see the failedTemplate test).
+set:
+  seLinuxLevel: "s0:c123,c456"
+tests:
+  - it: is absent by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: fails without a backup volume
+    set:
+      backup.enabled: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: set backup.volume (or backup.claim.size and point volume at <release>-tradelab-backup) when backup.enabled"
+
+  - it: fails without an SELinux level, so the Job never relabels the data volume
+    set:
+      backup.enabled: true
+      backup.volume: {persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+      seLinuxLevel: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: "tradelab-helm: backup.enabled needs seLinuxLevel (e.g. \"s0:c123,c456\"): with a random level per pod, the backup Job relabels the data volume and locks the app out of it; a level is ignored on nodes without SELinux"
+
+  - it: runs a daily backup that never overlaps and has a deadline
+    set:
+      backup.enabled: true
+      backup.volume: {persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+    asserts:
+      - isKind:
+          of: CronJob
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-tradelab-backup
+      - equal:
+          path: spec.schedule
+          value: "30 2 * * *"
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Forbid
+      - equal:
+          path: spec.jobTemplate.spec.ttlSecondsAfterFinished
+          value: 86400
+      - equal:
+          path: spec.jobTemplate.spec.activeDeadlineSeconds
+          value: 900
+      - equal:
+          path: spec.jobTemplate.spec.backoffLimit
+          value: 2
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.restartPolicy
+          value: Never
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].image
+          value: ghcr.io/jfms7s/tradelab:v0.1.0
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].args
+          value: [backup, --to, /backup, --work, /work, --keep, "14"]
+
+  - it: takes the schedule and the number of copies from values
+    set:
+      backup.enabled: true
+      backup.volume: {nfs: {server: 192.168.1.10, path: /volumes/tradelab}}
+      backup.schedule: "0 3 * * *"
+      backup.keep: 7
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "0 3 * * *"
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].args
+          value: [backup, --to, /backup, --work, /work, --keep, "7"]
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content: {name: backup, nfs: {server: 192.168.1.10, path: /volumes/tradelab}}
+
+  - it: mounts /data read-write, /backup, and local /work and /tmp
+    set:
+      backup.enabled: true
+      backup.volume: {persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+      persistence.subPath: data
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts
+          content: {name: data, mountPath: /data, subPath: data}
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts[?(@.name=="data")].readOnly
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts
+          content: {name: backup, mountPath: /backup}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts
+          content: {name: work, mountPath: /work}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].volumeMounts
+          content: {name: tmp, mountPath: /tmp}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content: {name: data, persistentVolumeClaim: {claimName: test-release-tradelab-data}}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content: {name: backup, persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content: {name: work, emptyDir: {}}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content: {name: tmp, emptyDir: {}}
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.volumes[?(@.name=="work")].emptyDir.sizeLimit
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.volumes[?(@.name=="tmp")].emptyDir.sizeLimit
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content: {name: TRADELAB_DATA_DIR, value: /data}
+
+  - it: size-limits /work and /tmp when set
+    set:
+      backup.enabled: true
+      backup.volume: {persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+      backup.workSizeLimit: 4Gi
+      tmpSizeLimit: 256Mi
+    asserts:
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content: {name: work, emptyDir: {sizeLimit: 4Gi}}
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.volumes
+          content: {name: tmp, emptyDir: {sizeLimit: 256Mi}}
+
+  - it: runs on the app pod's node (RWO volume)
+    set:
+      backup.enabled: true
+      backup.volume: {persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.affinity
+          value:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - topologyKey: kubernetes.io/hostname
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: tradelab
+                      app.kubernetes.io/instance: RELEASE-NAME
+      - notEqual:
+          path: spec.jobTemplate.spec.template.metadata.labels["app.kubernetes.io/name"]
+          value: tradelab
+
+  - it: shares the app pod's SELinux level
+    set:
+      backup.enabled: true
+      backup.volume: {persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+      seLinuxLevel: "s0:c123,c456"
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.securityContext.seLinuxOptions
+          value: {level: "s0:c123,c456"}
+
+  - it: is hardened like the app
+    set:
+      backup.enabled: true
+      backup.volume: {persistentVolumeClaim: {claimName: RELEASE-NAME-tradelab-backup}}
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.securityContext
+          value: {fsGroup: 65532, fsGroupChangePolicy: OnRootMismatch, seLinuxOptions: {level: "s0:c123,c456"}}
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.automountServiceAccountToken
+          value: false
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env[?(@.name=="APCA_API_KEY_ID")]

@@ -1,0 +1,16 @@
+apiVersion: v2
+name: tradelab-helm
+description: A Helm chart for tradelab, a platform to test investment agents on simulated and live (fake-money) markets
+type: application
+version: 0.1.0
+appVersion: "v0.1.0"
+keywords:
+  - tradelab
+  - trading
+  - backtesting
+sources:
+  - https://github.com/jfms7s/tradelab
+  - https://github.com/jfms7s/helm-charts
+maintainers:
+  - name: jfms7s
+    url: https://github.com/jfms7s

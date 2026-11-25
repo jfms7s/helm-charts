@@ -22,6 +22,9 @@ Deploys [Chez Tomperô](https://github.com/jfms7s/tompero), a self-hosted recipe
 ### padel-score-helm
 Deploys [padel-score](https://github.com/jfms7s/padel-score), a padel match scorer with live spectator links, as a single server container with SQLite. See [charts/padel-score-helm/README.md](charts/padel-score-helm/README.md).
 
+### tradelab-helm
+Deploys [tradelab](https://github.com/jfms7s/tradelab), a platform to test investment agents on simulated and live (fake-money) markets: one pod with the dashboard API, the replay worker and the live driver sharing one SQLite volume, plus an optional nightly backup CronJob. See [charts/tradelab-helm/README.md](charts/tradelab-helm/README.md).
+
 ### volley-helm
 Deploys [volley](https://github.com/jfms7s/volley), a browser arena brawler for 2-10 players, as a single stateless server container (rooms live in memory, so one replica). See [charts/volley-helm/README.md](charts/volley-helm/README.md).
 
@@ -97,7 +100,7 @@ helm template my-release charts/common -f charts/common/ci/test-values.yaml
 helm package charts/common
 ```
 
-`common`, `firstdime-helm`, `meiun-helm` and `padel-score-helm` fail to render on their defaults by design (required image, credentials and volumes); add `-f charts/<chart>/ci/test-values.yaml`.
+`common`, `firstdime-helm`, `meiun-helm`, `padel-score-helm` and `tradelab-helm` fail to render on their defaults by design (required image, credentials and volumes); add `-f charts/<chart>/ci/test-values.yaml`.
 
 ### Unit Testing
 

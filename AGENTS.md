@@ -12,6 +12,7 @@ helm-charts/
 │   ├── patchmon-helm/   # Chart for PatchMon application
 │   ├── tompero-helm/    # Chart for Chez Tomperô recipe manager
 │   ├── padel-score-helm/ # Chart for padel-score match scorer
+│   ├── tradelab-helm/   # Chart for tradelab, the investment-agent test bench
 │   ├── volley-helm/     # Chart for volley browser arena brawler
 │   ├── meiun-helm/      # Chart for meiun, the LLM-villager village sim
 │   ├── eng-metrics-lab-helm/  # Chart for the eng-metrics-lab code-quality reporting stack
@@ -81,6 +82,13 @@ Application-specific chart for deploying [padel-score](https://github.com/jfms7s
 - `/data` volume for the SQLite database, with an optional chart-created PVC (kept on uninstall)
 - Public image, so no pull secret by default
 
+### tradelab-helm
+Application-specific chart for deploying [tradelab](https://github.com/jfms7s/tradelab), a platform to test investment agents on simulated and live (fake-money) markets. Modeled on padel-score-helm. Includes:
+- One Deployment (single replica, Recreate) with three containers from one private image sharing one SQLite volume: `api` (dashboard, `/api/health`, `/metrics`), `worker` (replay runs) and `live` (the live driver); Alpaca keys from an existing Secret on worker and live only
+- `/data` on a ReadWriteOnce volume (SQLite WAL, never NFS), with an optional chart-created PVC (kept on uninstall); the render fails without a volume
+- The api's `TRADELAB_ALLOWED_HOSTS` is `$(POD_IP),<host>`, so probes and Prometheus pass the app's Host check
+- Optional nightly backup CronJob (`tradelab-app backup`, copy made in a local emptyDir, kept on its own volume; pod affinity to the app pod and a shared SELinux level), optional Ingress and ServiceMonitor
+
 ### volley-helm
 Application-specific chart for deploying [volley](https://github.com/jfms7s/volley), a browser arena brawler (WebSocket game server). Modeled on padel-score-helm. Includes:
 - Server deployment (single replica, Recreate; rooms live in memory) + Service + optional Ingress
@@ -115,7 +123,7 @@ These charts have one deployer and one consumer, and the templates assume both:
 - **Deployed by Argo CD through helm-argo-cd**, never by `helm install`: multi-source Applications render each chart with a `valuesObject`, at a pinned chart version. A chart release changes nothing in the cluster until helm-argo-cd bumps that pin.
 - **No Helm `lookup`, no Helm-only hooks.** Argo CD renders with `helm template`, so `lookup` returns nothing and `helm.sh/hook` annotations become Argo hooks with different semantics. Use Argo hooks (`argocd.argoproj.io/hook`, as eng-metrics-lab's migrate Job does). This is also why credentials are never auto-generated.
 - **`argocd.argoproj.io/*` annotations are intentional** (sync waves, `Prune=false,Delete=false` on kept PVCs): keep them.
-- **Credentials use the `{value, valueFrom}` shape**, rendered by each chart's `credentialEnv` helper; helm-argo-cd passes `secretKeyRef`s. In patchmon-helm and ticket-live-event-scanner-helm a `value` goes into a chart-owned `<release>-<app>-credentials` Secret and the env var uses `secretKeyRef` (firstdime-helm still inlines it). Charts with credentials refuse to render while one is empty or `CHANGE_ME` without a `valueFrom`.
+- **Credentials use the `{value, valueFrom}` shape**, rendered by each chart's `credentialEnv` helper; helm-argo-cd passes `secretKeyRef`s. In patchmon-helm and ticket-live-event-scanner-helm a `value` goes into a chart-owned `<release>-<app>-credentials` Secret and the env var uses `secretKeyRef` (firstdime-helm still inlines it). Charts with credentials refuse to render while one is empty or `CHANGE_ME` without a `valueFrom`. Exception: tradelab-helm takes the Alpaca keys only by Secret name (`alpaca.existingSecret`), never as values.
 - **Pod templates carry no chart-version labels** (`<chart>.podLabels`, `common.labels.pod`), so a release that does not change a workload's spec does not restart it.
 
 ## Choosing a composition model
@@ -148,7 +156,7 @@ make check-version                               # version-bump check CI runs on
 helm lint charts/data-lab-helm
 helm template my-release charts/data-lab-helm
 
-# common, firstdime-helm, meiun-helm, padel-score-helm, patchmon-helm and
+# common, firstdime-helm, meiun-helm, padel-score-helm, patchmon-helm, tradelab-helm and
 # ticket-live-event-scanner-helm refuse to render on their defaults by design (required image, credential and volume guards): pass
 # their CI values
 helm lint charts/firstdime-helm -f charts/firstdime-helm/ci/test-values.yaml
